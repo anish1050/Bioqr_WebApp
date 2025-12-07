@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Account | BioQR - Secure File Sharing</title>
+  <meta name="description" content="Join BioQR today - Create your secure account for file sharing and QR code generation">
+  <link rel="stylesheet" href="register.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Animated background elements -->
+  <div class="background-animation">
+    <div class="floating-shapes">
+      <div class="shape shape-1"></div>
+      <div class="shape shape-2"></div>
+      <div class="shape shape-3"></div>
+      <div class="shape shape-4"></div>
+      <div class="shape shape-5"></div>
+    </div>
+  </div>
+
+  <main class="register-container">
+    <!-- Brand header -->
+    <header class="brand-header">
+      <div class="logo-container">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h1 class="brand-name">BioQR</h1>
+      </div>
+      <p class="brand-tagline">Join the secure file sharing platform</p>
+    </header>
+
+    <!-- Registration form -->
+    <section class="register-section">
+      <div class="register-card">
+        <div class="card-header">
+          <h2>Create Your Account</h2>
+          <p>Start your secure file sharing journey with email or social login</p>
+        </div>
+
+        <form id="registerForm" class="register-form">
+          <!-- Name fields -->
+          <div class="form-row">
+            <div class="form-group">
+              <label for="firstName">First Name</label>
+              <div class="input-wrapper">
+                <svg class="input-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <input 
+                  type="text" 
+                  id="firstName" 
+                  name="firstName" 
+                  placeholder="Your first name"
+                  required 
+                  autocomplete="given-name"
+                >
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="lastName">Last Name</label>
+              <div class="input-wrapper">
+                <svg class="input-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <input 
+                  type="text" 
+                  id="lastName" 
+                  name="lastName" 
+                  placeholder="Your last name"
+                  required 
+                  autocomplete="family-name"
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Username -->
+          <div class="form-group">
+            <label for="username">Username</label>
+            <div class="input-wrapper">
+              <svg class="input-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM12 14a7 7 0 0 0-7 7h14a7 7 0 0 0-7-7z" stroke="currentColor" stroke-width="2"/>
+              </svg>
+              <input 
+                type="text" 
+                id="username" 
+                name="username" 
+                placeholder="Choose a unique username"
+                required 
+                autocomplete="username"
+                minlength="3"
+                maxlength="20"
+              >
+              <div class="input-status">
+                <svg class="status-icon check-icon" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                  <path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <svg class="status-icon error-icon" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                  <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2"/>
+                  <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </div>
+            </div>
+            <div class="field-hint">3-20 characters, letters, numbers, and underscores only</div>
+          </div>
+
+          <!-- Email -->
+          <div class="form-group">
+            <label for="email">Email Address</label>
+            <div class="input-wrapper">
+              <svg class="input-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="2"/>
+                <polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="2"/>
+              </svg>
+              <input 
+                type="email" 
+                id="email" 
+                name="email" 
+                placeholder="your.email@example.com"
+                required 
+                autocomplete="email"
+              >
+              <div class="input-status">
+                <svg class="status-icon check-icon" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                  <path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <svg class="status-icon error-icon" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                  <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2"/>
+                  <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Password -->
+          <div class="form-group">
+            <label for="password">Password</label>
+            <div class="input-wrapper">
+              <svg class="input-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                <circle cx="12" cy="16" r="1" fill="currentColor"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="2"/>
+              </svg>
+              <input 
+                type="password" 
+                id="password" 
+                name="password" 
+                placeholder="Create a strong password"
+                required 
+                autocomplete="new-password"
+                minlength="8"
+              >
+              <button type="button" class="password-toggle" aria-label="Toggle password visibility">
+                <svg class="eye-open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <svg class="eye-closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke="currentColor" stroke-width="2"/>
+                  <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </button>
+            </div>
+            
+            <!-- Password strength indicator -->
+            <div class="password-strength">
+              <div class="strength-bar">
+                <div class="strength-fill"></div>
+              </div>
+              <div class="strength-text">Password strength: <span>Weak</span></div>
+            </div>
+            
+            <!-- Password requirements -->
+            <div class="password-requirements">
+              <div class="requirement" data-requirement="length">
+                <svg class="req-icon" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                  <path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                At least 8 characters
+              </div>
+              <div class="requirement" data-requirement="lowercase">
+                <svg class="req-icon" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                  <path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                One lowercase letter
+              </div>
+              <div class="requirement" data-requirement="uppercase">
+                <svg class="req-icon" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                  <path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                One uppercase letter
+              </div>
+              <div class="requirement" data-requirement="number">
+                <svg class="req-icon" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                  <path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                One number
+              </div>
+            </div>
+          </div>
+
+          <!-- Confirm Password -->
+          <div class="form-group">
+            <label for="confirmPassword">Confirm Password</label>
+            <div class="input-wrapper">
+              <svg class="input-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                <circle cx="12" cy="16" r="1" fill="currentColor"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="2"/>
+              </svg>
+              <input 
+                type="password" 
+                id="confirmPassword" 
+                name="confirmPassword" 
+                placeholder="Confirm your password"
+                required 
+                autocomplete="new-password"
+              >
+              <div class="input-status">
+                <svg class="status-icon check-icon" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                  <path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <svg class="status-icon error-icon" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                  <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2"/>
+                  <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Terms and Privacy -->
+          <div class="form-group">
+            <label class="checkbox-container">
+              <input type="checkbox" id="terms" name="terms" required>
+              <span class="checkmark"></span>
+              I agree to the <a href="#" class="link">Terms of Service</a> and <a href="#" class="link">Privacy Policy</a>
+            </label>
+          </div>
+
+          <!-- Newsletter signup -->
+          <div class="form-group">
+            <label class="checkbox-container">
+              <input type="checkbox" id="newsletter" name="newsletter">
+              <span class="checkmark"></span>
+              Send me product updates and security tips
+            </label>
+          </div>
+
+          <button type="submit" class="register-btn">
+            <span class="btn-text">Create Account</span>
+            <div class="btn-loading">
+              <div class="spinner"></div>
+              <span>Creating account...</span>
+            </div>
+          </button>
+        </form>
+
+        <div class="divider">
+          <span>or create account with</span>
+        </div>
+
+        <div class="social-login">
+          <button type="button" class="social-btn google-btn" id="google-register-btn">
+            <svg viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            Continue with Google
+          </button>
+          <button type="button" class="social-btn github-btn" id="github-register-btn">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+            </svg>
+            Continue with GitHub
+          </button>
+        </div>
+
+        <div class="signin-link">
+          <p>Already have an account? <a href="login.html">Sign in</a></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Message display -->
+    <div id="message" class="message-container" style="display: none;">
+      <div class="message-content">
+        <svg class="message-icon success-icon" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+          <path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        <svg class="message-icon error-icon" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+          <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2"/>
+          <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        <span class="message-text"></span>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Global variables
+    const API_BASE = 'http://localhost:3000';
+    
+    // DOM elements
+    const registerForm = document.getElementById('registerForm');
+    const registerBtn = document.querySelector('.register-btn');
+    const btnText = document.querySelector('.btn-text');
+    const btnLoading = document.querySelector('.btn-loading');
+    const messageContainer = document.getElementById('message');
+    const messageText = document.querySelector('.message-text');
+    const passwordInput = document.getElementById('password');
+    const confirmPasswordInput = document.getElementById('confirmPassword');
+    const usernameInput = document.getElementById('username');
+    const emailInput = document.getElementById('email');
+
+    // Password strength and validation
+    const passwordRequirements = {
+      length: false,
+      lowercase: false,
+      uppercase: false,
+      number: false
+    };
+
+    // Password toggle functionality
+    document.querySelectorAll('.password-toggle').forEach(toggle => {
+      toggle.addEventListener('click', () => {
+        const input = toggle.parentElement.querySelector('input');
+        const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+        input.setAttribute('type', type);
+        toggle.classList.toggle('active');
+      });
+    });
+
+    // Password strength checker
+    passwordInput.addEventListener('input', (e) => {
+      checkPasswordStrength(e.target.value);
+      validatePasswordMatch();
+    });
+
+    // Confirm password validation
+    confirmPasswordInput.addEventListener('input', () => {
+      validatePasswordMatch();
+    });
+
+    // Username validation
+    usernameInput.addEventListener('input', (e) => {
+      validateUsername(e.target.value);
+    });
+
+    // Email validation
+    emailInput.addEventListener('input', (e) => {
+      validateEmail(e.target.value);
+    });
+
+    function checkPasswordStrength(password) {
+      const strengthBar = document.querySelector('.strength-fill');
+      const strengthText = document.querySelector('.strength-text span');
+      
+      // Check requirements
+      passwordRequirements.length = password.length >= 8;
+      passwordRequirements.lowercase = /[a-z]/.test(password);
+      passwordRequirements.uppercase = /[A-Z]/.test(password);
+      passwordRequirements.number = /\d/.test(password);
+
+      // Update requirement indicators
+      Object.keys(passwordRequirements).forEach(req => {
+        const element = document.querySelector(`[data-requirement="${req}"]`);
+        element.classList.toggle('met', passwordRequirements[req]);
+      });
+
+      // Calculate strength
+      const metRequirements = Object.values(passwordRequirements).filter(Boolean).length;
+      let strength = 0;
+      let strengthLabel = 'Weak';
+      let strengthClass = 'weak';
+
+      if (metRequirements === 4) {
+        strength = 100;
+        strengthLabel = 'Strong';
+        strengthClass = 'strong';
+      } else if (metRequirements >= 3) {
+        strength = 75;
+        strengthLabel = 'Good';
+        strengthClass = 'good';
+      } else if (metRequirements >= 2) {
+        strength = 50;
+        strengthLabel = 'Fair';
+        strengthClass = 'fair';
+      } else if (password.length > 0) {
+        strength = 25;
+        strengthLabel = 'Weak';
+        strengthClass = 'weak';
+      }
+
+      strengthBar.style.width = `${strength}%`;
+      strengthBar.className = `strength-fill ${strengthClass}`;
+      strengthText.textContent = strengthLabel;
+    }
+
+    function validatePasswordMatch() {
+      const password = passwordInput.value;
+      const confirmPassword = confirmPasswordInput.value;
+      const wrapper = confirmPasswordInput.parentElement;
+
+      if (confirmPassword && password !== confirmPassword) {
+        wrapper.classList.add('error');
+        wrapper.classList.remove('success');
+      } else if (confirmPassword && password === confirmPassword) {
+        wrapper.classList.add('success');
+        wrapper.classList.remove('error');
+      } else {
+        wrapper.classList.remove('error', 'success');
+      }
+    }
+
+    function validateUsername(username) {
+      const wrapper = usernameInput.parentElement;
+      const isValid = /^[a-zA-Z0-9_]{3,20}$/.test(username);
+
+      if (username && !isValid) {
+        wrapper.classList.add('error');
+        wrapper.classList.remove('success');
+      } else if (username && isValid) {
+        wrapper.classList.add('success');
+        wrapper.classList.remove('error');
+      } else {
+        wrapper.classList.remove('error', 'success');
+      }
+    }
+
+    function validateEmail(email) {
+      const wrapper = emailInput.parentElement;
+      const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+      if (email && !isValid) {
+        wrapper.classList.add('error');
+        wrapper.classList.remove('success');
+      } else if (email && isValid) {
+        wrapper.classList.add('success');
+        wrapper.classList.remove('error');
+      } else {
+        wrapper.classList.remove('error', 'success');
+      }
+    }
+
+    // Form submission
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const formData = new FormData(registerForm);
+      const data = {
+        first_name: formData.get('firstName').trim(),
+        last_name: formData.get('lastName').trim(),
+        username: formData.get('username').trim(),
+        email: formData.get('email').trim(),
+        password: formData.get('password')
+      };
+
+      // Validation
+      if (!data.first_name || !data.last_name || !data.username || !data.email || !data.password) {
+        showMessage('Please fill in all required fields', 'error');
+        return;
+      }
+
+      if (data.password !== formData.get('confirmPassword')) {
+        showMessage('Passwords do not match', 'error');
+        return;
+      }
+
+      if (!Object.values(passwordRequirements).every(Boolean)) {
+        showMessage('Please meet all password requirements', 'error');
+        return;
+      }
+
+      if (!formData.get('terms')) {
+        showMessage('Please agree to the Terms of Service and Privacy Policy', 'error');
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const response = await fetch(`${API_BASE}/bioqr/users/register`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          showMessage('Account created successfully! Redirecting to login...', 'success');
+          
+          // Redirect to login after success
+          setTimeout(() => {
+            window.location.href = 'login.html';
+          }, 2000);
+        } else {
+          showMessage(result.message || 'Registration failed', 'error');
+        }
+      } catch (error) {
+        console.error('Registration error:', error);
+        showMessage('Network error. Please try again.', 'error');
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    // UI helpers
+    function setLoading(loading) {
+      registerBtn.disabled = loading;
+      btnText.style.display = loading ? 'none' : 'inline';
+      btnLoading.style.display = loading ? 'flex' : 'none';
+      registerBtn.classList.toggle('loading', loading);
+    }
+
+    function showMessage(text, type) {
+      messageText.textContent = text;
+      messageContainer.className = `message-container ${type}`;
+      messageContainer.style.display = 'block';
+      
+      // Auto hide after 5 seconds
+      setTimeout(() => {
+        messageContainer.style.display = 'none';
+      }, 5000);
+    }
+
+    // Social login handlers - OAuth registration
+    document.getElementById('google-register-btn').addEventListener('click', () => {
+      handleOAuthRegistration('google');
+    });
+
+    document.getElementById('github-register-btn').addEventListener('click', () => {
+      handleOAuthRegistration('github');
+    });
+    
+    function handleOAuthRegistration(provider) {
+      const button = document.getElementById(`${provider}-register-btn`);
+      const originalContent = button.innerHTML;
+      
+      // Show loading state
+      button.disabled = true;
+      button.innerHTML = `<div class="spinner"></div> Connecting to ${provider.charAt(0).toUpperCase() + provider.slice(1)}...`;
+      
+      try {
+        // Redirect to OAuth provider
+        window.location.href = `${API_BASE}/auth/${provider}`;
+      } catch (error) {
+        console.error(`${provider} OAuth error:`, error);
+        
+        // Restore button state
+        button.disabled = false;
+        button.innerHTML = originalContent;
+        
+        showMessage(`Failed to connect to ${provider.charAt(0).toUpperCase() + provider.slice(1)}. Please try again.`, 'error');
+      }
+    }
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+      // Handle URL parameters (OAuth responses or errors)
+      handleUrlParameters();
+    });
+    
+    // Handle URL parameters for OAuth responses
+    function handleUrlParameters() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const error = urlParams.get('error');
+      
+      if (error) {
+        let errorMessage = 'Registration failed';
+        
+        switch (error) {
+          case 'oauth_failed':
+            errorMessage = 'Social registration failed. Please try again or use email registration.';
+            break;
+          case 'session_failed':
+            errorMessage = 'Session creation failed. Please try again.';
+            break;
+          case 'passport_error':
+            errorMessage = 'Authentication service error. Please try again.';
+            break;
+          case 'no_user':
+            errorMessage = 'Registration failed. Please try again.';
+            break;
+          default:
+            errorMessage = 'Registration error occurred. Please try again.';
+        }
+        
+        showMessage(errorMessage, 'error');
+        
+        // Clean URL
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    }
+
+    // Input animations
+    document.querySelectorAll('.input-wrapper input').forEach(input => {
+      input.addEventListener('focus', () => {
+        input.parentElement.classList.add('focused');
+      });
+      
+      input.addEventListener('blur', () => {
+        if (!input.value) {
+          input.parentElement.classList.remove('focused');
+        }
+      });
+      
+      // Check for pre-filled values
+      if (input.value) {
+        input.parentElement.classList.add('focused');
+      }
+    });
+  </script>
+</body>
+</html>

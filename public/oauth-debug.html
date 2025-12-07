@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OAuth Debug | BioQR</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .debug-section {
+      background: #f5f5f5;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 5px;
+    }
+    .button {
+      background: #007cba;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    .button:hover {
+      background: #005a87;
+    }
+    .error {
+      background: #ffebee;
+      border-left: 4px solid #f44336;
+      padding: 10px;
+      margin: 10px 0;
+    }
+    .success {
+      background: #e8f5e8;
+      border-left: 4px solid #4caf50;
+      padding: 10px;
+      margin: 10px 0;
+    }
+    .info {
+      background: #e3f2fd;
+      border-left: 4px solid #2196f3;
+      padding: 10px;
+      margin: 10px 0;
+    }
+    pre {
+      background: #f0f0f0;
+      padding: 10px;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 OAuth Debug Tool</h1>
+  
+  <div class="info">
+    <h3>Current Configuration</h3>
+    <p><strong>API Base:</strong> <code id="api-base">http://localhost:3000</code></p>
+    <p><strong>Current URL:</strong> <code id="current-url"></code></p>
+    <p><strong>User Agent:</strong> <code id="user-agent"></code></p>
+  </div>
+
+  <div class="debug-section">
+    <h3>🔗 OAuth URLs</h3>
+    <p><strong>Google OAuth URL:</strong></p>
+    <pre id="google-url"></pre>
+    
+    <p><strong>GitHub OAuth URL:</strong></p>
+    <pre id="github-url"></pre>
+  </div>
+
+  <div class="debug-section">
+    <h3>🧪 Test OAuth Flow</h3>
+    <button class="button" onclick="testGoogleOAuth()">🔍 Test Google OAuth</button>
+    <button class="button" onclick="testGitHubOAuth()">🔍 Test GitHub OAuth</button>
+    <button class="button" onclick="checkServerStatus()">📡 Check Server Status</button>
+  </div>
+
+  <div class="debug-section">
+    <h3>📋 Debug Log</h3>
+    <div id="debug-log"></div>
+  </div>
+
+  <div class="debug-section">
+    <h3>⚙️ Configuration Checklist</h3>
+    <div id="config-checklist">
+      <p>✅ <strong>Google OAuth App Setup:</strong></p>
+      <ul>
+        <li>Authorized JavaScript origins: <code>http://localhost:3000</code>, <code>http://localhost:5173</code>, <code>http://localhost:5174</code>, <code>http://localhost:5175</code></li>
+        <li>Authorized redirect URIs: <code>http://localhost:3000/auth/google/callback</code></li>
+      </ul>
+      
+      <p>✅ <strong>GitHub OAuth App Setup:</strong></p>
+      <ul>
+        <li>Homepage URL: <code>http://localhost:3000</code></li>
+        <li>Authorization callback URL: <code>http://localhost:3000/auth/github/callback</code></li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:3000';
+    
+    // Initialize debug info
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('current-url').textContent = window.location.href;
+      document.getElementById('user-agent').textContent = navigator.userAgent;
+      
+      // Display OAuth URLs
+      const googleUrl = `${API_BASE}/auth/google`;
+      const githubUrl = `${API_BASE}/auth/github`;
+      
+      document.getElementById('google-url').textContent = googleUrl;
+      document.getElementById('github-url').textContent = githubUrl;
+      
+      // Check URL parameters for OAuth responses
+      checkUrlParameters();
+    });
+    
+    function log(message, type = 'info') {
+      const debugLog = document.getElementById('debug-log');
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = document.createElement('div');
+      logEntry.className = type;
+      logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+      debugLog.appendChild(logEntry);
+      debugLog.scrollTop = debugLog.scrollHeight;
+    }
+    
+    function checkUrlParameters() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const error = urlParams.get('error');
+      const code = urlParams.get('code');
+      const state = urlParams.get('state');
+      
+      if (error) {
+        log(`❌ OAuth Error: ${error}`, 'error');
+        const errorDescription = urlParams.get('error_description');
+        if (errorDescription) {
+          log(`Error Description: ${errorDescription}`, 'error');
+        }
+      }
+      
+      if (code) {
+        log(`✅ OAuth Authorization Code received: ${code.substring(0, 20)}...`, 'success');
+      }
+      
+      if (state) {
+        log(`🔖 OAuth State: ${state}`, 'info');
+      }
+    }
+    
+    async function checkServerStatus() {
+      log('🔍 Checking server status...');
+      
+      try {
+        const response = await fetch(`${API_BASE}/health`);
+        const data = await response.json();
+        log(`✅ Server is running: ${JSON.stringify(data)}`, 'success');
+      } catch (error) {
+        log(`❌ Server check failed: ${error.message}`, 'error');
+      }
+    }
+    
+    function testGoogleOAuth() {
+      log('🔍 Testing Google OAuth flow...');
+      log('Opening Google OAuth in new tab for testing...');
+      
+      // Open in new tab so we can see what happens
+      const popup = window.open(`${API_BASE}/auth/google`, 'google-oauth', 'width=500,height=600');
+      
+      // Check if popup was blocked
+      if (!popup || popup.closed) {
+        log('❌ Popup blocked! Please allow popups and try again.', 'error');
+        return;
+      }
+      
+      // Monitor popup
+      const checkClosed = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(checkClosed);
+          log('🔄 OAuth popup was closed. Check if authentication was successful.', 'info');
+        }
+      }, 1000);
+      
+      setTimeout(() => {
+        if (!popup.closed) {
+          log('⏰ OAuth popup still open after 30 seconds...', 'info');
+        }
+      }, 30000);
+    }
+    
+    function testGitHubOAuth() {
+      log('🔍 Testing GitHub OAuth flow...');
+      log('Opening GitHub OAuth in new tab for testing...');
+      
+      // Open in new tab so we can see what happens
+      const popup = window.open(`${API_BASE}/auth/github`, 'github-oauth', 'width=500,height=600');
+      
+      // Check if popup was blocked
+      if (!popup || popup.closed) {
+        log('❌ Popup blocked! Please allow popups and try again.', 'error');
+        return;
+      }
+      
+      // Monitor popup
+      const checkClosed = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(checkClosed);
+          log('🔄 OAuth popup was closed. Check if authentication was successful.', 'info');
+        }
+      }, 1000);
+      
+      setTimeout(() => {
+        if (!popup.closed) {
+          log('⏰ OAuth popup still open after 30 seconds...', 'info');
+        }
+      }, 30000);
+    }
+  </script>
+</body>
+</html>

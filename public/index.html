@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BioQR - Biometric + QR Security System</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            text-align: center;
+            color: white;
+            max-width: 600px;
+            padding: 2rem;
+        }
+        .logo {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+        .tagline {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+        .buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background: white;
+            color: #667eea;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+        .btn-outline {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+        .btn-outline:hover {
+            background: white;
+            color: #667eea;
+        }
+        .info {
+            margin-top: 2rem;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 3rem; height: 3rem; display: inline-block; vertical-align: middle; margin-right: 0.5rem;">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            BioQR
+        </div>
+        <div class="tagline">Biometric + QR Security System</div>
+        
+        <div class="buttons">
+            <!-- Authentication buttons removed -->
+        </div>
+        
+        <div class="info">
+            <p>🔒 Secure file sharing with biometric authentication and dynamic QR codes</p>
+            <p><strong>For Development:</strong> OAuth testing available at <a href="/oauth-debug.html" style="color: #ffd700;">Debug Tool</a></p>
+        </div>
+    </div>
+
+    <script>
+        // Auto-redirect to React app if it's available on Vite dev server
+        fetch('http://localhost:5173')
+            .then(() => {
+                // If Vite dev server is running, show option to access it
+                const info = document.querySelector('.info');
+                info.innerHTML += '<p><a href="http://localhost:5173" style="color: #ffd700;">🚀 Access React Dev Server</a></p>';
+            })
+            .catch(() => {
+                // Vite dev server not running, stay on Express server
+            });
+    </script>
+</body>
+</html>

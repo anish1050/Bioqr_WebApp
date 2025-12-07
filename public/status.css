@@ -1,0 +1,508 @@
+/* ===== STATUS PAGE SPECIFIC STYLES ===== */
+
+/* Main Content Adjustments */
+.main-content {
+    margin-left: 0;
+    padding-top: 2rem;
+}
+
+/* Status Badge */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: var(--radius-full);
+    color: var(--success-color);
+    font-size: var(--font-lg);
+    font-weight: var(--font-semibold);
+    margin-bottom: var(--spacing-lg);
+    animation: fadeInUp 0.8s ease forwards;
+}
+
+.status-badge i {
+    font-size: var(--font-xl);
+}
+
+/* Status Header */
+.status-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-2xl);
+}
+
+.status-header h2 {
+    font-size: var(--font-4xl);
+    font-weight: var(--font-bold);
+    color: var(--text-primary);
+}
+
+.auto-refresh {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+}
+
+.auto-refresh i {
+    animation: spin 2s linear infinite;
+}
+
+/* Services Grid */
+.services-grid {
+    margin-bottom: var(--spacing-2xl);
+}
+
+.service-card {
+    padding: var(--spacing-xl);
+    transition: all var(--transition-normal);
+}
+
+.service-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-glow);
+}
+
+.service-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-lg);
+}
+
+.service-info {
+    display: flex;
+    gap: var(--spacing-md);
+    align-items: flex-start;
+}
+
+.service-icon {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    border-radius: var(--radius-xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-lg);
+    color: var(--white);
+    flex-shrink: 0;
+}
+
+.service-info h3 {
+    font-size: var(--font-xl);
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.service-info p {
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+}
+
+.service-metrics {
+    display: flex;
+    gap: var(--spacing-lg);
+}
+
+.metric {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.metric-label {
+    color: var(--text-tertiary);
+    font-size: var(--font-xs);
+    font-weight: var(--font-medium);
+}
+
+.metric-value {
+    color: var(--text-primary);
+    font-size: var(--font-lg);
+    font-weight: var(--font-bold);
+}
+
+/* Uptime Charts */
+.uptime-charts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: var(--spacing-xl);
+    margin-bottom: var(--spacing-2xl);
+}
+
+.chart-container {
+    padding: var(--spacing-xl);
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+}
+
+.chart-header h3 {
+    font-size: var(--font-xl);
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+}
+
+.chart-legend {
+    display: flex;
+    gap: var(--spacing-md);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: var(--font-xs);
+    color: var(--text-secondary);
+}
+
+.legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: var(--radius-base);
+}
+
+.legend-color.operational {
+    background: var(--success-color);
+}
+
+.legend-color.degraded {
+    background: var(--warning-color);
+}
+
+.legend-color.outage {
+    background: var(--danger-color);
+}
+
+.uptime-chart {
+    height: 60px;
+    background: linear-gradient(90deg, 
+        var(--success-color) 0% 95%, 
+        var(--warning-color) 95% 97%, 
+        var(--success-color) 97% 100%
+    );
+    border-radius: var(--radius-base);
+    margin-bottom: var(--spacing-md);
+    position: relative;
+    overflow: hidden;
+}
+
+.uptime-chart::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, 
+        transparent 25%, 
+        rgba(255, 255, 255, 0.1) 25%, 
+        rgba(255, 255, 255, 0.1) 50%, 
+        transparent 50%, 
+        transparent 75%, 
+        rgba(255, 255, 255, 0.1) 75%
+    );
+    background-size: 20px 20px;
+    animation: chartPattern 20s linear infinite;
+}
+
+@keyframes chartPattern {
+    0% { transform: translateX(-20px); }
+    100% { transform: translateX(20px); }
+}
+
+.chart-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.uptime-percentage {
+    color: var(--success-color);
+    font-weight: var(--font-bold);
+    font-size: var(--font-lg);
+}
+
+.incident-count {
+    color: var(--text-tertiary);
+    font-size: var(--font-sm);
+}
+
+/* Incidents Timeline */
+.incidents-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl);
+}
+
+.incident-item {
+    padding: var(--spacing-xl);
+    position: relative;
+}
+
+.incident-status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-xs) var(--spacing-md);
+    border-radius: var(--radius-full);
+    font-size: var(--font-sm);
+    font-weight: var(--font-semibold);
+    margin-bottom: var(--spacing-md);
+}
+
+.incident-status.resolved {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success-color);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.incident-status.scheduled {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--primary-color);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.incident-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-md);
+}
+
+.incident-header h3 {
+    font-size: var(--font-xl);
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+}
+
+.incident-date {
+    color: var(--text-tertiary);
+    font-size: var(--font-sm);
+    font-weight: var(--font-medium);
+}
+
+.incident-description {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-lg);
+    line-height: var(--leading-relaxed);
+}
+
+.incident-timeline {
+    margin-bottom: var(--spacing-lg);
+    padding-left: var(--spacing-lg);
+    border-left: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.timeline-item {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+    position: relative;
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -9px;
+    top: 6px;
+    width: 8px;
+    height: 8px;
+    background: var(--text-tertiary);
+    border-radius: var(--radius-full);
+}
+
+.timeline-item.resolved::before {
+    background: var(--success-color);
+}
+
+.timeline-time {
+    font-weight: var(--font-semibold);
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+    min-width: 60px;
+}
+
+.timeline-text {
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+}
+
+.timeline-item.resolved .timeline-text {
+    color: var(--success-color);
+    font-weight: var(--font-medium);
+}
+
+.incident-impact {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: flex-start;
+}
+
+.impact-label {
+    font-weight: var(--font-semibold);
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+}
+
+.impact-text {
+    color: var(--text-tertiary);
+    font-size: var(--font-sm);
+}
+
+/* Subscribe Section */
+.subscribe-section {
+    padding: var(--spacing-2xl);
+    text-align: center;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.subscribe-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: var(--white);
+    margin: 0 auto var(--spacing-lg);
+}
+
+.subscribe-section h2 {
+    font-size: var(--font-3xl);
+    font-weight: var(--font-bold);
+    margin-bottom: var(--spacing-md);
+    color: var(--text-primary);
+}
+
+.subscribe-section p {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xl);
+    line-height: var(--leading-relaxed);
+}
+
+.subscribe-form {
+    margin-bottom: var(--spacing-xl);
+}
+
+.subscribe-form .form-group {
+    display: flex;
+    gap: var(--spacing-md);
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.subscribe-form .form-input {
+    flex: 1;
+}
+
+.subscribe-options p {
+    color: var(--text-tertiary);
+    margin-bottom: var(--spacing-md);
+    font-size: var(--font-sm);
+}
+
+.subscribe-options .social-links {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-lg);
+}
+
+.subscribe-options .social-link {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: var(--font-sm);
+    transition: color var(--transition-fast);
+}
+
+.subscribe-options .social-link:hover {
+    color: var(--primary-color);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .status-header {
+        flex-direction: column;
+        gap: var(--spacing-md);
+        align-items: flex-start;
+    }
+    
+    .service-header {
+        flex-direction: column;
+        gap: var(--spacing-md);
+    }
+    
+    .service-metrics {
+        justify-content: space-between;
+    }
+    
+    .uptime-charts {
+        grid-template-columns: 1fr;
+    }
+    
+    .chart-header {
+        flex-direction: column;
+        gap: var(--spacing-md);
+        align-items: flex-start;
+    }
+    
+    .incident-header {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+    
+    .subscribe-form .form-group {
+        flex-direction: column;
+    }
+    
+    .subscribe-options .social-links {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .service-card {
+        padding: var(--spacing-lg);
+    }
+    
+    .service-icon {
+        width: 40px;
+        height: 40px;
+        font-size: var(--font-base);
+    }
+    
+    .chart-container {
+        padding: var(--spacing-lg);
+    }
+    
+    .incident-item {
+        padding: var(--spacing-lg);
+    }
+    
+    .subscribe-section {
+        padding: var(--spacing-xl);
+    }
+    
+    .subscribe-icon {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+    }
+}

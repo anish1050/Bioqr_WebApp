@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Demo | BioQR - Biometric QR Security System</title>
+    <meta name="description" content="Experience the future of security with our interactive BioQR demo. See how biometric authentication and QR codes work together.">
+    
+    <!-- Security headers -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <link href="viewdemo.css" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Progress Bar -->
+    <div class="progress-container">
+        <div class="progress-bar" id="progress-bar"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                <h2>BioQR</h2>
+            </div>
+            <button class="sidebar-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        
+        <div class="nav-menu">
+            <a href="../" class="nav-item">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </a>
+            <a href="about.html" class="nav-item">
+                <i class="fas fa-info-circle"></i>
+                <span>About</span>
+            </a>
+            <a href="contact.html" class="nav-item">
+                <i class="fas fa-envelope"></i>
+                <span>Contact</span>
+            </a>
+            <a href="viewdemo.html" class="nav-item active">
+                <i class="fas fa-play-circle"></i>
+                <span>Demo</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-footer">
+            <div class="demo-stats">
+                <div class="stat">
+                    <i class="fas fa-users"></i>
+                    <span>1.2K+ Views</span>
+                </div>
+                <div class="stat">
+                    <i class="fas fa-star"></i>
+                    <span>4.9/5 Rating</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <div class="hero-content">
+                <div class="hero-badge">
+                    <i class="fas fa-play"></i>
+                    <span>Interactive Demo</span>
+                </div>
+                <h1>Experience BioQR in Action</h1>
+                <p>Discover how our revolutionary biometric QR system transforms security with real-time demonstrations and interactive features.</p>
+                
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <div class="stat-number">99.9%</div>
+                        <div class="stat-label">Accuracy</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">&lt;0.5s</div>
+                        <div class="stat-label">Response</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">256-bit</div>
+                        <div class="stat-label">Encryption</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Demo Navigation -->
+        <section class="demo-nav">
+            <div class="demo-tabs">
+                <button class="tab-btn active" onclick="showDemo('video')">
+                    <i class="fas fa-video"></i>
+                    <span>Video Demo</span>
+                </button>
+                <button class="tab-btn" onclick="showDemo('interactive')">
+                    <i class="fas fa-mouse-pointer"></i>
+                    <span>Interactive</span>
+                </button>
+                <button class="tab-btn" onclick="showDemo('features')">
+                    <i class="fas fa-cogs"></i>
+                    <span>Features</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Demo Content -->
+        <section class="demo-content">
+            <!-- Video Demo -->
+            <div id="video-demo" class="demo-panel active">
+                <div class="video-container">
+                    <div class="video-card">
+                        <div class="video-header">
+                            <h3>BioQR System Walkthrough</h3>
+                            <div class="video-badges">
+                                <span class="badge">4K Quality</span>
+                                <span class="badge">3:45 Duration</span>
+                            </div>
+                        </div>
+                        
+                        <div class="video-wrapper">
+                            <video id="demo-video" poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='450' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%23f8fafc'/%3E%3Cg fill='%233b82f6' opacity='0.1'%3E%3Ccircle cx='400' cy='225' r='60'/%3E%3C/g%3E%3Ctext x='400' y='225' text-anchor='middle' dy='.35em' font-family='Inter' font-size='24' fill='%233b82f6'%3EBioQR Demo%3C/text%3E%3C/svg%3E">
+                                <source src="../src/assets/Sample_Video.mp4" type="video/mp4">
+                                <p>Your browser does not support the video tag. Please upgrade to a modern browser.</p>
+                            </video>
+                            
+                            <div class="video-overlay" id="video-overlay">
+                                <button class="play-btn" onclick="toggleVideo()">
+                                    <i class="fas fa-play" id="play-icon"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="video-controls">
+                            <div class="control-group">
+                                <button class="control-btn" onclick="toggleVideo()">
+                                    <i class="fas fa-play" id="ctrl-play-icon"></i>
+                                </button>
+                                <button class="control-btn" onclick="toggleMute()">
+                                    <i class="fas fa-volume-up" id="volume-icon"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="video-progress">
+                                <input type="range" class="progress-slider" id="video-progress" min="0" max="100" value="0">
+                            </div>
+                            
+                            <div class="control-group">
+                                <span class="time-display" id="time-display">0:00 / 0:00</span>
+                                <button class="control-btn" onclick="toggleFullscreen()">
+                                    <i class="fas fa-expand"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="video-description">
+                            <p>See how BioQR seamlessly integrates biometric authentication with dynamic QR code generation for unparalleled security.</p>
+                            <div class="video-actions">
+                                <button class="action-btn primary" onclick="startTrial()">
+                                    <i class="fas fa-rocket"></i>
+                                    Start Free Trial
+                                </button>
+                                <button class="action-btn secondary" onclick="downloadDemo()">
+                                    <i class="fas fa-download"></i>
+                                    Download Demo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Demo -->
+            <div id="interactive-demo" class="demo-panel">
+                <div class="interactive-container">
+                    <h3>Interactive BioQR Simulator</h3>
+                    <p>Try our interactive demo to experience the authentication process firsthand.</p>
+                    
+                    <div class="simulator-grid">
+                        <!-- Biometric Scanner -->
+                        <div class="simulator-card">
+                            <div class="card-header">
+                                <i class="fas fa-fingerprint"></i>
+                                <h4>Biometric Scanner</h4>
+                            </div>
+                            <div class="biometric-scanner" id="bio-scanner">
+                                <div class="scanner-ring">
+                                    <div class="fingerprint-icon">
+                                        <i class="fas fa-fingerprint"></i>
+                                    </div>
+                                    <div class="scanner-pulse"></div>
+                                </div>
+                                <p>Place finger on scanner</p>
+                                <button class="scan-btn" onclick="startBioScan()">
+                                    <i class="fas fa-power-off"></i>
+                                    Start Scan
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- QR Generator -->
+                        <div class="simulator-card">
+                            <div class="card-header">
+                                <i class="fas fa-qrcode"></i>
+                                <h4>QR Code Generator</h4>
+                            </div>
+                            <div class="qr-generator" id="qr-generator">
+                                <div class="qr-display">
+                                    <div class="qr-placeholder">
+                                        <i class="fas fa-qrcode"></i>
+                                        <p>QR Code will appear here</p>
+                                    </div>
+                                </div>
+                                <button class="generate-btn" onclick="generateQR()" disabled>
+                                    <i class="fas fa-magic"></i>
+                                    Generate QR
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Security Status -->
+                        <div class="simulator-card">
+                            <div class="card-header">
+                                <i class="fas fa-shield-alt"></i>
+                                <h4>Security Status</h4>
+                            </div>
+                            <div class="security-status">
+                                <div class="status-indicators">
+                                    <div class="indicator" id="bio-status">
+                                        <i class="fas fa-circle"></i>
+                                        <span>Biometric: Pending</span>
+                                    </div>
+                                    <div class="indicator" id="qr-status">
+                                        <i class="fas fa-circle"></i>
+                                        <span>QR Code: Pending</span>
+                                    </div>
+                                    <div class="indicator" id="auth-status">
+                                        <i class="fas fa-circle"></i>
+                                        <span>Authentication: Waiting</span>
+                                    </div>
+                                </div>
+                                <div class="security-level">
+                                    <div class="level-bar">
+                                        <div class="level-fill" id="security-level"></div>
+                                    </div>
+                                    <span>Security Level: <strong id="level-text">Low</strong></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="simulator-actions">
+                        <button class="action-btn secondary" onclick="resetSimulator()">
+                            <i class="fas fa-redo"></i>
+                            Reset Demo
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features Demo -->
+            <div id="features-demo" class="demo-panel">
+                <div class="features-container">
+                    <h3>Key Features Showcase</h3>
+                    <p>Explore the advanced capabilities that make BioQR the future of security.</p>
+                    
+                    <div class="features-grid">
+                        <div class="feature-card" onclick="showFeatureDetail('biometric')">
+                            <div class="feature-icon">
+                                <i class="fas fa-fingerprint"></i>
+                            </div>
+                            <h4>Advanced Biometrics</h4>
+                            <p>Multi-modal biometric authentication with 99.9% accuracy rate</p>
+                            <div class="feature-stats">
+                                <span class="stat">Sub-second response</span>
+                                <span class="stat">False positive: &lt;0.1%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-card" onclick="showFeatureDetail('qr')">
+                            <div class="feature-icon">
+                                <i class="fas fa-qrcode"></i>
+                            </div>
+                            <h4>Dynamic QR Codes</h4>
+                            <p>Time-sensitive QR codes with automatic regeneration and expiry</p>
+                            <div class="feature-stats">
+                                <span class="stat">Encrypted payload</span>
+                                <span class="stat">Auto-expiry: 30-300s</span>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-card" onclick="showFeatureDetail('security')">
+                            <div class="feature-icon">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <h4>Multi-Layer Security</h4>
+                            <p>Dual authentication ensures unbreachable access control</p>
+                            <div class="feature-stats">
+                                <span class="stat">256-bit encryption</span>
+                                <span class="stat">Zero breaches</span>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-card" onclick="showFeatureDetail('monitoring')">
+                            <div class="feature-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <h4>Real-time Monitoring</h4>
+                            <p>Live security dashboard with instant threat detection and alerts</p>
+                            <div class="feature-stats">
+                                <span class="stat">24/7 monitoring</span>
+                                <span class="stat">Instant alerts</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- CTA Section -->
+        <section class="cta-section">
+            <div class="cta-content">
+                <h2>Ready to Secure Your Future?</h2>
+                <p>Join thousands of organizations that trust BioQR for their critical security needs.</p>
+                <div class="cta-buttons">
+                    <button class="cta-btn secondary" onclick="window.location.href='contact.html'">
+                        <i class="fas fa-calendar"></i>
+                        Schedule Demo
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Notification Toast -->
+    <div class="toast" id="toast">
+        <div class="toast-content">
+            <i class="toast-icon"></i>
+            <span class="toast-message"></span>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p>Loading demo...</p>
+        </div>
+    </div>
+
+    <script src="viewdemo.js"></script>
+</body>
+</html>

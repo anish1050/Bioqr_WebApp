@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard | BioQR - Secure File Sharing</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Secure file sharing dashboard with biometric authentication and QR code generation">
+  <!-- Security headers to prevent caching -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="dashboard.css" rel="stylesheet">
+</head>
+<body>
+  <!-- Background Animation -->
+  <div class="background-animation">
+    <div class="floating-shapes">
+      <div class="shape shape-1"></div>
+      <div class="shape shape-2"></div>
+      <div class="shape shape-3"></div>
+    </div>
+  </div>
+
+  <!-- Top Navigation Bar -->
+  <nav class="top-navbar">
+    <div class="navbar-brand">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <h2>BioQR</h2>
+      </div>
+    </div>
+    
+    <div class="navbar-nav">
+      <a href="#" class="nav-item active" data-section="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"/>
+          <rect x="14" y="3" width="7" height="7"/>
+          <rect x="14" y="14" width="7" height="7"/>
+          <rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        <span>Dashboard</span>
+      </a>
+      
+      <a href="#" class="nav-item" data-section="files">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+          <polyline points="13,2 13,9 20,9"/>
+        </svg>
+        <span>Files</span>
+      </a>
+      
+      <a href="/about.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="m9,9h6"/>
+          <path d="m9,13h6"/>
+        </svg>
+        <span>About</span>
+      </a>
+      
+      <a href="/contact.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+          <polyline points="22,6 12,13 2,6"/>
+        </svg>
+        <span>Contact</span>
+      </a>
+    </div>
+    
+    <div class="navbar-user">
+      <div class="user-profile" id="user-profile">
+        <div class="user-avatar" id="user-avatar">
+          <span id="user-initials">U</span>
+        </div>
+        <div class="user-details">
+          <h4 id="user-name">User</h4>
+          <p id="user-email">user@example.com</p>
+        </div>
+      </div>
+      <button class="logout-btn" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16,17 21,12 16,7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        <span>Logout</span>
+      </button>
+    </div>
+    
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-toggle" id="mobile-menu-toggle">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <line x1="3" y1="12" x2="21" y2="12"/>
+        <line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- Dashboard Section -->
+    <section class="content-section active" id="dashboard-section">
+      <div class="welcome-banner">
+        <div class="welcome-content">
+          <h2>Welcome back, <span id="welcome-name">User</span>!</h2>
+          <p>Manage your secure files.</p>
+        </div>
+      </div>
+
+      <div class="quick-stats">
+        <div class="stat-card">
+          <div class="stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+              <polyline points="13,2 13,9 20,9"/>
+            </svg>
+          </div>
+          <div class="stat-content">
+            <h3 id="stat-total-files">0</h3>
+            <p>Total Files</p>
+          </div>
+        </div>
+        
+        
+        <div class="stat-card">
+          <div class="stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+              <polyline points="7.5,4.21 12,6.81 16.5,4.21"/>
+              <polyline points="7.5,19.79 7.5,14.6 3,12"/>
+              <polyline points="21,12 16.5,14.6 16.5,19.79"/>
+            </svg>
+          </div>
+          <div class="stat-content">
+            <h3 id="stat-storage-used">0 MB</h3>
+            <p>Storage Used</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="recent-activity">
+        <div class="section-header">
+          <h3>Recent Activity</h3>
+          <button class="btn btn-outline btn-sm" onclick="showSection('files')">
+            View All Files
+          </button>
+        </div>
+        <div class="activity-list" id="recent-files">
+          <div class="activity-loading">
+            <div class="spinner"></div>
+            <span>Loading recent files...</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Files Section -->
+    <section class="content-section" id="files-section">
+      <div class="section-header">
+        <h3>File Management</h3>
+        <div class="section-actions">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input type="text" placeholder="Search files..." id="file-search">
+          </div>
+        </div>
+      </div>
+
+      <div class="upload-card">
+        <div class="upload-content">
+          <div class="upload-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17,8 12,3 7,8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <div class="upload-text">
+            <h4>Upload New File</h4>
+            <p>Drag and drop or click to select files (Max 10MB)</p>
+          </div>
+        </div>
+        
+        <form id="uploadForm" enctype="multipart/form-data" class="upload-form">
+          <input type="file" id="fileInput" name="file" multiple accept="*/*" />
+          <input type="hidden" id="user_id" value="1" />
+          
+          <div class="file-drop-zone" id="file-drop-zone">
+            <div class="drop-content">
+              <div class="drop-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17,8 12,3 7,8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+              </div>
+              <p><strong>Drop files here</strong> or <span class="browse-link">browse</span></p>
+              <span class="file-limit">Maximum file size: 10MB</span>
+            </div>
+          </div>
+          
+          <div class="selected-files" id="selected-files"></div>
+          
+          <div class="upload-actions">
+            <button type="submit" class="btn btn-primary" id="uploadBtn">
+              <span class="btn-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17,8 12,3 7,8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+              </span>
+              <span class="btn-text">Upload Files</span>
+              <span class="btn-loader" style="display: none;">
+                <div class="spinner"></div>
+                Uploading...
+              </span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="files-container">
+        <div class="files-header">
+          <h4>Your Files</h4>
+          <div class="view-options">
+            <button class="view-toggle active" data-view="grid">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7"/>
+                <rect x="14" y="3" width="7" height="7"/>
+                <rect x="14" y="14" width="7" height="7"/>
+                <rect x="3" y="14" width="7" height="7"/>
+              </svg>
+            </button>
+            <button class="view-toggle" data-view="list">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <line x1="3" y1="12" x2="21" y2="12"/>
+                <line x1="3" y1="18" x2="21" y2="18"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        
+        <div class="files-grid" id="file-container">
+          <div class="loading-state" id="loading">
+            <div class="spinner"></div>
+            <span>Loading your files...</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Message Toast -->
+  <div class="toast" id="toast">
+    <div class="toast-content">
+      <div class="toast-icon"></div>
+      <span class="toast-message"></span>
+    </div>
+    <button class="toast-close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="6" x2="6" y2="18"/>
+        <line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+
+
+  <script src="dashboard.js"></script>
+</body>
+</html>
