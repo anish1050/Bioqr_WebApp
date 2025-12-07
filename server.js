@@ -1201,7 +1201,7 @@ if (process.env.NODE_ENV === "production") {
     app.use(express.static(distPath));
 
     // Handle React routing, return all requests to React app
-    app.get("*", (req, res, next) => {
+    app.get("(.*)", (req, res, next) => {
       // Skip API and Auth routes
       if (
         req.path.startsWith("/bioqr") ||
