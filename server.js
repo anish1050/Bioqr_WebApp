@@ -1094,10 +1094,7 @@ app.post("/bioqr/generate-qr", authenticateToken, async (req, res) => {
           return res.status(500).json({ error: "Database error" });
         }
 
-        const baseUrl =
-          process.env.NODE_ENV === "production"
-            ? process.env.BASE_URL || "http://localhost:3000"
-            : "http://localhost:3000";
+        const baseUrl = process.env.BASE_URL || "http://localhost:3000";
 
         const qrData = `${baseUrl}/access-file/${token}`;
         const qrImage = await QRCode.toDataURL(qrData);
