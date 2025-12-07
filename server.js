@@ -1036,24 +1036,14 @@ app.delete("/bioqr/files/delete/:id", authenticateToken, (req, res) => {
 app.get("/bioqr/files/download/:id", authenticateToken, (req, res) => {
   const fileId = req.params.id;
   const userId = req.user.userId;
-  // Ensure user owns the file
   db.query(
     "SELECT filename, filepath FROM files WHERE id = ? AND user_id = ?",
     [fileId, userId],
     (err, rows) => {
-      if (err) {
-        console.error("❌ Database error:", err);
-        return res.status(404).send("File not found");
-      }
-      if (!rows.length) {
-        return res.status(404).send("File not found or access denied");
-      }
-      let redirectUrl = rows[0].filepath;
-      // FORCE DOWNLOAD FIX: Inject 'fl_attachment' into Cloudinary URL
-      if (redirectUrl.includes("cloudinary") && redirectUrl.includes("/upload/")) {
-          redirectUrl = redirectUrl.replace("/upload/", "/upload/fl_attachment/");
-      }
-      res.redirect(redirectUrl);
+      if (err) return res.status(404).send("File not found");
+      if (!rows.length) return res.status(404).send("File not found or access denied");
+      // JUST REDIRECT (Safe)
+      res.redirect(rows[0].filepath);
     }
   );
 });
@@ -1109,26 +1099,13 @@ app.get("/access-file/:token", (req, res) => {
   const query = "SELECT * FROM qr_tokens WHERE token = ? AND expires_at > NOW()";
   
   db.query(query, [token], (err, result) => {
-    if (err) {
-      console.error("❌ Database error:", err);
-      return res.status(500).json({ success: false, message: "Database error" });
-    }
-    if (result.length === 0) {
-      return res.status(403).json({ success: false, message: "Invalid or expired QR code" });
-    }
+    if (err) return res.status(500).json({ success: false, message: "Database error" }); 
+    if (result.length === 0) return res.status(403).json({ success: false, message: "Invalid or expired QR" });
     const fileId = result[0].file_id;
     db.query("SELECT * FROM files WHERE id = ?", [fileId], (err, fileResult) => {
-      if (err || fileResult.length === 0) {
-        console.error("❌ File not found:", fileId);
-        return res.status(404).json({ success: false, message: "File not found" });
-      }
-      const file = fileResult[0];
-      let redirectUrl = file.filepath;
-      // FORCE DOWNLOAD FIX: Inject 'fl_attachment' into Cloudinary URL
-      if (redirectUrl.includes("cloudinary") && redirectUrl.includes("/upload/")) {
-          redirectUrl = redirectUrl.replace("/upload/", "/upload/fl_attachment/");
-      }
-      res.redirect(redirectUrl);
+      if (err || fileResult.length === 0) return res.status(404).json({ success: false, message: "File not found" });
+      // JUST REDIRECT (Safe)
+      res.redirect(fileResult[0].filepath); 
     });
   });
 });
