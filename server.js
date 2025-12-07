@@ -45,6 +45,13 @@ const JWT_REFRESH_SECRET =
 // __dirname workaround
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const cloudinary = require('cloudinary').v2;
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, "uploads");
@@ -875,54 +882,48 @@ const upload = multer({
 // Protected File Upload
 app.post("/bioqr/files/upload", authenticateToken, (req, res) => {
   console.log("📁 Upload request received for user:", req.user.userId);
-
-  upload.single("file")(req, res, (err) => {
+  upload.single("file")(req, res, async (err) => { // NOTE: Added async here
     if (err) {
       console.error("❌ Multer error:", err);
-      return res.status(400).json({
-        success: false,
-        message: `Upload error: ${err.message}`,
-      });
+      return res.status(400).json({ success: false, message: `Upload error: ${err.message}` });
     }
-
-    const userId = req.user.userId; // Get from JWT token
+    const userId = req.user.userId;
     const file = req.file;
-
-    console.log("📁 Upload data:", {
-      userId,
-      file: file ? file.filename : "no file",
-    });
-
     if (!file) {
-      return res.status(400).json({
-        success: false,
-        message: "No file uploaded",
-      });
+      return res.status(400).json({ success: false, message: "No file uploaded" });
     }
-
-    const query =
-      "INSERT INTO files (user_id, filename, mimetype, filepath, size) VALUES (?, ?, ?, ?, ?)";
-
-    db.query(
-      query,
-      [userId, file.originalname, file.mimetype, file.path, file.size],
-      (err, result) => {
-        if (err) {
-          console.error("❌ DB insert error:", err);
-          return res.status(500).json({
-            success: false,
-            message: `Database error: ${err.message}`,
+    try {
+      // 1. Upload to Cloudinary
+      const result = await cloudinary.uploader.upload(file.path, {
+        resource_type: "auto", // Auto-detect image/video/etc
+        original_filename: file.originalname,
+        folder: "bioqr_user_files" // Optional folder name in Cloudinary
+      });
+      // 2. Insert URL into Database (instead of local filepath)
+      const query = "INSERT INTO files (user_id, filename, mimetype, filepath, size) VALUES (?, ?, ?, ?, ?)";
+      
+      db.query(
+        query,
+        [userId, file.originalname, file.mimetype, result.secure_url, file.size],
+        (err, dbResult) => {
+          // Clean up the local temp file
+          try { fs.unlinkSync(file.path); } catch(e) {} 
+          if (err) {
+            console.error("❌ DB insert error:", err);
+            return res.status(500).json({ success: false, message: `Database error: ${err.message}` });
+          }
+          console.log("✅ File uploaded to Cloudinary:", dbResult.insertId);
+          res.json({
+            success: true,
+            message: "File uploaded successfully!",
+            file_id: dbResult.insertId,
           });
         }
-
-        console.log("✅ File uploaded successfully:", result.insertId);
-        res.json({
-          success: true,
-          message: "File uploaded successfully!",
-          file_id: result.insertId,
-        });
-      }
-    );
+      );
+    } catch (uploadError) {
+      console.error("❌ Cloudinary upload failed:", uploadError);
+      return res.status(500).json({ success: false, message: "Cloud upload failed" });
+    }
   });
 });
 
@@ -972,7 +973,7 @@ app.get("/bioqr/files/:userId", authenticateToken, (req, res) => {
         filename: f.filename,
         mimetype: f.mimetype,
         size: f.size,
-        url: `${baseUrl}/${f.filepath.replace(/\\/g, "/")}`,
+        url: f.filepath,
         uploaded_at: f.uploaded_at,
       }));
 
@@ -1053,14 +1054,15 @@ app.get("/bioqr/files/download/:id", authenticateToken, (req, res) => {
         return res.status(404).send("File not found or access denied");
       }
 
-      const filePath = path.resolve(rows[0].filepath);
+      // const filePath = path.resolve(rows[0].filepath);
 
-      if (!fs.existsSync(filePath)) {
-        console.error("❌ File not found on disk:", filePath);
-        return res.status(404).send("File not found on disk");
-      }
+      // if (!fs.existsSync(filePath)) {
+      //   console.error("❌ File not found on disk:", filePath);
+      //   return res.status(404).send("File not found on disk");
+      // }
 
-      res.download(filePath, rows[0].filename);
+      res.redirect(rows[0].filepath);
+      //res.download(filePath, rows[0].filename);
     }
   );
 });
@@ -1148,16 +1150,8 @@ app.get("/access-file/:token", (req, res) => {
         }
 
         const file = fileResult[0];
-        const filePath = path.resolve(file.filepath);
 
-        if (!fs.existsSync(filePath)) {
-          return res.status(404).json({
-            success: false,
-            message: "File not found on disk",
-          });
-        }
-
-        res.download(filePath, file.filename);
+        res.redirect(file.filepath); 
       }
     );
   });
