@@ -16,6 +16,7 @@ import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Strategy as GitHubStrategy } from "passport-github2";
 import session from "express-session";
+import cloudinary from "cloudinary";
 
 dotenv.config();
 const app = express();
@@ -45,7 +46,6 @@ const JWT_REFRESH_SECRET =
 // __dirname workaround
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const cloudinary = require('cloudinary').v2;
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
