@@ -963,10 +963,7 @@ app.get("/bioqr/files/:userId", authenticateToken, (req, res) => {
         return res.status(500).json({ message: "Database error" });
       }
 
-      const baseUrl =
-        process.env.NODE_ENV === "production"
-          ? process.env.BASE_URL || "http://localhost:3000"
-          : "http://localhost:3000";
+      const baseUrl = process.env.BASE_URL || "http://localhost:3000";
 
       const files = rows.map((f) => ({
         id: f.id,
