@@ -1,0 +1,116 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme that always uses dark theme to match web app -->
+    <style name="Base.Theme.BioQR" parent="Theme.Material3.Dark.NoActionBar">
+        <!-- Primary brand color. -->
+        <item name="colorPrimary">@color/bioqr_primary</item>
+        <item name="colorPrimaryVariant">@color/bioqr_primary_dark</item>
+        <item name="colorOnPrimary">@color/bioqr_text_primary</item>
+        
+        <!-- Secondary brand color. -->
+        <item name="colorSecondary">@color/bioqr_accent</item>
+        <item name="colorSecondaryVariant">@color/bioqr_accent_dark</item>
+        <item name="colorOnSecondary">@color/bioqr_text_primary</item>
+
+        <!-- Status bar color. -->
+        <item name="android:statusBarColor">@color/bioqr_background</item>
+        <item name="android:navigationBarColor">@color/bioqr_background</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
+
+        <!-- Background colors -->
+        <item name="android:colorBackground">@color/bioqr_background</item>
+        <item name="colorSurface">@color/bioqr_card_background</item>
+        <item name="colorOnBackground">@color/bioqr_text_primary</item>
+        <item name="colorOnSurface">@color/bioqr_text_primary</item>
+        <item name="colorError">@color/bioqr_danger</item>
+        <item name="colorOnError">@color/bioqr_text_primary</item>
+
+        <!-- Typography -->
+        <item name="android:fontFamily">@font/inter_font_family</item>
+        <item name="fontFamily">@font/inter_font_family</item>
+        <item name="android:textColor">@color/bioqr_text_primary</item>
+        <item name="android:textColorHint">@color/bioqr_text_muted</item>
+
+        <!-- Component Styles -->
+        <item name="materialButtonStyle">@style/Widget.App.Button</item>
+        <item name="textInputStyle">@style/Widget.App.TextInputLayout</item>
+        <item name="materialCardViewStyle">@style/Widget.App.CardView</item>
+
+        <!-- Control Activated/Checked state colors -->
+        <item name="colorControlActivated">@color/bioqr_primary</item>
+        <item name="colorControlNormal">@color/bioqr_text_muted</item>
+
+        <!-- Window background with gradients matching web app -->
+        <item name="android:windowBackground">@drawable/window_background_gradient</item>
+    </style>
+
+    <style name="Theme.BioQR" parent="Base.Theme.BioQR" />
+
+    <!-- Specific Widget Styles -->
+    <style name="Widget.App.Button" parent="Widget.Material3.Button">
+        <item name="android:textColor">@color/bioqr_text_primary</item>
+        <item name="cornerRadius">14dp</item>
+        <item name="android:paddingTop">14dp</item>
+        <item name="android:paddingBottom">14dp</item>
+        <item name="android:paddingStart">28dp</item>
+        <item name="android:paddingEnd">28dp</item>
+        <item name="android:fontFamily">@font/inter_semibold</item>
+        <item name="android:letterSpacing">0.02</item>
+        <!-- Use gradient background to match web app -->
+        <item name="android:background">@drawable/button_gradient_background</item>
+    </style>
+
+    <style name="Widget.App.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="strokeColor">@color/bioqr_primary_selector</item>
+        <item name="android:textColor">@color/bioqr_text_primary</item>
+        <item name="cornerRadius">14dp</item>
+        <item name="android:paddingTop">14dp</item>
+        <item name="android:paddingBottom">14dp</item>
+        <item name="android:paddingStart">28dp</item>
+        <item name="android:paddingEnd">28dp</item>
+        <item name="android:fontFamily">@font/inter_semibold</item>
+        <item name="rippleColor">@color/bioqr_primary_light_alpha30</item>
+        <item name="android:backgroundTint">#00000000</item>
+    </style>
+
+    <style name="Widget.App.TextInputLayout" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="boxStrokeColor">@color/bioqr_primary_selector</item>
+        <item name="hintTextColor">@color/bioqr_primary</item>
+        <item name="boxBackgroundColor">@color/bioqr_card_background_elevated</item>
+        <item name="boxCornerRadiusTopStart">12dp</item>
+        <item name="boxCornerRadiusTopEnd">12dp</item>
+        <item name="boxCornerRadiusBottomStart">12dp</item>
+        <item name="boxCornerRadiusBottomEnd">12dp</item>
+    </style>
+
+    <style name="Widget.App.CardView" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardBackgroundColor">@color/bioqr_card_background</item>
+        <item name="cardElevation">4dp</item>
+        <item name="cardCornerRadius">24dp</item>
+    </style>
+
+    <!-- Text Appearances -->
+    <style name="TextAppearance.App.Headline1" parent="TextAppearance.Material3.HeadlineLarge">
+        <item name="android:fontFamily">@font/inter_black</item>
+        <item name="android:textColor">@color/bioqr_text_primary</item>
+        <item name="lineHeight">48sp</item>
+    </style>
+
+    <style name="TextAppearance.App.Headline2" parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="android:fontFamily">@font/inter_bold</item>
+        <item name="android:textColor">@color/bioqr_text_primary</item>
+    </style>
+
+    <style name="TextAppearance.App.BodyLarge" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:fontFamily">@font/inter_regular</item>
+        <item name="android:textColor">@color/bioqr_text_secondary</item>
+        <item name="lineHeight">28sp</item>
+    </style>
+
+    <style name="TextAppearance.App.HeroBadge" parent="TextAppearance.Material3.LabelSmall">
+        <item name="android:fontFamily">@font/inter_bold</item>
+        <item name="android:textColor">@color/bioqr_primary</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.1</item>
+    </style>
+
+</resources>

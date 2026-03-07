@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingTop="16dp"
+    android:paddingBottom="16dp"
+    android:paddingStart="24dp"
+    android:paddingEnd="24dp">
+
+    <!-- Logo Icon + Text -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <!-- Shield with QR pattern -->
+        <ImageView
+            android:id="@+id/ivLogoShield"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_bioqr_logo"
+            android:contentDescription="BioQR Logo"
+            app:tint="@color/bioqr_primary" />
+
+        <!-- BioQR Text -->
+        <TextView
+            android:id="@+id/tvLogoBrand"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:text="BioQR"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="@color/bioqr_text_primary"
+            android:fontFamily="@font/inter_bold"
+            android:letterSpacing="0.02" />
+
+    </LinearLayout>
+
+    <!-- Spacer -->
+    <View
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_weight="1" />
+
+    <!-- Optional menu/settings icon for main pages -->
+    <ImageView
+        android:id="@+id/ivMenuIcon"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@drawable/ic_menu"
+        android:contentDescription="Menu"
+        android:visibility="gone"
+        app:tint="@color/bioqr_text_secondary"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:padding="4dp" />
+
+</LinearLayout>

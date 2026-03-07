@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bioqr_background">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+        
+        <!-- Logo Header -->
+        <include
+            android:id="@+id/includeHeaderLogo"
+            layout="@layout/include_header_logo" />
+            
+        <!-- Content -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+        <!-- Page Title -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Generate QR Code"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="@color/bioqr_text_primary"
+            android:fontFamily="@font/inter_bold"
+            android:gravity="center"
+            android:layout_marginBottom="8dp" />
+            
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Create secure QR codes for your files"
+            android:textSize="14sp"
+            android:textColor="@color/bioqr_text_secondary"
+            android:fontFamily="@font/inter_regular"
+            android:gravity="center"
+            android:layout_marginBottom="24dp" />
+
+        <!-- File Information -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/rounded_background"
+            android:padding="16dp"
+            android:layout_marginBottom="24dp">
+
+            <TextView
+                android:id="@+id/tvFileInfo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="File: example.pdf"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/primary_text"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/tvQRDuration"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="QR Code will be valid for: 60 minutes"
+                android:textSize="14sp"
+                android:textColor="@color/info" />
+
+        </LinearLayout>
+
+        <!-- Status -->
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Ready to generate secure QR code"
+            android:textSize="16sp"
+            android:textColor="@color/secondary_text"
+            android:gravity="center"
+            android:layout_marginBottom="24dp"
+            android:minHeight="48dp"/>
+
+        <!-- Authentication Button -->
+        <Button
+            android:id="@+id/btnStartAuth"
+            style="@style/Widget.App.Button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Authenticate &amp; Generate QR"
+            android:layout_marginBottom="24dp" />
+
+        <!-- QR Code Display -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/rounded_background"
+            android:padding="24dp"
+            android:gravity="center"
+            android:layout_marginBottom="24dp">
+
+            <ImageView
+                android:id="@+id/ivQRCode"
+                android:layout_width="280dp"
+                android:layout_height="280dp"
+                android:layout_gravity="center"
+                android:background="@color/white"
+                android:padding="8dp"
+                android:scaleType="fitCenter"
+                android:contentDescription="Generated QR Code"
+                android:visibility="gone" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Scan this QR code to access your file"
+                android:textSize="14sp"
+                android:textColor="@color/secondary_text"
+                android:gravity="center"
+                android:layout_marginTop="16dp"
+                android:visibility="gone"
+                android:id="@+id/tvQRInstructions" />
+
+        </LinearLayout>
+
+        <!-- Action Buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp">
+
+            <Button
+                android:id="@+id/btnBackToFiles"
+                style="@style/Widget.App.Button.Outlined"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Back to Files"
+                android:layout_marginEnd="8dp" />
+
+            <Button
+                android:id="@+id/btnShareQR"
+                style="@style/Widget.App.Button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Share QR"
+                android:layout_marginStart="8dp"
+                android:visibility="gone" />
+
+        </LinearLayout>
+        
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView>

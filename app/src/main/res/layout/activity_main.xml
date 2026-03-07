@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@color/bioqr_background">
+
+    <!-- Logo Header -->
+    <include
+        android:id="@+id/includeHeaderLogo"
+        layout="@layout/include_header_logo" />
+        
+    <!-- Main Content -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="24dp">
+
+    <!-- Welcome Section -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Next-Generation\nBiometric Security\nPlatform"
+        android:textSize="32sp"
+        android:textStyle="bold"
+        android:textColor="@color/bioqr_text_primary"
+        android:fontFamily="@font/inter_black"
+        android:gravity="center"
+        android:layout_marginBottom="16dp"
+        android:lineSpacingExtra="4dp" />
+    
+    <!-- Status Text -->
+    <TextView
+        android:id="@+id/statusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Transform your security infrastructure with AI-powered biometric authentication and dynamic QR code technology."
+        android:textSize="16sp"
+        android:textColor="@color/bioqr_text_secondary"
+        android:fontFamily="@font/inter_regular"
+        android:gravity="center"
+        android:layout_marginBottom="48dp"
+        android:lineSpacingExtra="6dp" />
+
+        <!-- Login/Register Buttons (shown when not logged in) -->
+        <Button
+            android:id="@+id/btnLogin"
+            style="@style/Widget.App.Button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Sign In"
+            android:layout_marginBottom="16dp" />
+
+        <Button
+            android:id="@+id/btnRegister"
+            style="@style/Widget.App.Button.Outlined"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Create Account"
+            android:layout_marginBottom="32dp" />
+
+        <!-- Manage Files Button (shown when logged in) -->
+        <Button
+            android:id="@+id/btnManageFiles"
+            style="@style/Widget.App.Button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Manage Files &amp; Generate QR"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone" />
+
+        <!-- Receive Files Button (shown when logged in) -->
+        <Button
+            android:id="@+id/btnReceiveFiles"
+            style="@style/Widget.App.Button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Receive Files Securely"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone" />
+
+        <!-- Logout Button (shown when logged in) -->
+        <Button
+            android:id="@+id/btnLogout"
+            style="@style/Widget.App.Button.Outlined"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Logout"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone" />
+
+        <!-- Footer -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Secure • Fast • Reliable"
+            android:textSize="14sp"
+            android:textColor="@color/bioqr_text_muted"
+            android:fontFamily="@font/inter_regular"
+            android:gravity="center"
+            android:layout_marginTop="32dp" />
+            
+    </LinearLayout>
+
+</LinearLayout>
