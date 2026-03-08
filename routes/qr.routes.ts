@@ -108,7 +108,52 @@ router.get(
                     res.setHeader("Expires", "0");
                     res.setHeader("Surrogate-Control", "no-store");
                     const base64Data = Buffer.from(buffer).toString("base64");
-                    const dataUrl = `data:${file.mimetype};base64,${base64Data}`;
+                    let contentHtml = "";
+
+                    if (file.mimetype.startsWith("image/")) {
+                        contentHtml = `<img src="data:${file.mimetype};base64,${base64Data}" class="protected-content" style="pointer-events: none;" />`;
+                    } else if (file.mimetype === "application/pdf") {
+                        contentHtml = `
+                            <div id="pdf-container" style="width: 100%; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; box-sizing: border-box; overflow-y: auto;"></div>
+                            <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+                            <script>
+                                const pdfData = atob("${base64Data}");
+                                const uint8Array = new Uint8Array(pdfData.length);
+                                for (let i = 0; i < pdfData.length; i++) {
+                                    uint8Array[i] = pdfData.charCodeAt(i);
+                                }
+                                var pdfjsLib = window['pdfjs-dist/build/pdf'];
+                                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+                                
+                                pdfjsLib.getDocument({data: uint8Array}).promise.then(function(pdf) {
+                                    const container = document.getElementById('pdf-container');
+                                    for(let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                                        pdf.getPage(pageNum).then(function(page) {
+                                            var viewport = page.getViewport({scale: window.innerWidth > 768 ? 1.5 : 1.0});
+                                            var canvas = document.createElement('canvas');
+                                            var context = canvas.getContext('2d');
+                                            canvas.height = viewport.height;
+                                            canvas.width = viewport.width;
+                                            canvas.className = "protected-content";
+                                            canvas.style.pointerEvents = "none";
+                                            canvas.style.marginBottom = "15px";
+                                            canvas.style.maxWidth = "100%";
+                                            canvas.style.height = "auto";
+                                            container.appendChild(canvas);
+                                            page.render({canvasContext: context, viewport: viewport});
+                                        });
+                                    }
+                                }).catch(function(err) {
+                                    document.getElementById('pdf-container').innerHTML = '<p style="color:white; margin-top:20px;">Error rendering PDF.</p>';
+                                    console.error(err);
+                                });
+                            </script>
+                        `;
+                    } else if (file.mimetype.startsWith("video/")) {
+                        contentHtml = `<video src="data:${file.mimetype};base64,${base64Data}" class="protected-content" controls controlsList="nodownload" style="max-height: 90vh; width: 100%; pointer-events: auto;"></video>`;
+                    } else {
+                        contentHtml = `<p style="color: white; text-align: center; margin-top: 50px;">Cannot securely preview this file type (${file.mimetype}).</p>`;
+                    }
 
                     const html = `
                     <!DOCTYPE html>
@@ -118,19 +163,18 @@ router.get(
                         <meta name="viewport" content="width=device-width, initial-scale=1.0">
                         <title>Secure View - ${file.filename}</title>
                         <style>
-                            body { margin: 0; padding: 0; background: #111; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; user-select: none; -webkit-user-select: none; position: relative; }
-                            .protected-content { max-width: 100%; max-height: 100vh; pointer-events: none; filter: contrast(0.9) brightness(0.9); }
-                            .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; pointer-events: auto; }
+                            body { margin: 0; padding: 0; background: #111; min-height: 100vh; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; overflow-x: hidden; position: relative; }
+                            .protected-content { max-width: 100%; filter: contrast(0.9) brightness(0.9); display: block; margin: 0 auto; pointer-events: none; }
                             .watermark {
-                                position: absolute; top: 0; left: 0; width: 200%; height: 200%;
+                                position: fixed; top: 0; left: 0; width: 200vw; height: 200vh;
                                 background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.15) 0, rgba(255,255,255,0.15) 2px, transparent 2px, transparent 150px);
                                 z-index: 9998; pointer-events: none; transform: translate(-25%, -25%);
                             }
                             .watermark-text {
-                                position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-wrap: wrap; justify-content: space-around; align-items: center; align-content: space-around;
-                                z-index: 9998; pointer-events: none; opacity: 0.15; font-family: sans-serif; font-weight: bold; font-size: 24px; color: white; transform: rotate(-30deg) scale(1.5);
+                                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; display: flex; flex-wrap: wrap; justify-content: space-around; align-items: center; align-content: space-around;
+                                z-index: 9998; pointer-events: none; opacity: 0.15; font-family: sans-serif; font-weight: bold; font-size: 24px; color: white; transform: rotate(-30deg) scale(1.5); overflow: hidden;
                             }
-                            .warning { position: absolute; bottom: 20px; color: rgba(255,255,255,0.8); font-family: sans-serif; font-weight: bold; font-size: 14px; text-align: center; width: 100%; z-index: 10000; pointer-events: none; text-shadow: 1px 1px 5px rgba(0,0,0,0.8); }
+                            .warning { position: fixed; bottom: 20px; color: rgba(255,255,255,0.8); font-family: sans-serif; font-weight: bold; font-size: 14px; text-align: center; width: 100%; z-index: 10000; pointer-events: none; text-shadow: 1px 1px 5px rgba(0,0,0,0.8); }
                         </style>
                         <script>
                             document.addEventListener('contextmenu', event => event.preventDefault());
@@ -140,16 +184,14 @@ router.get(
                         </script>
                     </head>
                     <body>
-                        <div class="overlay"></div>
                         <div class="watermark"></div>
                         <div class="watermark-text">
                             ${Array(50).fill('CONFIDENTIAL<br>DO NOT SHARE').join('&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;')}
                         </div>
                         <div class="warning">Secure View - Screen Recording, Screenshots, & Sharing Strictly Prohibited</div>
-                        ${file.mimetype.startsWith('image/')
-                            ? `<img src="${dataUrl}" class="protected-content" />`
-                            : `<embed src="${dataUrl}" type="${file.mimetype}" class="protected-content" width="100%" height="100%" />`
-                        }
+                        <div style="position: relative; z-index: 1; align-items: center; display: flex; justify-content: center; min-height: 100vh; width: 100vw; pointer-events: auto;">
+                            ${contentHtml}
+                        </div>
                     </body>
                     </html>
                     `;
