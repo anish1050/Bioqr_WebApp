@@ -22,6 +22,7 @@ router.post(
             );
 
             const isOneTime = req.body.is_one_time === true || req.body.is_one_time === "true";
+            const isUnshareable = req.body.is_unshareable === true || req.body.is_unshareable === "true";
 
             if (!file_id) {
                 res.status(400).json({ error: "file_id is required" });
@@ -39,7 +40,7 @@ router.post(
             const token = crypto.randomBytes(16).toString("hex");
             const expiresAt = new Date(Date.now() + duration * 60 * 1000);
 
-            await QrTokenQueries.create(token, userId, file_id, expiresAt, isOneTime);
+            await QrTokenQueries.create(token, userId, file_id, expiresAt, isOneTime, isUnshareable);
 
             const baseUrl = process.env.BASE_URL || "http://localhost:3000";
             const qrData = `${baseUrl}/access-file/${token}`;
@@ -91,6 +92,31 @@ router.get(
                 console.log(`❌ File ${qrToken.file_id} not found.`);
                 res.status(404).json({ success: false, message: "File not found" });
                 return;
+            }
+
+            if (qrToken.is_unshareable) {
+                // If unshareable, we do not want to redirect directly to the raw file which could just be copied.
+                // We fetch the file and stream it as an attachment so it downloads rather than opens in the browser.
+                try {
+                    const response = await fetch(file.filepath);
+                    if (!response.ok) throw new Error("Failed to fetch file from Cloudinary");
+
+                    const buffer = await response.arrayBuffer();
+
+                    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+                    res.setHeader("Pragma", "no-cache");
+                    res.setHeader("Expires", "0");
+                    res.setHeader("Surrogate-Control", "no-store");
+                    res.setHeader("Content-Disposition", `attachment; filename="${file.filename}"`);
+                    res.setHeader("Content-Type", file.mimetype || "application/octet-stream");
+
+                    res.send(Buffer.from(buffer));
+                    return;
+                } catch (fetchError) {
+                    console.error("❌ Error fetching unshareable file:", fetchError);
+                    res.status(500).json({ success: false, message: "Error downloading unshareable file" });
+                    return;
+                }
             }
 
             console.log(`✅ Redirecting to file: ${file.filepath}`);

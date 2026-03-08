@@ -9,6 +9,10 @@ const db = mysql.createConnection({
     user: process.env.DB_USER || "root",
     password: process.env.DB_PASSWORD || "",
     database: process.env.DB_NAME || "bioqr",
+    ssl: {
+        minVersion: "TLSv1.2",
+        rejectUnauthorized: true,
+    },
 });
 
 console.log("🔧 Setting up BioQR database...");
@@ -66,6 +70,7 @@ db.connect((err) => {
           user_id INT NOT NULL,
           file_id INT NOT NULL,
           is_one_time BOOLEAN DEFAULT FALSE,
+          is_unshareable BOOLEAN DEFAULT FALSE,
           is_used BOOLEAN DEFAULT FALSE,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           expires_at TIMESTAMP NOT NULL,

@@ -44,6 +44,7 @@ export interface QrToken {
     user_id: number;
     file_id: number;
     is_one_time: boolean;
+    is_unshareable: boolean;
     is_used: boolean;
     created_at: Date;
     expires_at: Date;
@@ -281,11 +282,12 @@ export const QrTokenQueries = {
         userId: number,
         fileId: number,
         expiresAt: Date,
-        isOneTime: boolean = false
+        isOneTime: boolean = false,
+        isUnshareable: boolean = false
     ): Promise<any> =>
         execute(
-            "INSERT INTO qr_tokens (token, user_id, file_id, expires_at, is_one_time) VALUES (?, ?, ?, ?, ?)",
-            [token, userId, fileId, expiresAt, isOneTime]
+            "INSERT INTO qr_tokens (token, user_id, file_id, expires_at, is_one_time, is_unshareable) VALUES (?, ?, ?, ?, ?, ?)",
+            [token, userId, fileId, expiresAt, isOneTime, isUnshareable]
         ),
 
     /** Mark a one-time QR token as used */

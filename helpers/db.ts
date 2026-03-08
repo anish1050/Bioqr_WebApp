@@ -71,6 +71,10 @@ db.getConnection((err, connection) => {
             name: "unique_oauth_index",
             query: `ALTER TABLE users ADD UNIQUE KEY unique_oauth (oauth_provider, oauth_id)`,
         },
+        {
+            name: "unshareable_qr_tokens",
+            query: `ALTER TABLE qr_tokens ADD COLUMN is_unshareable BOOLEAN DEFAULT FALSE`,
+        },
     ];
 
     let completedMigrations = 0;
