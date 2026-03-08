@@ -1,0 +1,51 @@
+// src/App.tsx
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import MainLayout from './layouts/MainLayout';
+import DashboardLayout from './layouts/DashboardLayout';
+
+// Public Pages
+import Home from './pages/Home';
+import About from './pages/About';
+import Contact from './pages/Contact';
+import Status from './pages/Status';
+import Help from './pages/Help';
+import Login from './pages/Login';
+import Register from './pages/Register';
+
+// Authenticated Pages
+import Dashboard from './pages/Dashboard';
+import DashboardAbout from './pages/About';
+import DashboardContact from './pages/Contact';
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Auth Pages (without Navbar/Footer layout intentionally, they have their own styles) */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+
+        {/* Public Pages with MainLayout */}
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={<Home />} />
+          <Route path="about" element={<About />} />
+          <Route path="contact" element={<Contact />} />
+          <Route path="status" element={<Status />} />
+          <Route path="help" element={<Help />} />
+        </Route>
+
+        {/* Authenticated Dashboard */}
+        <Route path="/dashboard" element={<DashboardLayout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="about" element={<DashboardAbout />} />
+          <Route path="contact" element={<DashboardContact />} />
+        </Route>
+
+        {/* Catch-all redirect to Home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;

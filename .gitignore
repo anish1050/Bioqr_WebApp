@@ -39,5 +39,45 @@ dist-ssr
 *.sln
 *.sw?
 
-#Environment variables
+# Environment variables
 .env
+.env.*
+
+# User uploads — generated at runtime, never commit
+uploads/
+
+# Debug and demo files
+public/*-debug.*
+public/*-demo.*
+**/oauth-debug.*
+**/upload-debug.*
+**/username-demo.*
+validate-oauth.js
+
+# Dev-only documentation
+public/BUTTON_REMOVAL_SUMMARY.md
+public/FILE_UPLOAD_FIX.md
+
+# Large binary / media assets
+*.mp4
+*.pptx
+
+# Temporary files
+tracked_files.txt
+*.tmp
+
+# OS files
+Thumbs.db
+Desktop.ini
+
+# Gradle / Android app — not needed for web production
+app/
+gradle/
+build.gradle.kts
+settings.gradle.kts
+gradle.properties
+gradlew
+gradlew.bat
+
+# Optional: uncomment to ignore package-lock.json
+# package-lock.json
