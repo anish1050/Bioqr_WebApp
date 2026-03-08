@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bioqr_background">
+
+    <!-- Logo Header -->
+    <include
+        android:id="@+id/includeHeaderLogo"
+        layout="@layout/include_header_logo" />
+        
+    <!-- Main Content -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+    <!-- Page Title -->
+    <TextView
+        android:id="@+id/tvWelcome"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="File Manager"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="@color/bioqr_text_primary"
+        android:fontFamily="@font/inter_bold"
+        android:gravity="center"
+        android:layout_marginBottom="8dp" />
+        
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Upload and manage your secure files"
+        android:textSize="14sp"
+        android:textColor="@color/bioqr_text_secondary"
+        android:fontFamily="@font/inter_regular"
+        android:gravity="center"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Upload Section -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="16dp">
+
+        <Button
+            android:id="@+id/btnUploadFile"
+            style="@style/Widget.App.Button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Upload File"
+            android:layout_marginEnd="8dp" />
+
+        <Button
+            android:id="@+id/btnRefreshFiles"
+            style="@style/Widget.App.Button.Outlined"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Refresh" />
+
+    </LinearLayout>
+
+    <!-- Upload Progress -->
+    <ProgressBar
+        android:id="@+id/pbUpload"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:visibility="gone"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:indeterminate="true" />
+
+    <!-- Files Section Header -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Your Files"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="@color/primary_text"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Loading indicator for files -->
+    <ProgressBar
+        android:id="@+id/pbLoading"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginBottom="16dp"
+        android:visibility="gone" />
+
+    <!-- Files List -->
+    <ListView
+        android:id="@+id/listViewFiles"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="@drawable/rounded_background"
+        android:padding="8dp"
+        android:divider="@color/divider"
+        android:dividerHeight="1dp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Selected File Section -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/rounded_background"
+        android:padding="16dp"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:id="@+id/tvSelectedFile"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="No file selected"
+            android:textSize="16sp"
+            android:textColor="@color/primary_text"
+            android:layout_marginBottom="12dp" />
+
+        <!-- One-Time QR Selection -->
+        <CheckBox
+            android:id="@+id/cbOneTimeQR"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="One-Time Use QR (Expires after first download)"
+            android:textSize="14sp"
+            android:textColor="@color/primary_text"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Unshareable Selection -->
+        <CheckBox
+            android:id="@+id/cbUnshareable"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Unshareable (File cannot be shared after download)"
+            android:textSize="14sp"
+            android:textColor="@color/primary_text"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Duration Selection -->
+        <LinearLayout
+            android:id="@+id/llDurationContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="QR Code Validity Duration:"
+                android:textSize="14sp"
+                android:textColor="@color/secondary_text"
+                android:layout_marginBottom="8dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="8dp">
+
+                <SeekBar
+                    android:id="@+id/seekBarDuration"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:max="480"
+                    android:progress="60" />
+
+                <Spinner
+                    android:id="@+id/spinnerDurationUnit"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp" />
+
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvQRDuration"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="QR Valid for: 60 Minutes"
+                android:textSize="14sp"
+                android:textColor="@color/info"
+                android:layout_marginBottom="16dp" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btnGenerateQR"
+            style="@style/Widget.App.Button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Generate QR Code"
+            android:enabled="false" />
+
+    </LinearLayout>
+    
+    </LinearLayout>
+
+</LinearLayout>
