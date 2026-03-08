@@ -20,7 +20,7 @@ A modern, comprehensive web application built with React, Vite, Node.js, and MyS
 *Every file listed below is clickable and will take you directly to its source code on GitHub.*
 
 ### Root Architecture
-- [`.env.example`](./.env.example) - Template for necessary environment variables (Database, OAuth).
+- `.env` - Production and development environment variables (Database, OAuth).
 - [`.gitignore`](./.gitignore) - Tracked exclusions for compiled builds and keys.
 - [`package.json`](./package.json) - All core Node dependencies and build scripts.
 - [`server.ts`](./server.ts) - The main Node.js/Express bootstrap server encompassing the backend routes, session middleware, and static production serving.
@@ -104,9 +104,9 @@ npm install
 
 ### 2. Environment Variables
 
-Create an `.env` file from the supplied example:
+Create an `.env` file in the root directory:
 ```bash
-cp .env.example .env
+touch .env
 ```
 Populate `.env` with actual development credentials (database, OAuth tokens setup via Google Cloud Console & GitHub Apps explicitly, session securely typed hashes, etc.).
 
