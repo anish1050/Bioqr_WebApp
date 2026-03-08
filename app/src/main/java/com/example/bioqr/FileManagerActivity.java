@@ -13,6 +13,8 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.SeekBar;
@@ -59,6 +61,8 @@ public class FileManagerActivity extends AppCompatActivity {
     private SeekBar seekBarDuration;
     private ProgressBar pbLoading, pbUpload;
     private Spinner spinnerDurationUnit;
+    private CheckBox cbOneTimeQR, cbUnshareable;
+    private LinearLayout llDurationContainer;
 
     // User data
     private int userId = -1;
@@ -98,6 +102,9 @@ public class FileManagerActivity extends AppCompatActivity {
         pbLoading = findViewById(R.id.pbLoading);
         pbUpload = findViewById(R.id.pbUpload);
         spinnerDurationUnit = findViewById(R.id.spinnerDurationUnit);
+        cbOneTimeQR = findViewById(R.id.cbOneTimeQR);
+        cbUnshareable = findViewById(R.id.cbUnshareable);
+        llDurationContainer = findViewById(R.id.llDurationContainer);
 
         // Setup duration unit spinner
         ArrayAdapter<String> unitAdapter = new ArrayAdapter<>(this,
@@ -140,6 +147,11 @@ public class FileManagerActivity extends AppCompatActivity {
     private void setupListeners() {
         // Upload file button
         btnUploadFile.setOnClickListener(v -> pickFile());
+
+        // Checkbox listener
+        cbOneTimeQR.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            llDurationContainer.setVisibility(isChecked ? View.GONE : View.VISIBLE);
+        });
 
         // File list selection
         listViewFiles.setOnItemClickListener((parent, view, position, id) -> {
@@ -202,6 +214,8 @@ public class FileManagerActivity extends AppCompatActivity {
                 intent.putExtra("file_id", selectedFile.getId());
                 intent.putExtra("file_name", selectedFile.getFilename());
                 intent.putExtra("duration_minutes", qrDurationMinutes);
+                intent.putExtra("is_one_time", cbOneTimeQR.isChecked());
+                intent.putExtra("is_unshareable", cbUnshareable.isChecked());
                 startActivity(intent);
             }
         });
@@ -295,12 +309,19 @@ public class FileManagerActivity extends AppCompatActivity {
     }
 
     private void uploadFileToServer(File file) {
-        OkHttpClient client = new OkHttpClient.Builder()
-                .connectTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
-                .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
-                .build();
+        OkHttpClient client = NetworkClient.getClient();
 
-        RequestBody fileBody = RequestBody.create(file, MediaType.parse("application/octet-stream"));
+        // Dynamically determine MIME type
+        String mimeType = "application/octet-stream";
+        String fileName = file.getName().toLowerCase();
+        if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) mimeType = "image/jpeg";
+        else if (fileName.endsWith(".png")) mimeType = "image/png";
+        else if (fileName.endsWith(".gif")) mimeType = "image/gif";
+        else if (fileName.endsWith(".pdf")) mimeType = "application/pdf";
+        else if (fileName.endsWith(".mp4")) mimeType = "video/mp4";
+        else if (fileName.endsWith(".txt")) mimeType = "text/plain";
+
+        RequestBody fileBody = RequestBody.create(file, MediaType.parse(mimeType));
         RequestBody requestBody = new MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
                 .addFormDataPart("file", file.getName(), fileBody)
@@ -384,10 +405,7 @@ public class FileManagerActivity extends AppCompatActivity {
 
         pbLoading.setVisibility(View.VISIBLE);
 
-        OkHttpClient client = new OkHttpClient.Builder()
-                .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-                .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-                .build();
+        OkHttpClient client = NetworkClient.getClient();
 
         Request request = new Request.Builder()
                 .url(ApiConfig.getFilesUrl() + "/" + userId)

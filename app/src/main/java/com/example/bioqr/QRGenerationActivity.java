@@ -50,6 +50,8 @@ public class QRGenerationActivity extends AppCompatActivity {
     private int fileId;
     private String fileName;
     private int durationMinutes;
+    private boolean isOneTime;
+    private boolean isUnshareable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,6 +73,8 @@ public class QRGenerationActivity extends AppCompatActivity {
         fileId = intent.getIntExtra("file_id", -1);
         fileName = intent.getStringExtra("file_name");
         durationMinutes = intent.getIntExtra("duration_minutes", 60);
+        isOneTime = intent.getBooleanExtra("is_one_time", false);
+        isUnshareable = intent.getBooleanExtra("is_unshareable", false);
 
         if (userId == -1 || fileId == -1 || authToken == null) {
             Toast.makeText(this, "Invalid data received", Toast.LENGTH_SHORT).show();
@@ -145,18 +149,22 @@ public class QRGenerationActivity extends AppCompatActivity {
     private void updateUI() {
         tvFileInfo.setText("File: " + fileName);
 
-        String durationText;
-        if (durationMinutes < 60) {
-            durationText = durationMinutes + " minute" + (durationMinutes != 1 ? "s" : "");
-        } else if (durationMinutes < 1440) {
-            int hours = durationMinutes / 60;
-            durationText = hours + " hour" + (hours != 1 ? "s" : "");
+        if (isOneTime) {
+            tvQRDuration.setText("QR Code will be valid for: One-Time Use");
         } else {
-            int days = durationMinutes / 1440;
-            durationText = days + " day" + (days != 1 ? "s" : "");
+            String durationText;
+            if (durationMinutes < 60) {
+                durationText = durationMinutes + " minute" + (durationMinutes != 1 ? "s" : "");
+            } else if (durationMinutes < 1440) {
+                int hours = durationMinutes / 60;
+                durationText = hours + " hour" + (hours != 1 ? "s" : "");
+            } else {
+                int days = durationMinutes / 1440;
+                durationText = days + " day" + (days != 1 ? "s" : "");
+            }
+            tvQRDuration.setText("QR Code will be valid for: " + durationText);
         }
 
-        tvQRDuration.setText("QR Code will be valid for: " + durationText);
         tvStatus.setText("Ready to generate secure QR code. Tap 'Authenticate' to begin.");
     }
 
@@ -166,15 +174,14 @@ public class QRGenerationActivity extends AppCompatActivity {
         btnStartAuth.setEnabled(false);
         tvStatus.setText("Generating secure QR code...");
 
-        OkHttpClient client = new OkHttpClient.Builder()
-                .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-                .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-                .build();
+        OkHttpClient client = NetworkClient.getClient();
 
         JSONObject json = new JSONObject();
         try {
             json.put("file_id", fileId);
             json.put("duration", durationMinutes);
+            json.put("is_one_time", isOneTime);
+            json.put("is_unshareable", isUnshareable);
             Log.d(TAG, "Request JSON: " + json.toString());
         } catch (JSONException e) {
             Log.e(TAG, "Error creating JSON", e);
@@ -327,6 +334,9 @@ public class QRGenerationActivity extends AppCompatActivity {
     }
 
     private String getDurationText() {
+        if (isOneTime) {
+            return "One-Time Use";
+        }
         if (durationMinutes < 60) {
             return durationMinutes + " minute" + (durationMinutes != 1 ? "s" : "");
         } else if (durationMinutes < 1440) {

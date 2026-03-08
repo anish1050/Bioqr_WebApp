@@ -221,10 +221,7 @@ public class LoginActivity extends AppCompatActivity {
     private void performLogin(String usernameEmail, String password) {
         Log.d(TAG, "Attempting login for user: " + usernameEmail);
 
-        OkHttpClient client = new OkHttpClient.Builder()
-                .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-                .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-                .build();
+        OkHttpClient client = NetworkClient.getClient();
 
         JSONObject json = new JSONObject();
         try {

@@ -124,45 +124,72 @@
             android:textColor="@color/primary_text"
             android:layout_marginBottom="12dp" />
 
-        <!-- Duration Selection -->
-        <TextView
+        <!-- One-Time QR Selection -->
+        <CheckBox
+            android:id="@+id/cbOneTimeQR"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="QR Code Validity Duration:"
+            android:text="One-Time Use QR (Expires after first download)"
             android:textSize="14sp"
-            android:textColor="@color/secondary_text"
+            android:textColor="@color/primary_text"
             android:layout_marginBottom="8dp" />
 
-        <LinearLayout
+        <!-- Unshareable Selection -->
+        <CheckBox
+            android:id="@+id/cbUnshareable"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="8dp">
-
-            <SeekBar
-                android:id="@+id/seekBarDuration"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:max="480"
-                android:progress="60" />
-
-            <Spinner
-                android:id="@+id/spinnerDurationUnit"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp" />
-
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/tvQRDuration"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="QR Valid for: 60 Minutes"
+            android:text="Unshareable (File cannot be shared after download)"
             android:textSize="14sp"
-            android:textColor="@color/info"
-            android:layout_marginBottom="16dp" />
+            android:textColor="@color/primary_text"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Duration Selection -->
+        <LinearLayout
+            android:id="@+id/llDurationContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="QR Code Validity Duration:"
+                android:textSize="14sp"
+                android:textColor="@color/secondary_text"
+                android:layout_marginBottom="8dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="8dp">
+
+                <SeekBar
+                    android:id="@+id/seekBarDuration"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:max="480"
+                    android:progress="60" />
+
+                <Spinner
+                    android:id="@+id/spinnerDurationUnit"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp" />
+
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvQRDuration"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="QR Valid for: 60 Minutes"
+                android:textSize="14sp"
+                android:textColor="@color/info"
+                android:layout_marginBottom="16dp" />
+        </LinearLayout>
 
         <Button
             android:id="@+id/btnGenerateQR"

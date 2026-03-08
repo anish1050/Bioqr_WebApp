@@ -367,10 +367,7 @@ public class RegisterActivity extends AppCompatActivity {
     private void performRegistration(String firstName, String lastName, String username, String email, String password) {
         Log.d(TAG, "Attempting registration for user: " + username);
 
-        OkHttpClient client = new OkHttpClient.Builder()
-                .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-                .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-                .build();
+        OkHttpClient client = NetworkClient.getClient();
 
         JSONObject json = new JSONObject();
         try {
