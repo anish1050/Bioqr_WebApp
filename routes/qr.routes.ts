@@ -107,10 +107,55 @@ router.get(
                     res.setHeader("Pragma", "no-cache");
                     res.setHeader("Expires", "0");
                     res.setHeader("Surrogate-Control", "no-store");
-                    res.setHeader("Content-Disposition", `attachment; filename="${file.filename}"`);
-                    res.setHeader("Content-Type", file.mimetype || "application/octet-stream");
+                    const base64Data = Buffer.from(buffer).toString("base64");
+                    const dataUrl = `data:${file.mimetype};base64,${base64Data}`;
 
-                    res.send(Buffer.from(buffer));
+                    const html = `
+                    <!DOCTYPE html>
+                    <html lang="en">
+                    <head>
+                        <meta charset="UTF-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <title>Secure View - ${file.filename}</title>
+                        <style>
+                            body { margin: 0; padding: 0; background: #111; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; user-select: none; -webkit-user-select: none; position: relative; }
+                            .protected-content { max-width: 100%; max-height: 100vh; pointer-events: none; filter: contrast(0.9) brightness(0.9); }
+                            .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; pointer-events: auto; }
+                            .watermark {
+                                position: absolute; top: 0; left: 0; width: 200%; height: 200%;
+                                background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.15) 0, rgba(255,255,255,0.15) 2px, transparent 2px, transparent 150px);
+                                z-index: 9998; pointer-events: none; transform: translate(-25%, -25%);
+                            }
+                            .watermark-text {
+                                position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-wrap: wrap; justify-content: space-around; align-items: center; align-content: space-around;
+                                z-index: 9998; pointer-events: none; opacity: 0.15; font-family: sans-serif; font-weight: bold; font-size: 24px; color: white; transform: rotate(-30deg) scale(1.5);
+                            }
+                            .warning { position: absolute; bottom: 20px; color: rgba(255,255,255,0.8); font-family: sans-serif; font-weight: bold; font-size: 14px; text-align: center; width: 100%; z-index: 10000; pointer-events: none; text-shadow: 1px 1px 5px rgba(0,0,0,0.8); }
+                        </style>
+                        <script>
+                            document.addEventListener('contextmenu', event => event.preventDefault());
+                            document.addEventListener('keydown', event => {
+                                if (event.ctrlKey || event.metaKey || event.key === "PrintScreen") event.preventDefault();
+                            });
+                        </script>
+                    </head>
+                    <body>
+                        <div class="overlay"></div>
+                        <div class="watermark"></div>
+                        <div class="watermark-text">
+                            ${Array(50).fill('CONFIDENTIAL<br>DO NOT SHARE').join('&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;')}
+                        </div>
+                        <div class="warning">Secure View - Screen Recording, Screenshots, & Sharing Strictly Prohibited</div>
+                        ${file.mimetype.startsWith('image/')
+                            ? `<img src="${dataUrl}" class="protected-content" />`
+                            : `<embed src="${dataUrl}" type="${file.mimetype}" class="protected-content" width="100%" height="100%" />`
+                        }
+                    </body>
+                    </html>
+                    `;
+
+                    res.setHeader("Content-Type", "text/html");
+                    res.send(html);
                     return;
                 } catch (fetchError) {
                     console.error("❌ Error fetching unshareable file:", fetchError);
