@@ -109,10 +109,20 @@ router.get(
                     res.setHeader("Surrogate-Control", "no-store");
                     const base64Data = Buffer.from(buffer).toString("base64");
                     let contentHtml = "";
+                    let effectiveMimeType = file.mimetype;
+                    const fileNameLower = file.filename.toLowerCase();
 
-                    if (file.mimetype.startsWith("image/")) {
-                        contentHtml = `<img src="data:${file.mimetype};base64,${base64Data}" class="protected-content" style="pointer-events: none;" />`;
-                    } else if (file.mimetype === "application/pdf") {
+                    if (effectiveMimeType === "application/octet-stream" || !effectiveMimeType) {
+                        if (fileNameLower.endsWith(".pdf")) effectiveMimeType = "application/pdf";
+                        else if (fileNameLower.endsWith(".jpg") || fileNameLower.endsWith(".jpeg")) effectiveMimeType = "image/jpeg";
+                        else if (fileNameLower.endsWith(".png")) effectiveMimeType = "image/png";
+                        else if (fileNameLower.endsWith(".gif")) effectiveMimeType = "image/gif";
+                        else if (fileNameLower.endsWith(".mp4")) effectiveMimeType = "video/mp4";
+                    }
+
+                    if (effectiveMimeType.startsWith("image/")) {
+                        contentHtml = `<img src="data:${effectiveMimeType};base64,${base64Data}" class="protected-content" style="pointer-events: none;" />`;
+                    } else if (effectiveMimeType === "application/pdf") {
                         contentHtml = `
                             <div id="pdf-container" style="width: 100%; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; box-sizing: border-box; overflow-y: auto;"></div>
                             <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
