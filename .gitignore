@@ -70,5 +70,14 @@ tracked_files.txt
 Thumbs.db
 Desktop.ini
 
+# Gradle / Android app — not needed for web production
+app/
+gradle/
+build.gradle.kts
+settings.gradle.kts
+gradle.properties
+gradlew
+gradlew.bat
+
 # Optional: uncomment to ignore package-lock.json
 # package-lock.json
