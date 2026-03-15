@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import DashboardNavbar from '../components/DashboardNavbar';
+import '../App.css';
 import '../styles/dashboard.css';
 
 const API_BASE = '';
@@ -38,7 +39,12 @@ const DashboardLayout: React.FC = () => {
           }
         });
         if (!response.ok) {
-          // Attempt token refresh logic or logout. Simplified to logout here for security, expecting fetch wrapper to handle refresh in actual API calls.
+          // Attempt token refresh logic or logout. 
+          console.warn('Session invalid, logging out');
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('userInfo');
+          navigate('/login');
         }
       } catch (error) {
         console.error('Session validation error:', error);
@@ -51,7 +57,7 @@ const DashboardLayout: React.FC = () => {
   }, [navigate]);
 
   return (
-    <div className={`dashboard-wrapper ${mobileMenuOpen ? 'mobile-nav-open' : ''}`}>
+    <div className="app">
        {/* Background Animation copied from dashboard.html */}
       <div className="background-animation">
         <div className="floating-shapes">

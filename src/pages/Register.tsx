@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { User, Mail, Lock, Eye, EyeOff, Loader, CheckCircle, XCircle, ShieldCheck } from "lucide-react";
 import "../styles/register.css";
 import SEO from "../components/SEO";
+import Navbar from "../components/Navbar";
 
 const API_BASE = '';
 
@@ -173,20 +174,7 @@ const Register: React.FC = () => {
         </div>
       </div>
 
-      {/* Brand header */}
-      <header className="brand-header" style={{ position: 'relative', zIndex: 10 }}>
-        <div className="logo-container" style={{ justifyContent: 'center' }}>
-          <Link to="/" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div className="logo-icon">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              </div>
-              <h1 className="brand-name" style={{ marginLeft: '10px' }}>BioQR</h1>
-          </Link>
-        </div>
-        <p className="brand-tagline">Join the secure file sharing platform</p>
-      </header>
+      <Navbar />
 
       {/* Registration form */}
       <section className="register-section" style={{ position: 'relative', zIndex: 10 }}>

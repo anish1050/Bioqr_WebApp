@@ -9,9 +9,9 @@ const About: React.FC = () => {
     <div className="about-page">
       <SEO title="About Us" description="Learn more about BioQR's mission to revolutionize physical and digital security." />
       {/* Hero Section */}
-      <section className="hero">
+      <section className="about-hero">
         <div className="container">
-          <div className="hero-content">
+          <div className="hero-content text-left">
             <div className="hero-badge">
               <Shield className="badge-icon" />
               <span>About BioQR</span>
@@ -47,12 +47,12 @@ const About: React.FC = () => {
       <section className="section">
         <div className="container">
           <div className="mission-grid">
-            <div className="mission-content">
-              <div className="section-badge">
+            <div className="mission-content text-left">
+              <div className="section-badge" style={{ justifyContent: 'flex-start' }}>
                 <CheckCircle className="badge-icon" />
                 <span>Our Mission</span>
               </div>
-              <h2>Securing the Digital Future</h2>
+              <h2 className="text-left" style={{ textAlign: 'left' }}>Securing the Digital Future</h2>
               <p>
                 At BioQR, we believe that security shouldn't come at the cost of usability. Our mission is to 
                 democratize enterprise-grade biometric security, making it accessible to individuals and 

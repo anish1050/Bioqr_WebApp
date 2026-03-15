@@ -42,7 +42,7 @@ export interface QrToken {
     id: number;
     token: string;
     user_id: number;
-    file_id: number;
+    file_id: number | null;
     is_one_time: boolean;
     is_unshareable: boolean;
     is_used: boolean;
@@ -276,19 +276,30 @@ export const FileQueries = {
 // ============================================================
 
 export const QrTokenQueries = {
-    /** Create a new QR access token */
-    create: (
+    /** Create a new QR access token with one or more files */
+    create: async (
         token: string,
         userId: number,
-        fileId: number,
+        fileIds: number[],
         expiresAt: Date,
         isOneTime: boolean = false,
         isUnshareable: boolean = false
-    ): Promise<any> =>
-        execute(
+    ): Promise<number> => {
+        const result = await execute(
             "INSERT INTO qr_tokens (token, user_id, file_id, expires_at, is_one_time, is_unshareable) VALUES (?, ?, ?, ?, ?, ?)",
-            [token, userId, fileId, expiresAt, isOneTime, isUnshareable]
-        ),
+            [token, userId, fileIds.length === 1 ? fileIds[0] : null, expiresAt, isOneTime, isUnshareable]
+        );
+        const qrTokenId = result.insertId;
+
+        // Link all files in the junction table
+        for (const fileId of fileIds) {
+            await execute(
+                "INSERT INTO qr_token_files (qr_token_id, file_id) VALUES (?, ?)",
+                [qrTokenId, fileId]
+            );
+        }
+        return qrTokenId;
+    },
 
     /** Mark a one-time QR token as used */
     markAsUsed: (tokenId: number): Promise<any> =>
@@ -303,4 +314,126 @@ export const QrTokenQueries = {
             "SELECT * FROM qr_tokens WHERE token = ? AND expires_at > NOW()",
             [token]
         ).then((r) => r[0]),
+
+    /** Get all files associated with a QR token */
+    getFilesByToken: (token: string): Promise<FileRecord[]> =>
+        query<FileRecord>(
+            `SELECT f.* FROM files f
+             JOIN qr_token_files qtf ON f.id = qtf.file_id
+             JOIN qr_tokens qt ON qtf.qr_token_id = qt.id
+             WHERE qt.token = ?`,
+            [token]
+        ),
+};
+
+// ============================================================
+// WebAuthn Credential Queries
+// ============================================================
+
+export interface WebAuthnCredential {
+    id: number;
+    user_id: number;
+    credential_id: string;
+    public_key: string; // base64 encoded
+    sign_count: number;
+    transports: string; // JSON string
+    created_at: Date;
+}
+
+export const WebAuthnCredentialQueries = {
+    /** Create a new WebAuthn credential */
+    create: async (
+        userId: number,
+        credentialId: string,
+        publicKeyBase64: string,
+        signCount: number,
+        transports: string[]
+    ): Promise<number> => {
+        const result = await execute(
+            `INSERT INTO web_authn_credentials (user_id, credential_id, public_key, sign_count, transports)
+             VALUES (?, ?, ?, ?, ?)`,
+            [userId, credentialId, publicKeyBase64, signCount, JSON.stringify(transports)]
+        );
+        return result.insertId;
+    },
+
+    /** Find a credential by its credential_id */
+    findByCredentialId: (credentialId: string): Promise<WebAuthnCredential | undefined> =>
+        query<WebAuthnCredential>(
+            "SELECT * FROM web_authn_credentials WHERE credential_id = ?",
+            [credentialId]
+        ).then((r) => r[0]),
+
+    /** Find all credentials for a user */
+    findByUserId: (userId: number): Promise<WebAuthnCredential[]> =>
+        query<WebAuthnCredential>(
+            "SELECT * FROM web_authn_credentials WHERE user_id = ? ORDER BY created_at DESC",
+            [userId]
+        ),
+
+    /** Update the sign count for a credential */
+    updateSignCount: (credentialId: string, newSignCount: number): Promise<any> =>
+        execute(
+            "UPDATE web_authn_credentials SET sign_count = ? WHERE credential_id = ?",
+            [newSignCount, credentialId]
+        ),
+
+    /** Delete a specific credential by database ID */
+    deleteById: (id: number): Promise<any> =>
+        execute("DELETE FROM web_authn_credentials WHERE id = ?", [id]),
+
+    /** Delete a specific credential by database ID with ownership check */
+    deleteByIdAndUser: (id: number, userId: number): Promise<any> =>
+        execute("DELETE FROM web_authn_credentials WHERE id = ? AND user_id = ?", [id, userId]),
+
+    /** Find a credential by database ID */
+    findById: (id: number): Promise<WebAuthnCredential | undefined> =>
+        query<WebAuthnCredential>("SELECT * FROM web_authn_credentials WHERE id = ?", [id]).then((r) => r[0]),
+
+    /** Delete all credentials for a user */
+    deleteAllByUserId: (userId: number): Promise<any> =>
+        execute("DELETE FROM web_authn_credentials WHERE user_id = ?", [userId]),
+};
+// ============================================================
+// Face Recognition Queries
+// ============================================================
+
+export interface FaceRecognition {
+    id: number;
+    user_id: number;
+    descriptor: string; // JSON string of Float32Array
+    created_at: Date;
+}
+
+export const FaceRecognitionQueries = {
+    upsert: async (userId: number, descriptor: Float32Array): Promise<any> => {
+        // We only store one face per user for simplicity in this version
+        const existing = await query("SELECT id FROM face_recognition WHERE user_id = ?", [userId]);
+        const descriptorJson = JSON.stringify(Array.from(descriptor));
+        
+        console.log(`💾 Persisting face descriptor for user ${userId} (Existing: ${existing.length > 0})`);
+        
+        if (existing.length > 0) {
+            return execute(
+                "UPDATE face_recognition SET descriptor = ?, created_at = NOW() WHERE user_id = ?",
+                [descriptorJson, userId]
+            );
+        } else {
+            return execute(
+                "INSERT INTO face_recognition (user_id, descriptor) VALUES (?, ?)",
+                [userId, descriptorJson]
+            );
+        }
+    },
+
+    /** Find face descriptor for a user */
+    findByUserId: (userId: number): Promise<FaceRecognition | undefined> =>
+        query<FaceRecognition>(
+            "SELECT * FROM face_recognition WHERE user_id = ?",
+            [userId]
+        ).then((r) => r[0]),
+
+    /** Delete face recognition data for a user */
+    deleteByUserId: (userId: number): Promise<any> =>
+        execute("DELETE FROM face_recognition WHERE user_id = ?", [userId]),
 };

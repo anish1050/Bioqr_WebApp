@@ -9,10 +9,12 @@ const db = mysql.createConnection({
     user: process.env.DB_USER || "root",
     password: process.env.DB_PASSWORD || "",
     database: process.env.DB_NAME || "bioqr",
+    port: parseInt(process.env.DB_PORT || '4000', 10),
     ssl: {
-        minVersion: "TLSv1.2",
-        rejectUnauthorized: true,
+        minVersion: 'TLSv1.2',
+        rejectUnauthorized: false, // TiDB Cloud requires SSL but uses custom CA
     },
+    connectTimeout: 10000, // 10 second timeout
 });
 
 console.log("🔧 Setting up BioQR database...");
@@ -68,7 +70,7 @@ db.connect((err) => {
           id INT AUTO_INCREMENT PRIMARY KEY,
           token VARCHAR(32) UNIQUE NOT NULL,
           user_id INT NOT NULL,
-          file_id INT NOT NULL,
+          file_id INT DEFAULT NULL,
           is_one_time BOOLEAN DEFAULT FALSE,
           is_unshareable BOOLEAN DEFAULT FALSE,
           is_used BOOLEAN DEFAULT FALSE,
@@ -78,6 +80,20 @@ db.connect((err) => {
           FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE,
           INDEX idx_token (token),
           INDEX idx_expires (expires_at)
+        )
+      `
+        },
+        {
+            name: "qr_token_files",
+            query: `
+        CREATE TABLE IF NOT EXISTS qr_token_files (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          qr_token_id INT NOT NULL,
+          file_id INT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (qr_token_id) REFERENCES qr_tokens(id) ON DELETE CASCADE,
+          FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE,
+          UNIQUE KEY unique_qr_file (qr_token_id, file_id)
         )
       `
         },
@@ -95,6 +111,36 @@ db.connect((err) => {
           INDEX idx_refresh_token (refresh_token),
           INDEX idx_user_id (user_id),
           INDEX idx_expires (expires_at)
+        )
+      `
+        },
+        {
+            name: "web_authn_credentials",
+            query: `
+        CREATE TABLE IF NOT EXISTS web_authn_credentials (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT NOT NULL,
+          credential_id VARCHAR(255) UNIQUE NOT NULL,
+          public_key TEXT NOT NULL,
+          sign_count INT DEFAULT 0,
+          transports TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+          INDEX idx_user_id (user_id),
+          INDEX idx_credential_id (credential_id)
+        )
+      `
+        },
+        {
+            name: "face_recognition",
+            query: `
+        CREATE TABLE IF NOT EXISTS face_recognition (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT NOT NULL,
+          descriptor TEXT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+          INDEX idx_user_id (user_id)
         )
       `
         }

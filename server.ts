@@ -15,17 +15,37 @@ import { globalLimiter } from "./helpers/rateLimiters.js";
 import { generateCsrfToken, CSRF_SECRET } from "./helpers/csrf.js";
 import { authenticateToken } from "./helpers/auth.js";
 import { SessionQueries } from "./helpers/queries.js";
+import { initFaceRecognitionModels } from "./helpers/faceRecognition.js";
 
 // Routes
 import authRoutes from "./routes/auth.routes.js";
 import oauthRoutes from "./routes/oauth.routes.js";
 import filesRoutes from "./routes/files.routes.js";
 import qrRoutes from "./routes/qr.routes.js";
+import webauthnRoutes from "./routes/webauthn.routes.js";
+import faceRoutes from "./routes/face.routes.js";
 
 dotenv.config();
 
+// Load Face Recognition models into Node.js memory
+initFaceRecognitionModels();
+
 const app = express();
-app.use(bodyParser.json());
+
+// 💡 TOP-LEVEL DEBUG LOGGER
+app.use((req, res, next) => {
+    console.log(`📡 [EXPRESS RECEIVE] ${req.method} ${req.url}`);
+    next();
+});
+
+// 💡 DEBUG PING ROUTE
+app.get("/bioqr/debug-ping", (req, res) => {
+    console.log("✅ Received debug ping");
+    res.json({ message: "pong", timestamp: new Date().toISOString() });
+});
+
+app.use(bodyParser.json({ limit: "5mb" }));
+app.use(bodyParser.urlencoded({ limit: "5mb", extended: true }));
 
 // __dirname workaround for ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -66,8 +86,10 @@ const prodOrigins: string[] = [
 ];
 const devOrigin: string[] = [
     "http://localhost:5173",
+    "http://localhost:5174",
     "http://localhost:3000",
     "http://127.0.0.1:5500",
+    "http://127.0.0.1:5174",
 ];
 const allowedOrigins =
     process.env.NODE_ENV === "production" ? prodOrigins : devOrigin;
@@ -120,11 +142,25 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 // ============================================================
 // Mount Routes
 // ============================================================
-app.use("/bioqr", authRoutes);        // /bioqr/users/login, /bioqr/users/register, etc.
-app.use("/auth", oauthRoutes);         // /auth/google, /auth/github, etc.
-app.use("/bioqr/files", filesRoutes);  // /bioqr/files/upload, /bioqr/files/:userId, etc.
-app.use("/bioqr", qrRoutes);           // /bioqr/generate-qr
-app.use("", qrRoutes);                 // /access-file/:token (public)
+// More specific prefixes first to avoid overlap issues
+app.use("/bioqr/auth/webauthn", webauthnRoutes); 
+app.use("/bioqr/auth/face", faceRoutes);
+app.use("/bioqr/files", filesRoutes);  
+app.use("/auth", oauthRoutes);         
+
+// General prefixes
+app.use("/bioqr", authRoutes);        
+app.use("/bioqr", qrRoutes);           
+app.use("", qrRoutes);                 
+
+// Add a catch-all 404 logger for handled routes to debug 404s
+app.use((req: Request, res: Response) => {
+    console.warn(`⚠️  404 - Route not found: ${req.method} ${req.url}`);
+    res.status(404).json({
+        success: false,
+        message: `Route not found: ${req.method} ${req.url}`
+    });
+});
 
 // ============================================================
 // Static files
@@ -213,9 +249,10 @@ app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     }
 
     console.error("❌ Unhandled error:", err);
-    res.status(500).json({
+    const status = err.status || err.statusCode || 500;
+    res.status(status).json({
         success: false,
-        message: "Internal server error",
+        message: status === 500 ? "Internal server error" : err.message,
     });
 });
 
@@ -223,11 +260,13 @@ app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
 // Start server
 // ============================================================
 const PORT: number = parseInt(process.env.PORT || "3000", 10);
-const HOST: string = process.env.HOST || "0.0.0.0";
+const HOST: string = "127.0.0.1"; // Bind to IPv4 explicitly
 
 app.listen(PORT, HOST, () => {
-    console.log(`🚀 Server running on http://${HOST}:${PORT}`);
-    console.log(`📁 Uploads directory: ${uploadsDir}`);
-    console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
-    console.log(`🔐 JWT Authentication enabled`);
+    console.log("-----------------------------------------");
+    console.log(`🚀 [BIOQR SERVER START]`);
+    console.log(`📡 URL: http://${HOST}:${PORT}`);
+    console.log(`🎯 PID: ${process.pid}`);
+    console.log(`🛠️ Mode: ${process.env.NODE_ENV || "development"}`);
+    console.log("-----------------------------------------");
 });

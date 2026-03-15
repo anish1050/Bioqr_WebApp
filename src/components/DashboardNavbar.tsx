@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileText, Info, Mail, LogOut, Menu } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import Logo from './Logo';
 
 interface UserInfo {
@@ -79,66 +79,68 @@ const DashboardNavbar: React.FC<DashboardNavbarProps> = ({ onMobileMenuToggle })
   const avatarUrl = getAvatarUrl();
 
   return (
-    <nav className="top-navbar">
-      <div className="navbar-brand">
-        <div className="logo">
-          <Link to="/dashboard" style={{ display: 'flex', alignItems: 'center' }}>
-            <div className="logo-icon">
-              <Logo className="w-8 h-8" />
+    <header className="header">
+      <div className="container">
+        <Link to="/dashboard" className="logo">
+          <Logo className="logo-icon" />
+          <span className="logo-text">BioQR</span>
+        </Link>
+      
+        <nav className={`main-nav ${location.pathname === '/' ? "nav-open" : ""}`}>
+          <ul>
+            <li>
+              <Link to="/dashboard" className={location.pathname === '/dashboard' ? 'active' : ''}>
+                Dashboard
+              </Link>
+            </li>
+            <li>
+              <Link to="/dashboard#files" className={location.hash === '#files' ? 'active' : ''}>
+                Files
+              </Link>
+            </li>
+            <li>
+              <Link to="/dashboard/security" className={location.pathname === '/dashboard/security' ? 'active' : ''}>
+                Security
+              </Link>
+            </li>
+            <li>
+              <Link to="/dashboard/about" className={location.pathname === '/dashboard/about' ? 'active' : ''}>
+                About
+              </Link>
+            </li>
+            <li>
+              <Link to="/dashboard/contact" className={location.pathname === '/dashboard/contact' ? 'active' : ''}>
+                Contact
+              </Link>
+            </li>
+          </ul>
+        </nav>
+        
+        <div className="navbar-user" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div className="user-profile" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div className="user-avatar" style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 600, fontSize: '0.8rem', position: 'relative', overflow: 'hidden' }}>
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar" className="profile-image" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+              ) : (
+                <span>{getInitials(displayName)}</span>
+              )}
             </div>
-            <h2 style={{ marginLeft: '10px' }}>BioQR</h2>
-          </Link>
-        </div>
-      </div>
-      
-      <div className="navbar-nav">
-        <Link to="/dashboard" className={`nav-item ${location.pathname === '/dashboard' ? 'active' : ''}`}>
-          <LayoutDashboard size={20} />
-          <span>Dashboard</span>
-        </Link>
-        
-        {/* We link Files to Dashboard with a state/hash or handle it inside Dashboard. Since both are in Dashboard.tsx, we can just use /dashboard for now and manage inner tabs, or use /files route if we separate them. Let's assume Dashboard handles both. We'll use a query param or state if needed, or simply let the Dashboard manage it inside. For now, we'll keep it as buttons that might switch state if in Dashboard. Let's manage it by updating location hash. */}
-        <Link to="/dashboard#files" className={`nav-item ${location.hash === '#files' ? 'active' : ''}`}>
-          <FileText size={20} />
-          <span>Files</span>
-        </Link>
-        
-        <Link to="/dashboard/about" className={`nav-item ${location.pathname === '/dashboard/about' ? 'active' : ''}`}>
-          <Info size={20} />
-          <span>About</span>
-        </Link>
-        
-        <Link to="/dashboard/contact" className={`nav-item ${location.pathname === '/dashboard/contact' ? 'active' : ''}`}>
-          <Mail size={20} />
-          <span>Contact</span>
-        </Link>
-      </div>
-      
-      <div className="navbar-user">
-        <div className="user-profile">
-          <div className="user-avatar">
-            {avatarUrl ? (
-              <img src={avatarUrl} alt="Avatar" className="profile-image" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-            ) : (
-              <span>{getInitials(displayName)}</span>
-            )}
+            <div className="user-details" style={{ display: 'none' }}>
+              <h4 style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>{displayName}</h4>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>{user?.email || 'user@example.com'}</p>
+            </div>
           </div>
-          <div className="user-details">
-            <h4>{displayName}</h4>
-            <p>{user?.email || 'user@example.com'}</p>
-          </div>
+          <button className="btn btn-ghost" onClick={handleLogout} style={{ padding: '0.5rem 1rem' }}>
+            Logout
+          </button>
         </div>
-        <button className="logout-btn" onClick={handleLogout}>
-          <LogOut size={20} />
-          <span>Logout</span>
+        
+        {/* Mobile Menu Toggle */}
+        <button className="mobile-menu-btn" onClick={onMobileMenuToggle}>
+          <Menu size={24} />
         </button>
       </div>
-      
-      {/* Mobile Menu Toggle */}
-      <button className="mobile-menu-toggle" onClick={onMobileMenuToggle}>
-        <Menu size={24} />
-      </button>
-    </nav>
+    </header>
   );
 };
 

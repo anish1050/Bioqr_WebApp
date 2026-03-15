@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { User, Mail, Lock, Eye, EyeOff, Loader, CheckCircle, XCircle, Info } from "lucide-react";
 import "../styles/login.css";
 import SEO from "../components/SEO";
+import Navbar from "../components/Navbar";
 
 const API_BASE = '';
 
@@ -152,20 +153,7 @@ const Login: React.FC = () => {
       </div>
 
       <div className="login-container">
-        {/* Brand Header */}
-        <div className="brand-header">
-          <div className="logo-container">
-            <Link to="/" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div className="logo-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                </svg>
-                </div>
-                <h1 className="brand-name" style={{ marginLeft: '10px' }}>BioQR</h1>
-            </Link>
-          </div>
-          <p className="brand-tagline">Secure QR Code File Sharing</p>
-        </div>
+        <Navbar />
 
         {/* Login Section */}
         <div className="login-section">

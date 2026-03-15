@@ -15,11 +15,15 @@
     "typecheck:server": "tsc --project tsconfig.server.json --noEmit"
   },
   "dependencies": {
+    "@github/webauthn-json": "^2.1.1",
+    "@simplewebauthn/server": "^10.0.1",
+    "@simplewebauthn/types": "^10.0.0",
     "@types/node": "^25.3.5",
     "@vitejs/plugin-react": "^5.0.0",
     "axios": "^1.13.6",
     "bcrypt": "^6.0.0",
     "body-parser": "^2.2.0",
+    "canvas": "^3.2.1",
     "cloudinary": "^2.8.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -28,6 +32,7 @@
     "express": "^5.1.0",
     "express-rate-limit": "^8.3.0",
     "express-session": "^1.18.2",
+    "face-api.js": "^0.22.2",
     "jsonwebtoken": "^9.0.2",
     "lucide": "^0.542.0",
     "lucide-react": "^0.542.0",

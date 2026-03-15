@@ -16,6 +16,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import DashboardAbout from './pages/About';
 import DashboardContact from './pages/Contact';
+import Security from './pages/Security';
 
 function App() {
   return (
@@ -39,6 +40,7 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="about" element={<DashboardAbout />} />
           <Route path="contact" element={<DashboardContact />} />
+          <Route path="security" element={<Security />} />
         </Route>
 
         {/* Catch-all redirect to Home */}

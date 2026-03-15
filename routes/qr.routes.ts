@@ -15,7 +15,15 @@ router.post(
     async (req: Request, res: Response): Promise<void> => {
         try {
             const userId = req.user!.userId;
-            const file_id = parseInt(req.body.file_id, 10);
+            
+            // Support both single file_id and multiple file_ids
+            let fileIds: number[] = [];
+            if (Array.isArray(req.body.file_ids)) {
+                fileIds = req.body.file_ids.map((id: any) => parseInt(id, 10)).filter((id: number) => !isNaN(id));
+            } else if (req.body.file_id) {
+                fileIds = [parseInt(req.body.file_id, 10)];
+            }
+
             const duration = Math.min(
                 Math.max(parseInt(req.body.duration, 10) || 60, 1),
                 1440
@@ -24,23 +32,23 @@ router.post(
             const isOneTime = req.body.is_one_time === true || req.body.is_one_time === "true";
             const isUnshareable = req.body.is_unshareable === true || req.body.is_unshareable === "true";
 
-            if (!file_id) {
-                res.status(400).json({ error: "file_id is required" });
+            if (fileIds.length === 0) {
+                res.status(400).json({ error: "At least one file_id is required" });
                 return;
             }
 
-            // Verify user owns the file
-            const file = await FileQueries.findByIdAndUser(file_id, userId);
-
-            if (!file) {
-                res.status(404).json({ error: "File not found or access denied" });
+            // Verify user owns all files
+            const files = await Promise.all(fileIds.map(id => FileQueries.findByIdAndUser(id, userId)));
+            
+            if (files.some(f => !f)) {
+                res.status(404).json({ error: "One or more files not found or access denied" });
                 return;
             }
 
             const token = crypto.randomBytes(16).toString("hex");
             const expiresAt = new Date(Date.now() + duration * 60 * 1000);
 
-            await QrTokenQueries.create(token, userId, file_id, expiresAt, isOneTime, isUnshareable);
+            await QrTokenQueries.create(token, userId, fileIds, expiresAt, isOneTime, isUnshareable);
 
             const baseUrl = process.env.BASE_URL || "http://localhost:3000";
             const qrData = `${baseUrl}/access-file/${token}`;
@@ -74,6 +82,79 @@ router.get(
                 return;
             }
 
+            const tokenFiles = await QrTokenQueries.getFilesByToken(token);
+            
+            if (tokenFiles.length === 0) {
+                 // Fallback for older tokens or if junction table is empty
+                 if (qrToken.file_id) {
+                     const fallbackFile = await FileQueries.findById(qrToken.file_id);
+                     if (fallbackFile) tokenFiles.push(fallbackFile);
+                 }
+            }
+
+            if (tokenFiles.length === 0) {
+                console.log(`❌ No files associated with token ${token}.`);
+                res.status(404).json({ success: false, message: "No files found for this QR" });
+                return;
+            }
+
+            // If a specific file is requested via query param
+            const requestedFileId = req.query.fileId ? parseInt(req.query.fileId as string, 10) : null;
+            let file = tokenFiles[0];
+
+            if (requestedFileId) {
+                const found = tokenFiles.find(f => f.id === requestedFileId);
+                if (found) file = found;
+                else {
+                    res.status(404).json({ success: false, message: "Requested file not found in this collection" });
+                    return;
+                }
+            } else if (tokenFiles.length > 1) {
+                // Show a list of files if multiple exist and no specific one is requested
+                const fileListHtml = tokenFiles.map(f => `
+                    <div class="file-item">
+                        <div class="file-info">
+                            <span class="file-name">${f.filename}</span>
+                            <span class="file-meta">${(f.size / 1024).toFixed(1)} KB</span>
+                        </div>
+                        <a href="/access-file/${token}?fileId=${f.id}" class="view-btn">View File</a>
+                    </div>
+                `).join("");
+
+                const listHtml = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Secure File Collection</title>
+                    <style>
+                        body { background: #0f172a; color: white; font-family: 'Inter', system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+                        .container { background: #1e293b; padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 90%; max-width: 500px; }
+                        h1 { font-size: 1.5rem; margin-bottom: 1.5rem; text-align: center; color: #38bdf8; }
+                        .file-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #334155; margin-bottom: 0.75rem; border-radius: 0.5rem; transition: transform 0.2s; }
+                        .file-item:hover { transform: translateX(5px); }
+                        .file-info { display: flex; flex-direction: column; }
+                        .file-name { font-weight: 600; font-size: 0.95rem; }
+                        .file-meta { font-size: 0.8rem; color: #94a3b8; }
+                        .view-btn { background: #38bdf8; color: #0f172a; text-decoration: none; padding: 0.5rem 1rem; border-radius: 0.375rem; font-size: 0.875rem; font-weight: 600; }
+                        .view-btn:hover { background: #7dd3fc; }
+                        .security-footer { margin-top: 2rem; font-size: 0.75rem; color: #64748b; text-align: center; border-top: 1px solid #334155; padding-top: 1rem; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h1>Secure File Collection</h1>
+                        <div class="file-list">${fileListHtml}</div>
+                        <div class="security-footer">This access is protected and monitored.</div>
+                    </div>
+                </body>
+                </html>
+                `;
+                res.send(listHtml);
+                return;
+            }
+
             if (qrToken.is_one_time) {
                 if (qrToken.is_used) {
                     console.log(`❌ QR Code ${token} has already been used.`);
@@ -82,16 +163,7 @@ router.get(
                 }
 
                 console.log(`✅ Marking QR Code ${token} as used.`);
-                // Mark as used before redirecting
                 await QrTokenQueries.markAsUsed(qrToken.id);
-            }
-
-            const file = await FileQueries.findById(qrToken.file_id);
-
-            if (!file) {
-                console.log(`❌ File ${qrToken.file_id} not found.`);
-                res.status(404).json({ success: false, message: "File not found" });
-                return;
             }
 
             if (qrToken.is_unshareable) {

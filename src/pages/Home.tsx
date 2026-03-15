@@ -10,10 +10,8 @@ import {
   Eye,
   Clock,
   Database,
-  CheckCircle,
-  ArrowRight,
 } from "lucide-react";
-import "../App.css"; // We will keep App.css for now, can move it later
+import "../App.css";
 
 const Home: React.FC = () => {
   const features = [
@@ -65,7 +63,7 @@ const Home: React.FC = () => {
       description: "Industry-leading precision in threat detection",
     },
     {
-      icon: CheckCircle,
+      icon: Zap,
       value: "10+",
       label: "Trusted Users",
       description: "Global enterprises rely on our security",
@@ -84,13 +82,6 @@ const Home: React.FC = () => {
     },
   ];
 
-  const benefits = [
-    "30-day free trial with full access",
-    "24/7 enterprise support included",
-    "No setup fees or hidden costs",
-    "Instant deployment capability",
-  ];
-
   return (
     <>
       <SEO title="Home" description="Experience enterprise-grade protection with zero-compromise reliability." />
@@ -98,227 +89,78 @@ const Home: React.FC = () => {
       <section className="hero">
         <div className="container">
           <div className="hero-content">
-            <div className="hero-badge">
-              <Shield className="badge-icon" />
-              <span>Next-Gen Security</span>
+            <div className="hero-badge-container">
+              <div className="glass-pill hero-badge">
+                <Shield size={14} />
+                <span>Next-Gen Security</span>
+              </div>
             </div>
 
-            <h1>
-              Next-Generation
-              <span className="gradient-text">Biometric Security</span>
-              <span className="highlight-text">Platform</span>
+            <h1 className="hero-title">
+              FUTURE<br />
+              <span className="accent-text">SECURED.</span>
             </h1>
 
-            <p>
-              Transform your security infrastructure with AI-powered biometric authentication 
-              and dynamic QR code technology. Experience enterprise-grade protection 
-              with zero-compromise reliability.
+            <p className="hero-description">
+              TRANSFORM YOUR SECURITY INFRASTRUCTURE WITH AI-POWERED BIOMETRIC 
+              AUTHENTICATION AND DYNAMIC QR TECHNOLOGY.
             </p>
 
-            <div className="cta-buttons">
-              <Link to="/register" className="btn btn-primary btn-large">
-                <Zap className="btn-icon" />
-                Start Free Trial
+            <div className="cta-container">
+              <Link to="/register" className="btn btn-primary">
+                GET STARTED
               </Link>
-              <Link to="/viewdemo" className="btn btn-outline btn-large">
-                <Lock className="btn-icon" />
-                View Demo
+              <Link to="/viewdemo" className="btn btn-outline">
+                VIEW DEMO
               </Link>
-            </div>
-
-            <div className="stats-grid">
-              <div className="stat">
-                <div className="stat-value primary">99.97%</div>
-                <div className="stat-label">Accuracy</div>
-                <div className="stat-description">Industry leading</div>
-              </div>
-              <div className="stat">
-                <div className="stat-value accent">0.3s</div>
-                <div className="stat-label">Response</div>
-                <div className="stat-description">Lightning fast</div>
-              </div>
-              <div className="stat">
-                <div className="stat-value warning">30 Days</div>
-                <div className="stat-label">Free Trial</div>
-                <div className="stat-description">Be Among The First</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="hero-image">
-            <div className="hero-image-placeholder">
-              <div className="security-showcase">
-                <div className="fingerprint-display">
-                  <div className="fingerprint-scanner">
-                    <Fingerprint className="fingerprint-icon" />
-                  </div>
-                </div>
-                <div className="qr-display-mini">
-                  <QrCode className="qr-icon-mini" />
-                  <div className="qr-particles"></div>
-                </div>
-                <div className="security-status">
-                  <div className="status-dot"></div>
-                  <span className="status-text">SECURE</span>
-                </div>
-              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="features">
+      {/* Section 01: Biometric Mastery */}
+      <section id="features" className="features-section">
         <div className="container">
-          <div className="section-header">
-            <div className="section-badge">
-              <Shield className="badge-icon" />
-              <span>Advanced Features</span>
+          <div className="section-header-asymmetric">
+            <div className="section-marker">01</div>
+            <div className="section-title-container">
+              <h2 className="section-headline">BIOMETRIC MASTERY</h2>
+              <p>ADVANCED FINGERPRINT AND FACIAL RECOGNITION WITH 99.9% ACCURACY.</p>
             </div>
-            <h2 className="section-title">
-              Advanced Security
-              <span className="gradient-text">Technology Stack</span>
-            </h2>
-            <p className="section-description">
-              Our comprehensive security platform integrates military-grade biometric 
-              authentication with quantum-resistant QR technology, delivering 
-              enterprise-level protection for the modern digital landscape.
-            </p>
           </div>
 
-          <div className="features-grid">
-            <div className="feature-card large">
-              <div className="feature-image biometric-image">
-                <div className="biometric-scanner">
-                  <div className="scanner-frame">
-                    <Fingerprint className="scanner-icon" />
-                  </div>
-                  <div className="scan-lines"></div>
+          <div className="features-grid-premium">
+            {features.map((feature, index) => (
+              <div key={index} className="feature-card-glass">
+                <div className="feature-icon-wrapper">
+                  <feature.icon className="feature-icon-premium" />
                 </div>
-              </div>
-              <div className="feature-content">
-                <div className="feature-header">
-                  <div className="feature-icon">
-                    <Fingerprint />
-                  </div>
-                  <h3>Biometric Authentication</h3>
-                </div>
-                <p>
-                  Advanced fingerprint and facial recognition with 99.9%
-                  accuracy
-                </p>
-              </div>
-            </div>
-
-            <div className="feature-card large">
-              <div className="feature-image qr-image">
-                <div className="qr-display">
-                  <div className="qr-code">
-                    <QrCode className="qr-icon" />
-                  </div>
-                  <div className="qr-glow"></div>
-                  <Lock className="lock-icon" />
-                </div>
-              </div>
-              <div className="feature-content">
-                <div className="feature-header">
-                  <div className="feature-icon">
-                    <QrCode />
-                  </div>
-                  <h3>Dynamic QR Codes</h3>
-                </div>
-                <p>
-                  Time-sensitive QR codes that regenerate for maximum security
-                </p>
-              </div>
-            </div>
-
-            {features.slice(2).map((feature, index) => (
-              <div key={index + 2} className="feature-card">
-                <div className="feature-content">
-                  <div className="feature-header">
-                    <div className="feature-icon">
-                      <feature.icon />
-                    </div>
-                    <h3>{feature.title}</h3>
-                  </div>
-                  <p>{feature.description}</p>
-                </div>
+                <h3>{feature.title.toUpperCase()}</h3>
+                <p>{feature.description.toUpperCase()}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Security Stats Section */}
-      <section id="security" className="security-stats">
+      {/* Section 02: Proven Results */}
+      <section id="security" className="stats-section">
         <div className="container">
-          <div className="section-header">
-            <h2 className="section-title">
-              Proven Security
-              <span className="gradient-text">Performance</span>
-            </h2>
-            <p className="section-description">
-              Our advanced security metrics demonstrate the reliability and
-              effectiveness of the BioQR system in real-world applications.
-            </p>
+          <div className="section-header-asymmetric reversed">
+            <div className="section-marker">02</div>
+            <div className="section-title-container">
+              <h2 className="section-headline">PROVEN RESULTS</h2>
+              <p>REAL-WORLD SECURITY METRICS FROM OUR GLOBAL NETWORK.</p>
+            </div>
           </div>
 
-          <div className="stats-cards">
+          <div className="stats-grid-premium">
             {stats.map((stat, index) => (
-              <div key={index} className="stat-card">
-                <div className="stat-icon">
-                  <stat.icon />
-                </div>
-                <div className="stat-value gradient-text">{stat.value}</div>
-                <div className="stat-label">{stat.label}</div>
-                <div className="stat-description">{stat.description}</div>
+              <div key={index} className="stat-item-premium">
+                <div className="stat-number">{stat.value}</div>
+                <div className="stat-label-premium">{stat.label.toUpperCase()}</div>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Call to Action Section */}
-      <section className="cta-section">
-        <div className="container">
-          <div className="cta-content">
-            <div className="section-badge">
-              <Shield className="badge-icon" />
-              <span>Ready to Secure Your Future?</span>
-            </div>
-
-            <h2>
-              Ready to Revolutionize
-              <span className="gradient-text">Your Security?</span>
-            </h2>
-
-            <p>
-            Forward-thinking organizations are choosing BioQR to protect their most valuable assets. Start your security transformation today with our comprehensive platform.
-            </p>
-
-            <div className="benefits-grid">
-              {benefits.map((benefit, index) => (
-                <div key={index} className="benefit-item">
-                  <CheckCircle className="benefit-icon" />
-                  <span>{benefit}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="cta-buttons">
-              <Link to="/register" className="btn btn-primary btn-large">
-                Start Free Trial
-                <ArrowRight className="btn-icon" />
-              </Link>
-              <Link to="/viewdemo" className="btn btn-outline btn-large">
-                Schedule Demo
-              </Link>
-            </div>
-
-            <div className="cta-note">
-              No credit card required • Enterprise-grade security from day one
-            </div>
           </div>
         </div>
       </section>

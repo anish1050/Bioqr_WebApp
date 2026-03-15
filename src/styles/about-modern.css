@@ -21,12 +21,12 @@ body {
 }
 
 /* Hero Section */
-.hero {
-  padding: 6rem 0 4rem;
+.about-hero {
+  padding: 8rem 0 4rem;
   background: 
     radial-gradient(ellipse 80% 80% at 50% -20%, rgba(120, 119, 198, 0.15), transparent),
     radial-gradient(ellipse 80% 80% at 80% 30%, rgba(79, 70, 229, 0.1), transparent);
-  text-align: center;
+  text-align: left;
   position: relative;
 }
 
@@ -75,7 +75,7 @@ body {
   font-size: 1.25rem;
   color: var(--muted-foreground, #94a3b8);
   max-width: 800px;
-  margin: 0 auto 3rem;
+  margin: 0 0 3rem;
   line-height: 1.6;
 }
 
@@ -119,6 +119,10 @@ body {
   text-align: center;
 }
 
+.text-left {
+  text-align: left;
+}
+
 .section-badge {
   display: inline-flex;
   align-items: center;
@@ -157,7 +161,7 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4rem;
-  align-items: center;
+  align-items: start;
 }
 
 .mission-features {
@@ -185,7 +189,7 @@ body {
 /* Mission Visual */
 .security-showcase {
   display: grid;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .showcase-item {

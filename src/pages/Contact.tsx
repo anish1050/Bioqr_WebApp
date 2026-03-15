@@ -42,13 +42,23 @@ const Contact: React.FC = () => {
     <div className="contact-page">
       <SEO title="Contact Us" description="Get in touch with the BioQR team for enterprise support and inquiries." />
       {/* Hero Section */}
-      <section className="hero">
-        <div className="hero-badge">
-          <Headset className="badge-icon" />
-          <span>24/7 Support</span>
+      <section className="contact-hero">
+        <div className="container contact-hero-container">
+          <div className="contact-hero-left">
+            <div className="hero-badge" style={{ margin: '0 0 1rem 0' }}>
+              <Headset className="badge-icon" />
+              <span>24/7 Support</span>
+            </div>
+            <h1 className="hero-title" style={{ textAlign: 'left', margin: 0 }}>GET IN TOUCH</h1>
+          </div>
+          <div className="contact-hero-right">
+            <p className="hero-subtitle" style={{ textAlign: 'left', margin: 0 }}>
+              Have questions about BioQR? Need technical support
+              or want to discuss enterprise solutions? We're here to
+              help you secure your future.
+            </p>
+          </div>
         </div>
-        <h1 className="hero-title">Get in Touch</h1>
-        <p className="hero-subtitle">Have questions about BioQR? Need technical support or want to discuss enterprise solutions? We're here to help you secure your future.</p>
       </section>
 
       {/* Contact Options */}

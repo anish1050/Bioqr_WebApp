@@ -38,16 +38,20 @@ const Navbar: React.FC = () => {
             <li>
               <Link to="/status" className={isActive("/status") ? "active" : ""} onClick={closeMenu}>Status</Link>
             </li>
-            <li>
-              <Link className="btn btn-ghost" to="/login" onClick={closeMenu}>
-                Sign In
-              </Link>
-            </li>
-            <li>
-              <Link className="btn btn-primary" to="/register" onClick={closeMenu}>
-                Get Started
-              </Link>
-            </li>
+            {location.pathname !== '/login' && location.pathname !== '/register' && (
+              <>
+                <li>
+                  <Link className="btn btn-ghost" to="/login" onClick={closeMenu}>
+                    Sign In
+                  </Link>
+                </li>
+                <li>
+                  <Link className="btn btn-primary" to="/register" onClick={closeMenu}>
+                    Get Started
+                  </Link>
+                </li>
+              </>
+            )}
           </ul>
         </nav>
 

@@ -261,7 +261,7 @@ body {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  padding: var(--space-lg);
+  padding: 7rem var(--space-lg) var(--space-2xl);
   position: relative;
   z-index: var(--z-base);
 }

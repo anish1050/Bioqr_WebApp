@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { 
-  FileBox, HardDrive, UploadCloud, Search, CheckCircle, 
-  XCircle, File as FileIcon, Eye, Trash2, Loader, Image as ImageIcon,
-  Video, Music, FileText, Archive, Info
+import {
+  FileBox, HardDrive, UploadCloud, Search, CheckCircle,
+  XCircle, Eye, Trash2, Loader, Info, QrCode, Shield, AlertCircle
 } from 'lucide-react';
 import '../styles/dashboard.css';
 import SEO from '../components/SEO';
+import QRModal from '../components/QRModal';
 
 const API_BASE = '';
 
@@ -48,11 +48,13 @@ const Dashboard: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'files'>('dashboard');
   const [user, setUser] = useState<UserInfo | null>(null);
-  
+
   const [files, setFiles] = useState<FileData[]>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
-  
+  const [hasBiometric, setHasBiometric] = useState<boolean | null>(null);
+
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [qrModalFile, setQrModalFile] = useState<FileData | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
   
@@ -76,11 +78,45 @@ const Dashboard: React.FC = () => {
         const parsedUser = JSON.parse(userInfoStr);
         setUser(parsedUser);
         fetchFiles(parsedUser.id);
+        checkBiometricEnrollment();
       } catch (e) {
         console.error('Failed to parse user info', e);
       }
     }
   }, []);
+
+  const checkBiometricEnrollment = async () => {
+    try {
+      let hasWebAuthn = false;
+      let hasFace = false;
+
+      // Check WebAuthn credentials
+      try {
+        const response = await authenticatedFetch(`${API_BASE}/bioqr/auth/webauthn/credentials`);
+        if (response.ok) {
+          const data = await response.json();
+          hasWebAuthn = data.count > 0;
+        }
+      } catch (err) {
+        console.error('Failed to check WebAuthn enrollment:', err);
+      }
+
+      // Check custom face enrollment
+      try {
+        const faceRes = await authenticatedFetch(`${API_BASE}/bioqr/auth/face/status`);
+        if (faceRes.ok) {
+          const faceData = await faceRes.json();
+          hasFace = !!faceData.enrolled;
+        }
+      } catch (err) {
+        console.error('Failed to check face enrollment:', err);
+      }
+
+      setHasBiometric(hasWebAuthn || hasFace);
+    } catch (err) {
+      console.error('Failed to check biometric enrollment:', err);
+    }
+  };
 
   const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
     let accessToken = localStorage.getItem('accessToken');
@@ -109,6 +145,10 @@ const Dashboard: React.FC = () => {
             throw new Error('Refresh failed');
           }
         } catch (err) {
+          console.error('Token refresh failed:', err);
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('userInfo');
           window.location.href = '/login';
           throw err;
         }
@@ -245,20 +285,11 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const totalSize = files.reduce((acc, file) => acc + (file.size || 0), 0);
-  const recentFiles = files.slice(0, 5);
-
-  const getFileIcon = (file: FileData) => {
-    if (file.mimetype.startsWith('image/')) return <ImageIcon size={24} color="#e74c3c" />;
-    if (file.mimetype.startsWith('video/')) return <Video size={24} color="#3498db" />;
-    if (file.mimetype.startsWith('audio/')) return <Music size={24} color="#9b59b6" />;
-    
-    const ext = file.filename.split('.').pop()?.toLowerCase();
-    if (['zip', 'rar', 'tar'].includes(ext || '')) return <Archive size={24} color="#f39c12" />;
-    if (['pdf', 'doc', 'docx', 'txt'].includes(ext || '')) return <FileText size={24} color="#2ecc71" />;
-    
-    return <FileIcon size={24} color="#7f8c8d" />;
+  const handleGoToSecurity = () => {
+    window.location.href = '/dashboard/security';
   };
+
+  const totalSize = files.reduce((acc, file) => acc + (file.size || 0), 0);
 
   const filteredFiles = files.filter(f => f.filename.toLowerCase().includes(searchQuery.toLowerCase()));
 
@@ -281,7 +312,7 @@ const Dashboard: React.FC = () => {
               <p>Total Files</p>
             </div>
           </div>
-          
+
           <div className="stat-card">
             <div className="stat-icon"><HardDrive size={24} /></div>
             <div className="stat-content">
@@ -289,43 +320,26 @@ const Dashboard: React.FC = () => {
               <p>Storage Used</p>
             </div>
           </div>
+
+          <div className="stat-card" onClick={hasBiometric === false ? handleGoToSecurity : undefined} style={{ cursor: hasBiometric === false ? 'pointer' : 'default' }}>
+            <div className="stat-icon" style={{ color: hasBiometric === false ? '#f59e0b' : '#10b981' }}>
+              <Shield size={24} />
+            </div>
+            <div className="stat-content">
+              <h3>{hasBiometric === null ? '?' : hasBiometric ? '✓' : '!'}</h3>
+              <p>Biometric Auth</p>
+            </div>
+          </div>
         </div>
 
-        <div className="recent-activity">
-          <div className="section-header">
-            <h3>Recent Activity</h3>
-            <button className="btn btn-outline btn-sm" onClick={() => setActiveTab('files')}>
-              View All Files
-            </button>
+        {hasBiometric === false && (
+          <div className="alert alert-warning" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', borderRadius: '6px', background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.3)', color: '#fbbf24', fontSize: '0.9rem' }}>
+            <AlertCircle size={18} />
+            <span>Face recognition is not enabled. <button onClick={handleGoToSecurity} style={{ background: 'transparent', border: 'none', color: '#fbbf24', textDecoration: 'underline', cursor: 'pointer', fontSize: 'inherit' }}>Enroll now</button> to secure QR code generation.</span>
           </div>
-          <div className="activity-list">
-            {isLoadingFiles ? (
-               <div className="activity-loading">
-                 <Loader className="spinner" size={20} />
-                 <span>Loading recent files...</span>
-               </div>
-            ) : recentFiles.length > 0 ? (
-              recentFiles.map(file => (
-                <div key={file.id} className="activity-item" onClick={() => handleViewFile(file.id)} style={{ cursor: 'pointer' }}>
-                  <div className="activity-preview" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {getFileIcon(file)}
-                  </div>
-                  <div className="activity-content">
-                    <span className="activity-name">{file.filename}</span>
-                    <div className="activity-meta">
-                      <span className="activity-size">{formatFileSize(file.size)}</span>
-                      <span className="activity-time">{formatDate(file.uploaded_at)}</span>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="empty-state">
-                <p>No recent activity</p>
-              </div>
-            )}
-          </div>
-        </div>
+        )}
+
+
       </section>
 
       {/* Files Section */}
@@ -439,6 +453,9 @@ const Dashboard: React.FC = () => {
                     <span> Uploaded: {formatDate(file.uploaded_at)}</span>
                   </div>
                   <div className="file-actions">
+                    <button className="btn qr-btn" onClick={() => setQrModalFile(file)}>
+                      <QrCode size={16} /> Generate QR
+                    </button>
                     <button className="btn view-btn" onClick={() => handleViewFile(file.id)}>
                       <Eye size={16} /> View
                     </button>
@@ -460,19 +477,32 @@ const Dashboard: React.FC = () => {
       </section>
 
       {/* Toast Notification */}
-      <div className={`toast ${toastMessage.visible ? 'show' : ''}`} style={{ bottom: toastMessage.visible ? '2rem' : '-100px', display: 'flex', alignItems: 'center' }}>
-        <div className="toast-content" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div className="toast-icon">
-            {toastMessage.type === 'success' && <CheckCircle color="#22c55e" />}
-            {toastMessage.type === 'error' && <XCircle color="#ef4444" />}
-            {toastMessage.type === 'info' && <Info color="#3b82f6" />}
+      {toastMessage.visible && toastMessage.text && (
+        <div className="toast show" style={{ bottom: '2rem', display: 'flex', alignItems: 'center' }}>
+          <div className="toast-content" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div className="toast-icon">
+              {toastMessage.type === 'success' && <CheckCircle color="#22c55e" />}
+              {toastMessage.type === 'error' && <XCircle color="#ef4444" />}
+              {toastMessage.type === 'info' && <Info color="#3b82f6" />}
+            </div>
+            <span className="toast-message">{toastMessage.text}</span>
           </div>
-          <span className="toast-message">{toastMessage.text}</span>
+          <button className="toast-close" onClick={() => setToastMessage({ ...toastMessage, visible: false })} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', marginLeft: 'auto' }}>
+            <XCircle size={18} />
+          </button>
         </div>
-        <button className="toast-close" onClick={() => setToastMessage({ ...toastMessage, visible: false })} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', marginLeft: 'auto' }}>
-          <XCircle size={18} />
-        </button>
-      </div>
+      )}
+
+      {/* QR Modal */}
+      {qrModalFile && (
+        <QRModal
+          isOpen={!!qrModalFile}
+          onClose={() => setQrModalFile(null)}
+          fileId={qrModalFile.id}
+          filename={qrModalFile.filename}
+          accessToken={localStorage.getItem('accessToken') || ''}
+        />
+      )}
     </>
   );
 };
