@@ -153,6 +153,11 @@ app.use("/bioqr", authRoutes);
 app.use("/bioqr", qrRoutes);           
 app.use("", qrRoutes);                 
 
+// Home route for Render health check
+app.get("/", (req: Request, res: Response) => {
+    res.status(200).json({ success: true, message: "BioQR API is running" });
+});
+
 // Add a catch-all 404 logger for handled routes to debug 404s
 app.use((req: Request, res: Response) => {
     console.warn(`⚠️  404 - Route not found: ${req.method} ${req.url}`);
@@ -260,7 +265,7 @@ app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
 // Start server
 // ============================================================
 const PORT: number = parseInt(process.env.PORT || "3000", 10);
-const HOST: string = "127.0.0.1"; // Bind to IPv4 explicitly
+const HOST: string = "0.0.0.0"; // Bind to all interfaces for Render
 
 app.listen(PORT, HOST, () => {
     console.log("-----------------------------------------");
