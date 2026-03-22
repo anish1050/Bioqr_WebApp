@@ -70,6 +70,13 @@ router.post(
             });
 
             console.log("✅ User registered successfully:", userId);
+            (req as any).user = {
+                id: userId,
+                first_name,
+                last_name,
+                username,
+                email
+            };
             log(`User registered: ${username}`, req, userId);
             res.json({
                 success: true,
@@ -121,12 +128,20 @@ router.post(
                 return;
             }
 
-            const { accessToken, refreshToken } = generateTokens(user.id);
+            const { accessToken, refreshToken } = generateTokens({
+                userId: user.id,
+                username: user.username,
+                email: user.email,
+                firstName: user.first_name,
+                lastName: user.last_name
+            });
             const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
             await SessionQueries.create(user.id, refreshToken, expiresAt);
 
             console.log("✅ Login successful:", user.id);
+            // Attach user to req so the logger can extract firstName, LastName, etc.
+            (req as any).user = user;
             log(`User logged in: ${user.username}`, req, user.id);
             res.json({
                 success: true,
@@ -137,6 +152,7 @@ router.post(
                     email: user.email,
                     first_name: user.first_name,
                     last_name: user.last_name,
+                    avatar_url: user.avatar_url,
                 },
                 tokens: { accessToken, refreshToken, expiresIn: 900 },
             });
@@ -176,9 +192,19 @@ router.post(
                 return;
             }
 
-            const { accessToken, refreshToken: newRefreshToken } = generateTokens(
-                decoded.userId
-            );
+            const user = await UserQueries.findById(decoded.userId);
+            if (!user) {
+                res.status(404).json({ success: false, message: "User not found" });
+                return;
+            }
+
+            const { accessToken, refreshToken: newRefreshToken } = generateTokens({
+                userId: user.id,
+                username: user.username,
+                email: user.email,
+                firstName: user.first_name,
+                lastName: user.last_name
+            });
             const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
             await SessionQueries.rotateToken(refreshToken, newRefreshToken, newExpiresAt);

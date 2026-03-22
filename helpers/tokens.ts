@@ -14,11 +14,30 @@ export interface TokenPair {
 }
 
 /**
+ * User details expected for JWT payload
+ */
+export interface UserJwtPayload {
+    userId: number;
+    username?: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+}
+
+/**
  * Generate access and refresh JWT tokens for a user.
  */
-export function generateTokens(userId: number): TokenPair {
-    const accessToken = jwt.sign({ userId }, JWT_SECRET, { expiresIn: "15m" });
-    const refreshToken = jwt.sign({ userId }, JWT_REFRESH_SECRET, {
+export function generateTokens(user: UserJwtPayload): TokenPair {
+    const payload = { 
+        userId: user.userId,
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName
+    };
+    
+    const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: "15m" });
+    const refreshToken = jwt.sign({ userId: user.userId }, JWT_REFRESH_SECRET, {
         expiresIn: "7d",
     });
     return { accessToken, refreshToken };

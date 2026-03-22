@@ -59,7 +59,13 @@ router.get(
         const user = (req as any).user;
         console.log("🔍 Authenticated user:", { id: user.id, email: user.email });
 
-        const { accessToken, refreshToken } = generateTokens(user.id);
+        const { accessToken, refreshToken } = generateTokens({
+            userId: user.id,
+            username: user.username,
+            email: user.email,
+            firstName: user.first_name,
+            lastName: user.last_name
+        });
 
         try {
             const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -172,7 +178,13 @@ router.get(
         const user = (req as any).user;
         console.log("🔍 Authenticated user:", { id: user.id, email: user.email || user.username });
 
-        const { accessToken, refreshToken } = generateTokens(user.id);
+        const { accessToken, refreshToken } = generateTokens({
+            userId: user.id,
+            username: user.username,
+            email: user.email,
+            firstName: user.first_name,
+            lastName: user.last_name
+        });
 
         try {
             const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
