@@ -16,7 +16,7 @@ const db: mysql.Pool = mysql.createPool({
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    connectTimeout: 10000, // 10 second timeout
+    connectTimeout: 30000, // 30 second timeout for TiDB Serverless cold starts
 });
 
 // Test the connection

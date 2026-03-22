@@ -14,7 +14,7 @@ const db = mysql.createConnection({
         minVersion: 'TLSv1.2',
         rejectUnauthorized: false, // TiDB Cloud requires SSL but uses custom CA
     },
-    connectTimeout: 10000, // 10 second timeout
+    connectTimeout: 30000, // 30 second timeout for TiDB cold starts
 });
 
 console.log("🔧 Setting up BioQR database...");
