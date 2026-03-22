@@ -81,9 +81,14 @@ app.use(passport.session());
 // ============================================================
 // CORS setup
 // ============================================================
+const commonOrigins: string[] = [
+    "https://bioqr-web-app.vercel.app",
+    "https://bioqr-webapp-lvzy.onrender.com",
+];
 const prodOrigins: string[] = [
     process.env.ORIGIN_1 || "",
     process.env.ORIGIN_2 || "",
+    ...commonOrigins,
 ];
 const devOrigin: string[] = [
     "http://localhost:5173",
@@ -91,6 +96,7 @@ const devOrigin: string[] = [
     "http://localhost:3000",
     "http://127.0.0.1:5500",
     "http://127.0.0.1:5174",
+    ...commonOrigins,
 ];
 const allowedOrigins =
     process.env.NODE_ENV === "production" ? prodOrigins : devOrigin;
