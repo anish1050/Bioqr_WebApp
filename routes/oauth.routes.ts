@@ -78,13 +78,27 @@ router.get(
         const isRegistration = (req as any).session.isOAuthRegistration;
         const wasNewUser = (req as any).session.wasNewUser;
 
-        let redirectUrl: string;
-
         const isDevelopment = process.env.NODE_ENV !== "production";
         const authSource: string = (req as any).session.authSource || "";
-        const viteUrl = authSource.match(/(http:\/\/localhost:\d+)/)?.[1] || "http://localhost:5173";
-        const baseRedirectUrl = isDevelopment ? viteUrl : "";
+        const prodFrontendUrl = "https://bioqr-web-app.vercel.app";
 
+        let baseRedirectUrl: string;
+
+        if (authSource.includes("localhost") || authSource.includes("127.0.0.1")) {
+            baseRedirectUrl = authSource.match(/(http:\/\/localhost:\d+)/)?.[1] || 
+                             authSource.match(/(http:\/\/127\.0\.0\.1:\d+)/)?.[1] || 
+                             "http://localhost:5173";
+        } else if (authSource.startsWith("http")) {
+            try {
+                baseRedirectUrl = new URL(authSource).origin;
+            } catch (e) {
+                baseRedirectUrl = prodFrontendUrl;
+            }
+        } else {
+            baseRedirectUrl = isDevelopment ? "http://localhost:5173" : prodFrontendUrl;
+        }
+
+        let redirectUrl: string;
         if (isRegistration && wasNewUser) {
             redirectUrl = `${baseRedirectUrl}/login?message=registration_success&provider=google`;
             console.log("✅ Google registration successful - redirecting to login");
@@ -105,12 +119,8 @@ router.get(
                 })
             );
 
-            if (isDevelopment) {
-                redirectUrl = `${viteUrl}/dashboard?token=${accessToken}&refresh=${refreshToken}&user=${userPayload}`;
-                console.log(`🔨 Development Mode: Redir to Vite dev server at ${viteUrl}`);
-            } else {
-                redirectUrl = `/dashboard?token=${accessToken}&refresh=${refreshToken}&user=${userPayload}`;
-            }
+            redirectUrl = `${baseRedirectUrl}/dashboard?token=${accessToken}&refresh=${refreshToken}&user=${userPayload}`;
+            console.log(`📡 Redirecting to frontend at: ${baseRedirectUrl}`);
             console.log("✅ Google login successful - redirecting to dashboard");
             log(`User logged in via Google: ${user.username}`, req, user.id);
         }
@@ -197,13 +207,27 @@ router.get(
         const isRegistration = (req as any).session.isOAuthRegistration;
         const wasNewUser = (req as any).session.wasNewUser;
 
-        let redirectUrl: string;
-
         const isDevelopment = process.env.NODE_ENV !== "production";
         const authSource: string = (req as any).session.authSource || "";
-        const viteUrl = authSource.match(/(http:\/\/localhost:\d+)/)?.[1] || "http://localhost:5173";
-        const baseRedirectUrl = isDevelopment ? viteUrl : "";
+        const prodFrontendUrl = "https://bioqr-web-app.vercel.app";
 
+        let baseRedirectUrl: string;
+
+        if (authSource.includes("localhost") || authSource.includes("127.0.0.1")) {
+            baseRedirectUrl = authSource.match(/(http:\/\/localhost:\d+)/)?.[1] || 
+                             authSource.match(/(http:\/\/127\.0\.0\.1:\d+)/)?.[1] || 
+                             "http://localhost:5173";
+        } else if (authSource.startsWith("http")) {
+            try {
+                baseRedirectUrl = new URL(authSource).origin;
+            } catch (e) {
+                baseRedirectUrl = prodFrontendUrl;
+            }
+        } else {
+            baseRedirectUrl = isDevelopment ? "http://localhost:5173" : prodFrontendUrl;
+        }
+
+        let redirectUrl: string;
         if (isRegistration && wasNewUser) {
             redirectUrl = `${baseRedirectUrl}/login?message=registration_success&provider=github`;
             console.log("✅ GitHub registration successful - redirecting to login");
@@ -224,12 +248,8 @@ router.get(
                 })
             );
 
-            if (isDevelopment) {
-                redirectUrl = `${viteUrl}/dashboard?token=${accessToken}&refresh=${refreshToken}&user=${userPayload}`;
-                console.log(`🔨 Development Mode: Redir to Vite dev server at ${viteUrl}`);
-            } else {
-                redirectUrl = `/dashboard?token=${accessToken}&refresh=${refreshToken}&user=${userPayload}`;
-            }
+            redirectUrl = `${baseRedirectUrl}/dashboard?token=${accessToken}&refresh=${refreshToken}&user=${userPayload}`;
+            console.log(`📡 Redirecting to frontend at: ${baseRedirectUrl}`);
             console.log("✅ GitHub login successful - redirecting to dashboard");
             log(`User logged in via GitHub: ${user.username}`, req, user.id);
         }

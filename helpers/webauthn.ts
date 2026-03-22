@@ -14,11 +14,12 @@ dotenv.config();
 // Configuration
 // ============================================================
 
-const RP_ID = process.env.RP_ID || "localhost";
-const RP_ORIGIN = process.env.RP_ORIGIN || "http://localhost:5173";
+const IS_PROD = process.env.NODE_ENV === "production";
+const RP_ID = process.env.RP_ID || (IS_PROD ? "bioqr-web-app.vercel.app" : "localhost");
+const RP_ORIGIN = process.env.RP_ORIGIN || (IS_PROD ? "https://bioqr-web-app.vercel.app" : "http://localhost:5173");
 
 if (!process.env.RP_ID || !process.env.RP_ORIGIN) {
-  console.warn("⚠️  RP_ID or RP_ORIGIN not set in .env. Using defaults (localhost).");
+  console.warn(`⚠️  RP_ID or RP_ORIGIN not set in .env. Using ${IS_PROD ? "production" : "development"} defaults.`);
 }
 
 // ============================================================
