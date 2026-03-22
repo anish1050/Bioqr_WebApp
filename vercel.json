@@ -1,0 +1,28 @@
+{
+  "rewrites": [
+    {
+      "source": "/bioqr/(.*)",
+      "destination": "https://bioqr-webapp-lvzy.onrender.com/bioqr/$1"
+    },
+    {
+      "source": "/auth/(.*)",
+      "destination": "https://bioqr-webapp-lvzy.onrender.com/auth/$1"
+    },
+    {
+      "source": "/uploads/(.*)",
+      "destination": "https://bioqr-webapp-lvzy.onrender.com/uploads/$1"
+    },
+    {
+      "source": "/access-file/(.*)",
+      "destination": "https://bioqr-webapp-lvzy.onrender.com/access-file/$1"
+    },
+    {
+      "source": "/health/(.*)",
+      "destination": "https://bioqr-webapp-lvzy.onrender.com/health/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
