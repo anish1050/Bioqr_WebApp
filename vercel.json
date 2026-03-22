@@ -21,6 +21,10 @@
       "destination": "https://bioqr-webapp-lvzy.onrender.com/health/$1"
     },
     {
+      "source": "/api/(.*)",
+      "destination": "https://bioqr-webapp-lvzy.onrender.com/api/$1"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

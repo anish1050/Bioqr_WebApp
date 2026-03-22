@@ -11,7 +11,24 @@ const DashboardLayout: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Authentication Check
+    // 0. Parse OAuth tokens if present in URL
+    const searchParams = new URLSearchParams(window.location.search);
+    const urlToken = searchParams.get('token');
+    const urlRefresh = searchParams.get('refresh');
+    const urlUser = searchParams.get('user');
+
+    if (urlToken && urlRefresh && urlUser) {
+      localStorage.setItem('accessToken', urlToken);
+      localStorage.setItem('refreshToken', urlRefresh);
+      localStorage.setItem('userInfo', decodeURIComponent(urlUser));
+      localStorage.removeItem('userLoggedOut');
+      
+      // Clean up URL parameters without refreshing the page
+      const cleanUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+
+    // 1. Authentication Check
     const accessToken = localStorage.getItem('accessToken');
     const refreshToken = localStorage.getItem('refreshToken');
     const userInfo = localStorage.getItem('userInfo');
