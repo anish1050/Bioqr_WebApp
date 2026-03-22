@@ -106,7 +106,7 @@ Required variables (adjust as needed):
 DB_HOST=localhost
 DB_USER=root
 DB_PASSWORD=yourpassword
-DB_NAME=bioqr_db
+SQL_DB_NAME=bioqr_db
 DB_PORT=3306
 
 # Session security
