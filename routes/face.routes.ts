@@ -3,6 +3,7 @@ import { FaceRecognitionQueries } from "../helpers/queries.js";
 import { authenticateToken } from "../helpers/auth.js";
 import { authLimiter } from "../helpers/rateLimiters.js";
 import { extractFaceDescriptorFromBase64 } from "../helpers/faceRecognition.js";
+import { log } from "../helpers/logger.js";
 
 const router = Router();
 
@@ -30,6 +31,7 @@ router.post("/enroll", authenticateToken, async (req: Request, res: Response) =>
         }
         
         await FaceRecognitionQueries.upsert(userId, floatDescriptor);
+        log("Face biometric enrolled", req, userId);
         res.json({ success: true, message: "Face enrolled successfully" });
     } catch (error) {
         console.error("❌ Face enrollment error:", error);
@@ -83,6 +85,8 @@ router.post("/verify", authenticateToken, authLimiter, async (req: Request, res:
         // face-api threshold: smaller distance = better match. Usually 0.6 is threshold
         console.log("Face match distance (Euclidean):", distance);
         const isMatch = distance < 0.6;
+        
+        log(`Face verification: ${isMatch ? "Success" : "Failed"} (dist: ${distance.toFixed(4)})`, req, userId);
 
         if (isMatch) {
             return res.json({ success: true, verified: true, message: "Face verified successfully", distance });
@@ -119,6 +123,7 @@ router.post("/reset", authenticateToken, async (req: Request, res: Response) => 
     if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
     try {
         await FaceRecognitionQueries.deleteByUserId(userId);
+        log("Face biometric reset", req, userId);
         res.json({ success: true, message: "Face biometric removed" });
     } catch (error) {
         res.status(500).json({ success: false, message: "Failed to reset face biometric" });

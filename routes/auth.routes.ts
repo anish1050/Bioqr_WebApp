@@ -7,6 +7,7 @@ import { authenticateToken } from "../helpers/auth.js";
 import { authLimiter } from "../helpers/rateLimiters.js";
 import { optionalDoubleCsrfProtection } from "../helpers/csrf.js";
 import { UserQueries, SessionQueries } from "../helpers/queries.js";
+import { log } from "../helpers/logger.js";
 
 const router = Router();
 
@@ -69,6 +70,7 @@ router.post(
             });
 
             console.log("✅ User registered successfully:", userId);
+            log(`User registered: ${username}`, req, userId);
             res.json({
                 success: true,
                 message: "User registered successfully!",
@@ -125,6 +127,7 @@ router.post(
             await SessionQueries.create(user.id, refreshToken, expiresAt);
 
             console.log("✅ Login successful:", user.id);
+            log(`User logged in: ${user.username}`, req, user.id);
             res.json({
                 success: true,
                 message: "Login successful",
@@ -211,6 +214,7 @@ router.post(
                 await SessionQueries.invalidateAll(userId);
                 console.log("✅ All sessions invalidated for user:", userId);
             }
+            log("User logged out", req, userId);
         } catch (error) {
             console.error("❌ Logout error:", error);
         }

@@ -3,6 +3,7 @@ import crypto from "crypto";
 import QRCode from "qrcode";
 import { authenticateToken } from "../helpers/auth.js";
 import { FileQueries, QrTokenQueries } from "../helpers/queries.js";
+import { log } from "../helpers/logger.js";
 
 const router = Router();
 
@@ -59,6 +60,7 @@ router.post(
             const qrImage = await QRCode.toDataURL(qrData);
 
             console.log("✅ QR code generated for token:", token);
+            log(`QR Code generated for ${fileIds.length} file(s)`, req, userId);
             res.json({ qrImage, token, expiresAt });
         } catch (err) {
             console.error("❌ QR generation error:", err);
@@ -293,6 +295,7 @@ router.get(
             }
 
             console.log(`✅ Redirecting to file: ${file.filepath}`);
+            log(`File accessed via QR: ${file.filename}`, req, qrToken.user_id);
             // Explicitly set no-cache headers so browsers don't cache the 302 redirect
             res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
             res.setHeader("Pragma", "no-cache");

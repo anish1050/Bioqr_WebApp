@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import passport from "../helpers/passport.js";
 import { generateTokens } from "../helpers/tokens.js";
 import { SessionQueries } from "../helpers/queries.js";
+import { log } from "../helpers/logger.js";
 
 const router = Router();
 
@@ -81,6 +82,7 @@ router.get(
         if (isRegistration && wasNewUser) {
             redirectUrl = `${baseRedirectUrl}/login?message=registration_success&provider=google`;
             console.log("✅ Google registration successful - redirecting to login");
+            log(`User registered via Google: ${user.username}`, req, user.id);
         } else if (isRegistration && !wasNewUser) {
             redirectUrl = `${baseRedirectUrl}/login?message=user_exists&provider=google`;
             console.log("ℹ️ Google user already exists - redirecting to login");
@@ -104,6 +106,7 @@ router.get(
                 redirectUrl = `/dashboard?token=${accessToken}&refresh=${refreshToken}&user=${userPayload}`;
             }
             console.log("✅ Google login successful - redirecting to dashboard");
+            log(`User logged in via Google: ${user.username}`, req, user.id);
         }
 
         console.log(`✅ Final OAuth redirect URL: ${redirectUrl}`);
@@ -192,6 +195,7 @@ router.get(
         if (isRegistration && wasNewUser) {
             redirectUrl = `${baseRedirectUrl}/login?message=registration_success&provider=github`;
             console.log("✅ GitHub registration successful - redirecting to login");
+            log(`User registered via GitHub: ${user.username}`, req, user.id);
         } else if (isRegistration && !wasNewUser) {
             redirectUrl = `${baseRedirectUrl}/login?message=user_exists&provider=github`;
             console.log("ℹ️ GitHub user already exists - redirecting to login");
@@ -215,6 +219,7 @@ router.get(
                 redirectUrl = `/dashboard?token=${accessToken}&refresh=${refreshToken}&user=${userPayload}`;
             }
             console.log("✅ GitHub login successful - redirecting to dashboard");
+            log(`User logged in via GitHub: ${user.username}`, req, user.id);
         }
 
         console.log(`✅ Final OAuth redirect URL: ${redirectUrl}`);

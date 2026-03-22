@@ -16,6 +16,7 @@ import { generateCsrfToken, CSRF_SECRET } from "./helpers/csrf.js";
 import { authenticateToken } from "./helpers/auth.js";
 import { SessionQueries } from "./helpers/queries.js";
 import { initFaceRecognitionModels } from "./helpers/faceRecognition.js";
+import { log } from "./helpers/logger.js";
 
 // Routes
 import authRoutes from "./routes/auth.routes.js";
@@ -156,6 +157,20 @@ app.use("", qrRoutes);
 // Home route for Render health check
 app.get("/", (req: Request, res: Response) => {
     res.status(200).json({ success: true, message: "BioQR API is running" });
+});
+
+/**
+ * POST /bioqr/log
+ * Explicit logging endpoint for external clients (like Android app)
+ */
+app.post("/bioqr/log", (req: Request, res: Response) => {
+    const { activity, userId, platform } = req.body;
+    if (!activity) {
+        res.status(400).json({ success: false, message: "Activity description required" });
+        return;
+    }
+    log(activity, req, userId, platform);
+    res.json({ success: true, message: "Activity logged" });
 });
 
 // Add a catch-all 404 logger for handled routes to debug 404s

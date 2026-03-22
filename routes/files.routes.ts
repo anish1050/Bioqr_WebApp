@@ -6,6 +6,7 @@ import { authenticateToken } from "../helpers/auth.js";
 import { uploadLimiter } from "../helpers/rateLimiters.js";
 import { upload } from "../helpers/multer.js";
 import { FileQueries } from "../helpers/queries.js";
+import { log } from "../helpers/logger.js";
 
 const router = Router();
 
@@ -58,6 +59,7 @@ router.post(
                 try { fs.unlinkSync(file.path); } catch (_e) { /* ignore */ }
 
                 console.log("✅ File uploaded to Cloudinary:", fileId);
+                log(`File uploaded: ${file.originalname}`, req, userId);
                 res.json({
                     success: true,
                     message: "File uploaded successfully!",
@@ -146,6 +148,7 @@ router.delete(
             }
 
             console.log("✅ File deleted successfully:", fileId);
+            log(`File deleted: ${file.filename}`, req, userId);
             res.json({ success: true, message: "File deleted successfully" });
         } catch (error) {
             console.error("❌ Delete error:", error);
@@ -172,6 +175,7 @@ router.get(
                 return;
             }
 
+            log(`File downloaded: ${file.filename}`, req, userId);
             res.redirect(file.filepath);
         } catch (error) {
             console.error("❌ Download error:", error);

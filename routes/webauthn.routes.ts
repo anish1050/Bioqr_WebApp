@@ -10,6 +10,7 @@ import {
 import { WebAuthnCredentialQueries, UserQueries } from "../helpers/queries.js";
 import { authenticateToken } from "../helpers/auth.js";
 import { authLimiter } from "../helpers/rateLimiters.js";
+import { log } from "../helpers/logger.js";
 
 const router = Router();
 
@@ -65,6 +66,7 @@ router.post("/register/complete", authenticateToken, authLimiter, async (req: Re
 
     await WebAuthnCredentialQueries.create(userId, credentialId, publicKeyBase64, 0, transports);
     console.log(`✅ WebAuthn credential registered for user ${userId}: ${credentialId}`);
+    log("Biometric passkey registered", req, userId);
     res.json({ success: true, message: "Biometric credential registered successfully" });
   } catch (error: any) {
     console.error("❌ WebAuthn registration complete error:", error);
@@ -134,6 +136,7 @@ router.post("/verify/complete", authenticateToken, authLimiter, async (req: Requ
 
     await WebAuthnCredentialQueries.updateSignCount(credentialId, newSignCount);
     console.log(`✅ WebAuthn verification successful for user ${userId}`);
+    log("Biometric passkey verified", req, userId);
     res.json({ success: true, verified: true, userId });
   } catch (error: any) {
     console.error("❌ WebAuthn verify complete error:", error);
@@ -186,6 +189,7 @@ router.delete("/credentials/:id", authenticateToken, authLimiter, async (req: Re
       return;
     }
     console.log(`🗑️  WebAuthn credential deleted for user ${userId}, id: ${id}`);
+    log(`Biometric passkey deleted (ID: ${id})`, req, userId);
     res.json({ success: true, message: "Credential removed" });
   } catch (error) {
     console.error("❌ WebAuthn credential delete error:", error);
@@ -200,6 +204,7 @@ router.post("/reset", authenticateToken, authLimiter, async (req: Request, res: 
   try {
     await WebAuthnCredentialQueries.deleteAllByUserId(userId);
     console.log(`🗑️  All WebAuthn credentials reset for user ${userId}`);
+    log("All biometric passkeys reset", req, userId);
     res.json({ success: true, message: "All biometric credentials removed" });
   } catch (error) {
     console.error("❌ WebAuthn reset error:", error);
