@@ -2,6 +2,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
 import DashboardLayout from './layouts/DashboardLayout';
+import { Analytics } from "@vercel/analytics/react";
 
 // Public Pages
 import Home from './pages/Home';
@@ -21,6 +22,7 @@ import Security from './pages/Security';
 function App() {
   return (
     <BrowserRouter>
+      <Analytics />
       <Routes>
         {/* Auth Pages (without Navbar/Footer layout intentionally, they have their own styles) */}
         <Route path="/login" element={<Login />} />
