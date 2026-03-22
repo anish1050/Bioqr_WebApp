@@ -1,5 +1,5 @@
 import { doubleCsrf } from "csrf-csrf";
-import { Request } from "express";
+import { Request, Response, NextFunction } from "express"; // Added Response, NextFunction
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -23,5 +23,29 @@ const { generateCsrfToken, doubleCsrfProtection } = doubleCsrf({
     getCsrfTokenFromRequest: (req: Request) =>
         req.headers["x-csrf-token"] as string,
 });
+
+/**
+ * Custom middleware that bypasses CSRF protection if the request comes from
+ * the Android app (identified by a specific header or User-Agent).
+ */
+export const optionalDoubleCsrfProtection = (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): void => {
+    const clientType = req.headers["x-client-type"];
+    const userAgent = req.headers["user-agent"] || "";
+
+    // Debug logging to help identify why requests might be failing
+    console.log(`🛡️ [CSRF CHECK] URL: ${req.url}, Method: ${req.method}`);
+    console.log(`📡 [CSRF HEADERS] x-client-type: ${clientType}, user-agent: ${userAgent}`);
+
+    if (clientType === "android" || userAgent.toLowerCase().includes("okhttp")) {
+        console.log(`✅ [CSRF BYPASS] Mobile client detected, bypassing CSRF check.`);
+        return next();
+    }
+
+    doubleCsrfProtection(req, res, next);
+};
 
 export { generateCsrfToken, doubleCsrfProtection, CSRF_SECRET };

@@ -35,7 +35,7 @@ export const authenticateToken = (
             return;
         }
 
-        req.user = decoded as Express.User;
+        (req as any).user = decoded;
         next();
     });
 };

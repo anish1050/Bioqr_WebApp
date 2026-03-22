@@ -1,11 +1,11 @@
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { sanitizeInput } from "../helpers/sanitize.js";
 import { generateTokens, JWT_REFRESH_SECRET } from "../helpers/tokens.js";
 import { authenticateToken } from "../helpers/auth.js";
 import { authLimiter } from "../helpers/rateLimiters.js";
-import { doubleCsrfProtection } from "../helpers/csrf.js";
+import { optionalDoubleCsrfProtection } from "../helpers/csrf.js";
 import { UserQueries, SessionQueries } from "../helpers/queries.js";
 
 const router = Router();
@@ -16,7 +16,7 @@ const router = Router();
 router.post(
     "/users/register",
     authLimiter,
-    doubleCsrfProtection,
+    optionalDoubleCsrfProtection,
     async (req: Request, res: Response): Promise<void> => {
         const first_name = sanitizeInput(req.body.first_name, 50);
         const last_name = sanitizeInput(req.body.last_name, 50);
@@ -87,7 +87,7 @@ router.post(
 router.post(
     "/users/login",
     authLimiter,
-    doubleCsrfProtection,
+    optionalDoubleCsrfProtection,
     async (req: Request, res: Response): Promise<void> => {
         const loginField = sanitizeInput(req.body.loginField, 100);
         const password: string = req.body.password;
@@ -198,7 +198,7 @@ router.post(
     "/auth/logout",
     authenticateToken,
     async (req: Request, res: Response): Promise<void> => {
-        const userId = req.user!.userId;
+        const userId = (req as any).user?.userId;
         const { refreshToken } = req.body;
 
         console.log("🔐 Logout request for user:", userId);
@@ -227,7 +227,12 @@ router.get(
     authenticateToken,
     async (req: Request, res: Response): Promise<void> => {
         try {
-            const user = await UserQueries.getProfile(req.user!.userId);
+            const userId = (req as any).user?.userId;
+            if (!userId) {
+                res.status(401).json({ success: false, message: "Unauthorized" });
+                return;
+            }
+            const user = await UserQueries.getProfile(userId);
 
             if (!user) {
                 res.status(404).json({ success: false, message: "User not found" });

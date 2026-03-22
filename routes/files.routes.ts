@@ -17,7 +17,12 @@ router.post(
     uploadLimiter,
     authenticateToken,
     (req: Request, res: Response): void => {
-        console.log("📁 Upload request received for user:", req.user!.userId);
+        const userId = (req as any).user?.userId;
+        console.log("📁 Upload request received for user:", userId);
+        if (!userId) {
+            res.status(401).json({ success: false, message: "Unauthorized" });
+            return;
+        }
         upload.single("file")(req as any, res as any, async (err: any) => {
             if (err) {
                 console.error("❌ Multer error:", err);
@@ -25,7 +30,7 @@ router.post(
                 return;
             }
 
-            const userId = req.user!.userId;
+            // userId already retrieved above
             const file = (req as any).file;
             if (!file) {
                 res.status(400).json({ success: false, message: "No file uploaded" });
@@ -74,7 +79,11 @@ router.get(
     authenticateToken,
     async (req: Request, res: Response): Promise<void> => {
         const requestedUserId = req.params.userId as string;
-        const tokenUserId = req.user!.userId;
+        const tokenUserId = (req as any).user?.userId;
+        if (!tokenUserId) {
+            res.status(401).json({ success: false, message: "Unauthorized" });
+            return;
+        }
 
         if (parseInt(requestedUserId, 10) !== tokenUserId) {
             res.status(403).json({ success: false, message: "Access denied" });
@@ -111,7 +120,7 @@ router.delete(
     authenticateToken,
     async (req: Request, res: Response): Promise<void> => {
         const fileId = req.params.id as string;
-        const userId = req.user!.userId;
+    const userId = (req as any).user?.userId;
 
         console.log(`🗑️ Delete request for file ${fileId} by user ${userId}`);
 
@@ -153,7 +162,7 @@ router.get(
     authenticateToken,
     async (req: Request, res: Response): Promise<void> => {
         const fileId = req.params.id as string;
-        const userId = req.user!.userId;
+    const userId = (req as any).user?.userId;
 
         try {
             const file = await FileQueries.findByIdAndUser(fileId, userId);

@@ -19,7 +19,11 @@ const router = Router();
 
 // POST /bioqr/auth/webauthn/register/start
 router.post("/register/start", authenticateToken, authLimiter, async (req: Request, res: Response): Promise<void> => {
-  const userId = req.user!.userId;
+            const userId = (req as any).user?.userId;
+            if (!userId) {
+                res.status(401).json({ success: false, message: "Unauthorized" });
+                return;
+            }
 
   try {
     const user = await UserQueries.findById(userId);
@@ -38,7 +42,11 @@ router.post("/register/start", authenticateToken, authLimiter, async (req: Reque
 
 // POST /bioqr/auth/webauthn/register/complete
 router.post("/register/complete", authenticateToken, authLimiter, async (req: Request, res: Response): Promise<void> => {
-  const userId = req.user!.userId;
+            const userId = (req as any).user?.userId;
+            if (!userId) {
+                res.status(401).json({ success: false, message: "Unauthorized" });
+                return;
+            }
   const { challengeId, registrationResponse } = req.body as {
     challengeId: string;
     registrationResponse: RegistrationResponse;
@@ -66,7 +74,11 @@ router.post("/register/complete", authenticateToken, authLimiter, async (req: Re
 
 // POST /bioqr/auth/webauthn/verify/start
 router.post("/verify/start", authenticateToken, authLimiter, async (req: Request, res: Response): Promise<void> => {
-  const userId = req.user!.userId;
+            const userId = (req as any).user?.userId;
+            if (!userId) {
+                res.status(401).json({ success: false, message: "Unauthorized" });
+                return;
+            }
 
   try {
     const credentials = await WebAuthnCredentialQueries.findByUserId(userId);
@@ -89,7 +101,11 @@ router.post("/verify/start", authenticateToken, authLimiter, async (req: Request
 
 // POST /bioqr/auth/webauthn/verify/complete
 router.post("/verify/complete", authenticateToken, authLimiter, async (req: Request, res: Response): Promise<void> => {
-  const userId = req.user!.userId;
+            const userId = (req as any).user?.userId;
+            if (!userId) {
+                res.status(401).json({ success: false, message: "Unauthorized" });
+                return;
+            }
   const { challengeId, authenticationResponse } = req.body as {
     challengeId: string;
     authenticationResponse: AuthenticationResponse;
@@ -127,7 +143,11 @@ router.post("/verify/complete", authenticateToken, authLimiter, async (req: Requ
 
 // GET /bioqr/auth/webauthn/credentials
 router.get("/credentials", authenticateToken, authLimiter, async (req: Request, res: Response): Promise<void> => {
-  const userId = req.user!.userId;
+            const userId = (req as any).user?.userId;
+            if (!userId) {
+                res.status(401).json({ success: false, message: "Unauthorized" });
+                return;
+            }
 
   try {
     const credentials = await WebAuthnCredentialQueries.findByUserId(userId);
@@ -147,7 +167,11 @@ router.get("/credentials", authenticateToken, authLimiter, async (req: Request, 
 
 // DELETE /bioqr/auth/webauthn/credentials/:id
 router.delete("/credentials/:id", authenticateToken, authLimiter, async (req: Request, res: Response): Promise<void> => {
-  const userId = req.user!.userId;
+            const userId = (req as any).user?.userId;
+            if (!userId) {
+                res.status(401).json({ success: false, message: "Unauthorized" });
+                return;
+            }
   const id = parseInt(req.params.id as string, 10);
 
   if (isNaN(id)) {

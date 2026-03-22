@@ -15,7 +15,8 @@ const router = Router();
  * Save face descriptor for the currently logged-in user.
  */
 router.post("/enroll", authenticateToken, async (req: Request, res: Response) => {
-    const userId = req.user!.userId;
+    const userId = (req as any).user?.userId;
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
     const { base64Image } = req.body;
 
     if (!base64Image) {
@@ -57,7 +58,8 @@ const calculateEuclideanDistance = (descriptor1: Float32Array, descriptor2: Floa
  */
 router.post("/verify", authenticateToken, authLimiter, async (req: Request, res: Response) => {
     try {
-        const userId = req.user!.userId;
+        const userId = (req as any).user?.userId;
+        if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
         const { base64Image } = req.body;
 
         if (!base64Image) {
@@ -98,7 +100,8 @@ router.post("/verify", authenticateToken, authLimiter, async (req: Request, res:
  * Check if the current user has a face biometric enrolled.
  */
 router.get("/status", authenticateToken, async (req: Request, res: Response) => {
-    const userId = req.user!.userId;
+    const userId = (req as any).user?.userId;
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
     try {
         const storedRecord = await FaceRecognitionQueries.findByUserId(userId);
         res.json({ success: true, enrolled: !!storedRecord });
@@ -112,7 +115,8 @@ router.get("/status", authenticateToken, async (req: Request, res: Response) => 
  * Remove face biometric for the current user.
  */
 router.post("/reset", authenticateToken, async (req: Request, res: Response) => {
-    const userId = req.user!.userId;
+    const userId = (req as any).user?.userId;
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
     try {
         await FaceRecognitionQueries.deleteByUserId(userId);
         res.json({ success: true, message: "Face biometric removed" });

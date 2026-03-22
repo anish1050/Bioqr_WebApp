@@ -14,7 +14,11 @@ router.post(
     authenticateToken,
     async (req: Request, res: Response): Promise<void> => {
         try {
-            const userId = req.user!.userId;
+            const userId = (req as any).user?.userId;
+            if (!userId) {
+                res.status(401).json({ error: "Unauthorized" });
+                return;
+            }
             
             // Support both single file_id and multiple file_ids
             let fileIds: number[] = [];
