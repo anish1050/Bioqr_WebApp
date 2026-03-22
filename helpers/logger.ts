@@ -9,12 +9,18 @@ const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/BioQR";
 const isCloud = MONGO_URI.includes("mongodb+srv");
 console.log(`🔌 Attempting to connect to ${isCloud ? "MongoDB Atlas" : "local MongoDB"}...`);
 
+let isMongoConnected = false;
+
 mongoose
     .connect(MONGO_URI, {
         serverSelectionTimeoutMS: 5000, // Timeout after 5s
     })
-    .then(() => console.log(`✅ MongoDB Connection Established: ${isCloud ? "Cloud Cluster" : "Local Collection"}`))
+    .then(() => {
+        isMongoConnected = true;
+        console.log(`✅ MongoDB Connection Established: ${isCloud ? "Cloud Cluster" : "Local Collection"}`);
+    })
     .catch((err) => {
+        isMongoConnected = false;
         console.error("❌ MongoDB Connection Error:", err.message);
         if (isCloud && err.message.includes("auth")) {
             console.error("💡 Tip: Check your MONGO_URI password in the .env file.");
@@ -59,12 +65,17 @@ export async function logActivity(activity: string, req?: any, userId?: string |
         const username = user.username || req?.body?.username;
         const email = user.email || req?.body?.email;
 
+        if (!isMongoConnected) {
+            console.log(`📝 [${detectedPlatform}] Skip MongoDB: ${activity} - User: ${username || finalUserId}`);
+            return;
+        }
+
         const logEntry = new LogModel({
             userId: finalUserId.toString(),
             activity,
             method: req?.method,
             url: req?.originalUrl || req?.url,
-            ip: req?.ip || req?.headers["x-forwarded-for"] || req?.connection.remoteAddress,
+            ip: req?.ip || req?.headers["x-forwarded-for"] || req?.connection?.remoteAddress,
             platform: detectedPlatform,
             firstName,
             lastName,

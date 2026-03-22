@@ -272,7 +272,8 @@ app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     res.status(status).json({
         success: false,
-        message: status === 500 ? "Internal server error" : err.message,
+        message: err.message || "Internal server error",
+        stack: process.env.NODE_ENV !== "production" ? err.stack : undefined,
     });
 });
 

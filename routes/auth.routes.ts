@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from "express";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { sanitizeInput } from "../helpers/sanitize.js";
 import { generateTokens, JWT_REFRESH_SECRET } from "../helpers/tokens.js";
@@ -109,10 +109,10 @@ router.post(
         }
 
         try {
-            const isEmail = loginField.includes("@");
             const user = await UserQueries.findByEmailOrUsername(loginField);
 
             if (!user) {
+                const isEmail = loginField.includes("@");
                 const fieldType = isEmail ? "email address" : "username";
                 res.json({
                     success: false,
@@ -121,9 +121,20 @@ router.post(
                 return;
             }
 
-            const match = await bcrypt.compare(password, user.password!);
+            // Check if the user has a password set (local auth vs OAuth only)
+            if (!user.password) {
+                console.warn(`⚠️ User '${loginField}' has no password set (possibly OAuth only)`);
+                res.json({
+                    success: false,
+                    message: "Invalid credentials. Please sign in using your OAuth provider.",
+                });
+                return;
+            }
+
+            const match = await bcrypt.compare(password, user.password);
 
             if (!match) {
+                console.warn(`❌ Login failed for user '${loginField}': Invalid password`);
                 res.json({ success: false, message: "Invalid credentials" });
                 return;
             }
@@ -142,7 +153,7 @@ router.post(
             console.log("✅ Login successful:", user.id);
             // Attach user to req so the logger can extract firstName, LastName, etc.
             (req as any).user = user;
-            log(`User logged in: ${user.username}`, req, user.id);
+            await log(`User logged in: ${user.username}`, req, user.id);
             res.json({
                 success: true,
                 message: "Login successful",
@@ -156,9 +167,13 @@ router.post(
                 },
                 tokens: { accessToken, refreshToken, expiresIn: 900 },
             });
-        } catch (error) {
+        } catch (error: any) {
             console.error("❌ Login error:", error);
-            res.status(500).json({ success: false, message: "Database error" });
+            res.status(500).json({ 
+                success: false, 
+                message: "Internal server error during login",
+                error: process.env.NODE_ENV !== "production" ? error.message : undefined 
+            });
         }
     }
 );
