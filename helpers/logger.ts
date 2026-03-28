@@ -39,6 +39,13 @@ const LogSchema = new mongoose.Schema({
     lastName: { type: String, required: false },
     username: { type: String, required: false },
     email: { type: String, required: false },
+    // Geolocation from Vercel/Render headers
+    country: { type: String, required: false },
+    city: { type: String, required: false },
+    region: { type: String, required: false },
+    latitude: { type: String, required: false },
+    longitude: { type: String, required: false },
+    timezone: { type: String, required: false },
     timestamp: { type: Date, default: Date.now },
 });
 
@@ -81,6 +88,15 @@ export async function logActivity(activity: string, req?: any, userId?: string |
             lastName,
             username,
             email,
+            // Extract Vercel/Render headers
+            country: req?.headers["x-vercel-ip-country"] || req?.headers["x-render-ip-country"] || "Unknown",
+            city: req?.headers["x-vercel-ip-city"] 
+                ? decodeURIComponent(req.headers["x-vercel-ip-city"] as string) 
+                : (req?.headers["x-render-ip-city"] || "Unknown"),
+            region: req?.headers["x-vercel-ip-country-region"] || "Unknown",
+            latitude: req?.headers["x-vercel-ip-latitude"] || "Unknown",
+            longitude: req?.headers["x-vercel-ip-longitude"] || "Unknown",
+            timezone: req?.headers["x-vercel-ip-timezone"] || "Unknown",
         });
 
         await logEntry.save();

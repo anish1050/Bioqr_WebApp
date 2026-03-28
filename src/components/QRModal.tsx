@@ -8,6 +8,13 @@ import {
   QrCode,
   Shield,
   Camera,
+  MapPin,
+  Settings,
+  ChevronDown,
+  ChevronUp,
+  User,
+  Hash,
+  Type
 } from "lucide-react";
 import { useBiometricVerification } from "./BiometricVerifier";
 import FaceScanner from "./FaceScanner";
@@ -26,9 +33,10 @@ interface QRModalProps {
 const DURATION_OPTIONS = [
   { value: 1, label: "1 minute" },
   { value: 5, label: "5 minutes" },
-  { value: 15, label: "15 minutes" },
   { value: 60, label: "1 hour" },
   { value: 1440, label: "24 hours" },
+  { value: 10080, label: "1 week" },
+  { value: 525600, label: "1 year" },
 ];
 
 const QRModal: React.FC<QRModalProps> = ({
@@ -39,9 +47,11 @@ const QRModal: React.FC<QRModalProps> = ({
   accessToken,
 }) => {
   const [step, setStep] = useState<"form" | "verifying" | "generated">("form");
-  const [duration, setDuration] = useState(1);
+  const [qrType, setQrType] = useState<"file" | "vcard" | "text">("file");
+  const [duration, setDuration] = useState(60);
   const [isOneTime, setIsOneTime] = useState(false);
   const [isUnshareable, setIsUnshareable] = useState(false);
+  const [requireAuth, setRequireAuth] = useState(false);
   const [qrImage, setQrImage] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
@@ -49,10 +59,19 @@ const QRModal: React.FC<QRModalProps> = ({
   const [copied, setCopied] = useState(false);
   const [useFaceScanner, setUseFaceScanner] = useState(false);
   const [hasFaceEnrolled, setHasFaceEnrolled] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+
+  // V2 Fields
+  const [lat, setLat] = useState("");
+  const [lng, setLng] = useState("");
+  const [radius, setRadius] = useState("100");
+  const [styleColor, setStyleColor] = useState("#000000");
+  const [styleBg, setStyleBg] = useState("#FFFFFF");
+  const [vcard, setVcard] = useState({ firstName: "", lastName: "", tel: "", email: "", org: "" });
+  const [textContent, setTextContent] = useState("");
 
   const { verify, reset: resetBiometric } = useBiometricVerification();
 
-  // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
       setStep("form");
@@ -63,33 +82,13 @@ const QRModal: React.FC<QRModalProps> = ({
       setUseFaceScanner(false);
       resetBiometric();
     } else {
-      // Check biometric statuses
       const checkStatus = async () => {
         try {
-          const [faceRes, webAuthnRes] = await Promise.all([
-            fetch(`${API_BASE}/bioqr/auth/face/status`, {
-              headers: { "Authorization": `Bearer ${accessToken}` }
-            }),
-            fetch(`${API_BASE}/bioqr/auth/webauthn/credentials`, {
-              headers: { "Authorization": `Bearer ${accessToken}` }
-            })
-          ]);
-
+          const faceRes = await fetch(`${API_BASE}/bioqr/auth/face/status`, { headers: { "Authorization": `Bearer ${accessToken}` } });
           const faceData = await faceRes.json();
-          const webAuthnData = await webAuthnRes.json();
-
-          const faceEnrolled = !!faceData.enrolled;
-          const webAuthnEnrolled = !!(webAuthnData.credentials && webAuthnData.credentials.length > 0);
-
-          setHasFaceEnrolled(faceEnrolled);
-          
-          // If ONLY face is enrolled, default to face scanner automatically
-          if (faceEnrolled && !webAuthnEnrolled) {
-            setUseFaceScanner(true);
-          }
-        } catch (err) {
-          console.error("Error checking biometric status:", err);
-        }
+          setHasFaceEnrolled(!!faceData.enrolled);
+          if (faceData.enrolled) setUseFaceScanner(true);
+        } catch (err) { console.error("Error checking biometric status:", err); }
       };
       checkStatus();
     }
@@ -98,16 +97,12 @@ const QRModal: React.FC<QRModalProps> = ({
   const handleGenerateQR = async () => {
     setError(null);
     setStep("verifying");
-
     try {
-      // If we are already in the FaceScanner step, this won't be called directly 
-      // handleFaceCapture handles it instead.
       if (!useFaceScanner) {
         await verify();
         await completeQRGeneration();
       }
     } catch (err: any) {
-      console.error("QR generation error:", err);
       setError(err.message || "An error occurred");
       setStep("form");
     }
@@ -118,46 +113,42 @@ const QRModal: React.FC<QRModalProps> = ({
     try {
       const response = await fetch(`${API_BASE}/bioqr/auth/face/verify`, {
         method: "POST",
-        headers: {
-          "Authorization": `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
+        headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
         body: JSON.stringify({ base64Image }),
       });
-
-      if (!response.ok) {
-        throw new Error("Face verification failed. Please try again or check lighting.");
-      }
-
+      if (!response.ok) throw new Error("Face verification failed.");
       await completeQRGeneration();
-    } catch (err: any) {
-      setError(err.message || "Face recognition failed");
-      // Intentionally not setting useFaceScanner to false so they can try again
-      throw err;
-    }
+    } catch (err: any) { setError(err.message || "Face recognition failed"); throw err; }
   };
 
   const completeQRGeneration = async () => {
-    const response = await fetch(`${API_BASE}/bioqr/generate-qr`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify({
-        file_id: fileId,
-        duration,
-        is_one_time: isOneTime,
-        is_unshareable: isUnshareable,
-      }),
-    });
+    const payload: any = {
+      qr_type: qrType,
+      duration,
+      is_one_time: isOneTime,
+      is_unshareable: isUnshareable,
+      require_auth: requireAuth,
+      style_color: styleColor,
+      style_bg: styleBg,
+    };
 
-    if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || "Failed to generate QR code");
+    if (qrType === "file") payload.file_id = fileId;
+    if (qrType === "vcard") payload.vcard_data = vcard;
+    if (qrType === "text") payload.text_content = textContent;
+
+    if (lat && lng) {
+      payload.latitude = lat;
+      payload.longitude = lng;
+      payload.radius = radius;
     }
 
+    const response = await fetch(`${API_BASE}/bioqr/generate-qr`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) throw new Error("Failed to generate QR code");
     const data = await response.json();
     setQrImage(data.qrImage);
     setToken(data.token);
@@ -167,44 +158,24 @@ const QRModal: React.FC<QRModalProps> = ({
 
   const handleShareQR = async () => {
     if (!token) return;
-    const link = `${window.location.origin}/access-file/${token}`;
-    
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Secure BioQR File',
-          text: `Authorized file access: ${filename}`,
-          url: link,
-        });
-      } catch (err) {
-        if ((err as Error).name !== 'AbortError') {
-          console.error("Error sharing:", err);
-          // Fallback to copy if share fails
-          handleCopyFallback(link);
-        }
-      }
-    } else {
-      // Fallback for desktop/unsupported browsers
-      handleCopyFallback(link);
-    }
-  };
+    const link = (qrImage?.includes("localhost") || !process.env.NODE_ENV)
+      ? `${window.location.protocol}//${window.location.host}/access-file/${token}`
+      : `${window.location.origin}/access-file/${token}`;
 
-  const handleCopyFallback = async (link: string) => {
-    try {
-      await navigator.clipboard.writeText(link);
+    if (navigator.share) {
+      await navigator.share({ title: 'BioQR Secure', url: link }).catch(() => null);
+    } else {
+      navigator.clipboard.writeText(link);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
     }
   };
 
-  const handleDownloadQR = () => {
-    if (!qrImage) return;
-    const link = document.createElement("a");
-    link.download = `qr-${filename}-${token?.slice(0, 8)}.png`;
-    link.href = qrImage;
-    link.click();
+  const useMyLocation = () => {
+    navigator.geolocation.getCurrentPosition((pos) => {
+      setLat(pos.coords.latitude.toFixed(6));
+      setLng(pos.coords.longitude.toFixed(6));
+    });
   };
 
   if (!isOpen) return null;
@@ -213,149 +184,82 @@ const QRModal: React.FC<QRModalProps> = ({
     <div className="qr-modal-overlay" onClick={onClose}>
       <div className="qr-modal" onClick={(e) => e.stopPropagation()}>
         <div className="qr-modal-header">
-          <h3>
-            <QrCode size={20} style={{ marginRight: "8px" }} />
-            QR Code
-          </h3>
-          <button className="close-btn" onClick={onClose}>
-            <X size={24} />
-          </button>
+          <h3><QrCode size={20} style={{ marginRight: "8px" }} /> QR V2 Generator</h3>
+          <button className="close-btn" onClick={onClose}><X size={24} /></button>
         </div>
 
         <div className="qr-modal-content">
           {step === "form" && (
             <>
-              <div className="file-info">
-                <p>
-                  <strong>File:</strong> {filename}
-                </p>
+              <div className="qr-tabs">
+                <button className={`qr-tab ${qrType === 'file' ? 'active' : ''}`} onClick={() => setQrType('file')}><Hash size={16} /> File</button>
+                <button className={`qr-tab ${qrType === 'vcard' ? 'active' : ''}`} onClick={() => setQrType('vcard')}><User size={16} /> Contact</button>
+                <button className={`qr-tab ${qrType === 'text' ? 'active' : ''}`} onClick={() => setQrType('text')}><Type size={16} /> Text</button>
               </div>
 
+              {qrType === 'file' && <div className="file-info"><p><strong>Target:</strong> {filename}</p></div>}
+              {qrType === 'vcard' && (
+                <div className="settings-grid" style={{ marginBottom: '1rem' }}>
+                  <div className="input-row"><label>First Name</label><input value={vcard.firstName} onChange={e => setVcard({ ...vcard, firstName: e.target.value })} /></div>
+                  <div className="input-row"><label>Last Name</label><input value={vcard.lastName} onChange={e => setVcard({ ...vcard, lastName: e.target.value })} /></div>
+                  <div className="input-row" style={{ gridColumn: 'span 2' }}><label>Email</label><input value={vcard.email} onChange={e => setVcard({ ...vcard, email: e.target.value })} /></div>
+                </div>
+              )}
+
               <div className="form-group">
-                <label htmlFor="duration">Duration (minutes)</label>
-                <select
-                  id="duration"
-                  value={duration}
-                  onChange={(e) => setDuration(Number(e.target.value))}
-                >
-                  {DURATION_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
+                <label>Validity Duration</label>
+                <select value={duration} onChange={(e) => setDuration(Number(e.target.value))}>
+                  {DURATION_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                 </select>
               </div>
 
               <div className="checkbox-group">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={isOneTime}
-                    onChange={(e) => setIsOneTime(e.target.checked)}
-                  />
-                  <span className="checkmark"></span>
-                  One-time use (QR becomes invalid after first scan)
-                </label>
-
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={isUnshareable}
-                    onChange={(e) => setIsUnshareable(e.target.checked)}
-                  />
-                  <span className="checkmark"></span>
-                  Unshareable (prevents direct download, forces secure viewer)
-                </label>
+                <label className="checkbox-label"><input type="checkbox" checked={isOneTime} onChange={(e) => setIsOneTime(e.target.checked)} /> One-time use</label>
+                <label className="checkbox-label"><input type="checkbox" checked={isUnshareable} onChange={(e) => setIsUnshareable(e.target.checked)} /> Unshareable (Protected View)</label>
+                <label className="checkbox-label"><input type="checkbox" checked={requireAuth} onChange={(e) => setRequireAuth(e.target.checked)} /> 🧬 Biometric Lock on Scan</label>
               </div>
 
-              <div className="security-notice">
-                <Shield size={16} />
-                <span>
-                  You will need to authenticate with your face to generate this QR code.
-                </span>
-              </div>
+              <button className="settings-toggle" onClick={() => setAdvancedOpen(!advancedOpen)}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Settings size={18} /> Advanced (Geofencing & Styling)</span>
+                {advancedOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              </button>
 
-              {error && (
-                <div className="error-message">
-                  <XCircle size={18} />
-                  <span>{error}</span>
+              {advancedOpen && (
+                <div className="advanced-settings">
+                  <div className="settings-grid">
+                    <div className="input-row"><label>Latitude</label><input value={lat} onChange={e => setLat(e.target.value)} placeholder="0.0000" /></div>
+                    <div className="input-row"><label>Longitude</label><input value={lng} onChange={e => setLng(e.target.value)} placeholder="0.0000" /></div>
+                    <div className="input-row"><label>Radius (m)</label><input type="number" value={radius} onChange={e => setRadius(e.target.value)} /></div>
+                    <div className="input-row"><button className="switch-method-btn" style={{ marginTop: '1.5rem' }} onClick={useMyLocation}><MapPin size={14} /> My Location</button></div>
+                    
+                    <div className="color-inputs">
+                      <div className="color-field"><label>Dots</label><input type="color" value={styleColor} onChange={e => setStyleColor(e.target.value)} /></div>
+                      <div className="color-field"><label>Background</label><input type="color" value={styleBg} onChange={e => setStyleBg(e.target.value)} /></div>
+                    </div>
+                  </div>
                 </div>
               )}
 
-              <button className="generate-btn" onClick={handleGenerateQR}>
-                <QrCode size={18} />
-                Generate QR (Face Auth Required)
-              </button>
+              {error && <div className="error-message"><XCircle size={18} /><span>{error}</span></div>}
+              <button className="generate-btn" onClick={handleGenerateQR}><QrCode size={18} /> Authorize & Generate</button>
             </>
           )}
 
           {step === "verifying" && (
             <div className="verifying-state">
-              {useFaceScanner ? (
-                <FaceScanner 
-                  onCapture={handleFaceCapture} 
-                  statusText="Look directly at the camera to authorize"
-                  actionLabel="Identity Confirmed"
-                />
-              ) : (
-                <>
-                  <Loader className="spinner large" size={48} />
-                  <p>Please use your native biometric device (Passkey) to authorize QR code generation...</p>
-                  {hasFaceEnrolled && (
-                    <button 
-                      className="switch-method-btn" 
-                      onClick={() => setUseFaceScanner(true)}
-                    >
-                      <Camera size={18} />
-                      Use Webcam Face ID instead
-                    </button>
-                  )}
-                </>
-              )}
-              <div className="verification-actions">
-                <button className="cancel-btn" onClick={() => setStep("form")}>
-                  Cancel
-                </button>
-                {useFaceScanner && (
-                  <button className="native-btn" onClick={() => setUseFaceScanner(false)}>
-                    Use Native Passkey
-                  </button>
-                )}
-              </div>
+              {useFaceScanner ? <FaceScanner onCapture={handleFaceCapture} statusText="Identity verification required" /> : <><Loader className="spinner large" size={48} /><p>Confirming biometric authorization...</p></>}
+              <button className="cancel-btn" onClick={() => setStep("form")}>Cancel</button>
             </div>
           )}
 
           {step === "generated" && qrImage && (
             <div className="qr-generated-container">
-              <div className="qr-display">
-                <img src={qrImage} alt="Generated QR Code" />
-              </div>
- 
-              {expiresAt && (
-                <p className="expiry-info">
-                  Expires: {new Date(expiresAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
-                </p>
-              )}
-
+              <div className="qr-display"><img src={qrImage} alt="QR" style={{ border: `8px solid ${styleBg}` }} /></div>
+              <p className="expiry-info">Expires: {new Date(expiresAt!).toLocaleString()}</p>
               <div className="qr-actions">
-                <button className="action-btn download-btn" onClick={handleDownloadQR}>
-                  <Download size={18} />
-                  Download PNG
-                </button>
-                <button className="action-btn share-btn" onClick={handleShareQR}>
-                  <Share2 size={18} />
-                  {copied ? "Link Copied!" : "Share QR Code"}
-                </button>
+                <button className="action-btn download-btn" onClick={() => { const a = document.createElement('a'); a.href = qrImage; a.download = 'qr.png'; a.click(); }}><Download size={18} /> Download</button>
+                <button className="action-btn share-btn" onClick={handleShareQR}>{copied ? "Copied!" : "Share Link"}</button>
               </div>
-
-              <p className="qr-note">
-                {isOneTime
-                  ? "⚠️ This QR code can be scanned only once."
-                  : "This QR code can be scanned multiple times until it expires."}
-                {isUnshareable
-                  ? " Files will be displayed in secure viewer with protection."
-                  : ""}
-              </p>
             </div>
           )}
         </div>

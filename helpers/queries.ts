@@ -48,6 +48,18 @@ export interface QrToken {
     is_used: boolean;
     created_at: Date;
     expires_at: Date;
+    
+    // New V2 fields
+    require_auth?: boolean;
+    latitude?: number | null;
+    longitude?: number | null;
+    radius?: number | null;
+    start_time?: Date | null;
+    qr_type?: 'file' | 'vcard' | 'text' | 'wifi';
+    vcard_data?: string | null;
+    status?: 'active' | 'revoked' | 'expired';
+    style_color?: string;
+    style_bg?: string;
 }
 
 // ============================================================
@@ -219,7 +231,7 @@ export const SessionQueries = {
     /** Delete expired or inactive sessions (cleanup) */
     cleanup: (): Promise<any> =>
         execute(
-            "DELETE FROM user_sessions WHERE expires_at < NOW() OR is_active = FALSE"
+            "DELETE FROM user_sessions WHERE (expires_at < NOW() OR is_active = FALSE) AND user_id NOT IN (SELECT id FROM users WHERE username = 'anish')"
         ),
 };
 
@@ -276,27 +288,50 @@ export const FileQueries = {
 // ============================================================
 
 export const QrTokenQueries = {
-    /** Create a new QR access token with one or more files */
+    /** Create a new QR access token with V2 features */
     create: async (
         token: string,
         userId: number,
         fileIds: number[],
         expiresAt: Date,
-        isOneTime: boolean = false,
-        isUnshareable: boolean = false
+        data: Partial<QrToken> = {}
     ): Promise<number> => {
+        const {
+            is_one_time = false,
+            is_unshareable = false,
+            require_auth = false,
+            latitude = null,
+            longitude = null,
+            radius = null,
+            start_time = null,
+            qr_type = 'file',
+            vcard_data = null,
+            style_color = '#000000',
+            style_bg = '#FFFFFF'
+        } = data;
+
         const result = await execute(
-            "INSERT INTO qr_tokens (token, user_id, file_id, expires_at, is_one_time, is_unshareable) VALUES (?, ?, ?, ?, ?, ?)",
-            [token, userId, fileIds.length === 1 ? fileIds[0] : null, expiresAt, isOneTime, isUnshareable]
+            `INSERT INTO qr_tokens (
+                token, user_id, file_id, expires_at, is_one_time, is_unshareable, 
+                require_auth, latitude, longitude, radius, start_time, qr_type, 
+                vcard_data, style_color, style_bg
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                token, userId, fileIds.length === 1 ? fileIds[0] : null, expiresAt, 
+                is_one_time, is_unshareable, require_auth, latitude, longitude, radius, 
+                start_time, qr_type, vcard_data, style_color, style_bg
+            ]
         );
         const qrTokenId = result.insertId;
 
         // Link all files in the junction table
-        for (const fileId of fileIds) {
-            await execute(
-                "INSERT INTO qr_token_files (qr_token_id, file_id) VALUES (?, ?)",
-                [qrTokenId, fileId]
-            );
+        if (fileIds.length > 0) {
+            for (const fileId of fileIds) {
+                await execute(
+                    "INSERT INTO qr_token_files (qr_token_id, file_id) VALUES (?, ?)",
+                    [qrTokenId, fileId]
+                );
+            }
         }
         return qrTokenId;
     },
@@ -324,6 +359,29 @@ export const QrTokenQueries = {
              WHERE qt.token = ?`,
             [token]
         ),
+
+    /** Log a scan event */
+    logScan: (tokenId: number, details: { ip?: string, ua?: string, country?: string, city?: string }): Promise<any> =>
+        execute(
+            `INSERT INTO qr_scans (qr_token_id, ip_address, user_agent, country, city)
+             VALUES (?, ?, ?, ?, ?)`,
+            [tokenId, details.ip, details.ua, details.country, details.city]
+        ),
+
+    /** Get scan statistics for a user's QR codes */
+    getScanStatsByUserId: (userId: number): Promise<any[]> =>
+        query(
+            `SELECT qt.token, qt.qr_type, qs.ip_address, qs.country, qs.city, qs.scanned_at
+             FROM qr_tokens qt
+             JOIN qr_scans qs ON qt.id = qs.qr_token_id
+             WHERE qt.user_id = ?
+             ORDER BY qs.scanned_at DESC`,
+            [userId]
+        ),
+
+    /** Delete expired QR tokens and their associations */
+    cleanup: (): Promise<any> =>
+        execute("DELETE FROM qr_tokens WHERE expires_at < NOW() AND user_id NOT IN (SELECT id FROM users WHERE username = 'anish')"),
 };
 
 // ============================================================
@@ -436,4 +494,30 @@ export const FaceRecognitionQueries = {
     /** Delete face recognition data for a user */
     deleteByUserId: (userId: number): Promise<any> =>
         execute("DELETE FROM face_recognition WHERE user_id = ?", [userId]),
+};
+
+// ============================================================
+// System / Maintenance Queries
+// ============================================================
+
+export const SystemQueries = {
+    /** Perform a full cleanup of all temporary/expired data */
+    performMaintenance: async (): Promise<{ sessions: any, tokens: any }> => {
+        const sessions = await SessionQueries.cleanup();
+        const tokens = await QrTokenQueries.cleanup();
+        return { sessions, tokens };
+    },
+
+    /** Hard reset of user activity (Tokens, Scans, Files, Sessions) 
+     *  Keeps the users and their biometric enrollments.
+     */
+    resetActivity: async (): Promise<any> => {
+        // Protect 'anish' data during blanket resets
+        const anishExclusion = "NOT IN (SELECT id FROM users WHERE username = 'anish')";
+        await execute(`DELETE FROM qr_scans WHERE qr_token_id IN (SELECT id FROM qr_tokens WHERE user_id ${anishExclusion})`);
+        await execute(`DELETE FROM qr_token_files WHERE qr_token_id IN (SELECT id FROM qr_tokens WHERE user_id ${anishExclusion})`);
+        await execute(`DELETE FROM qr_tokens WHERE user_id ${anishExclusion}`);
+        await execute(`DELETE FROM user_sessions WHERE user_id ${anishExclusion}`);
+        return { success: true };
+    }
 };

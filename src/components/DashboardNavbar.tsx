@@ -104,6 +104,11 @@ const DashboardNavbar: React.FC<DashboardNavbarProps> = ({ onMobileMenuToggle })
               </Link>
             </li>
             <li>
+              <Link to="/dashboard/analytics" className={location.pathname === '/dashboard/analytics' ? 'active' : ''}>
+                Analytics
+              </Link>
+            </li>
+            <li>
               <Link to="/dashboard/about" className={location.pathname === '/dashboard/about' ? 'active' : ''}>
                 About
               </Link>

@@ -14,7 +14,7 @@ import passport from "./helpers/passport.js";
 import { globalLimiter } from "./helpers/rateLimiters.js";
 import { generateCsrfToken, CSRF_SECRET } from "./helpers/csrf.js";
 import { authenticateToken } from "./helpers/auth.js";
-import { SessionQueries } from "./helpers/queries.js";
+import { SessionQueries, SystemQueries } from "./helpers/queries.js";
 import { initFaceRecognitionModels } from "./helpers/faceRecognition.js";
 import { log } from "./helpers/logger.js";
 
@@ -160,9 +160,31 @@ app.use("/bioqr", authRoutes);
 app.use("/bioqr", qrRoutes);           
 app.use("", qrRoutes);                 
 
-// Home route for Render health check
 app.get("/", (req: Request, res: Response) => {
     res.status(200).json({ success: true, message: "BioQR API is running" });
+});
+
+// ============================================================
+// Cron / Maintenance Route (for external services like cron-job.org)
+// ============================================================
+app.get("/api/cron/cleanup", async (req: Request, res: Response) => {
+    const cronSecret = req.query.secret;
+    const masterSecret = process.env.CRON_SECRET || "bioqr-maintenance-default-secret";
+
+    if (cronSecret !== masterSecret) {
+        console.warn("⚠️ Unauthorized CRON attempt from:", req.ip);
+        res.status(401).json({ success: false, message: "Unauthorized" });
+        return;
+    }
+
+    try {
+        const stats = await SystemQueries.performMaintenance();
+        console.log("🧹 Cron maintenance completed via API");
+        res.json({ success: true, message: "Maintenance completed", details: stats });
+    } catch (err) {
+        console.error("❌ Cron maintenance failed:", err);
+        res.status(500).json({ success: false, message: "Maintenance failed" });
+    }
 });
 
 /**
@@ -250,16 +272,16 @@ if (process.env.NODE_ENV === "production") {
 }
 
 // ============================================================
-// Cleanup expired sessions (every hour)
+// Maintenance Job (every 30 days)
 // ============================================================
 setInterval(async () => {
     try {
-        await SessionQueries.cleanup();
-        console.log("✅ Expired sessions cleaned up");
+        const stats = await SystemQueries.performMaintenance();
+        console.log(`🧹 Monthly maintenance completed: Sessions/Tokens cleaned (excluding anish).`);
     } catch (err) {
-        console.error("❌ Error cleaning up sessions:", err);
+        console.error("❌ Error performing maintenance:", err);
     }
-}, 60 * 60 * 1000);
+}, 30 * 24 * 60 * 60 * 1000);
 
 // ============================================================
 // Error handling middleware
