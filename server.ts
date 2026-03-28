@@ -179,12 +179,24 @@ app.post("/bioqr/log", (req: Request, res: Response) => {
     res.json({ success: true, message: "Activity logged" });
 });
 
-// Add a catch-all 404 logger for handled routes to debug 404s
-app.use((req: Request, res: Response) => {
-    console.warn(`⚠️  404 - Route not found: ${req.method} ${req.url}`);
-    res.status(404).json({
-        success: false,
-        message: `Route not found: ${req.method} ${req.url}`
+// ============================================================
+// Health check
+// ============================================================
+app.get("/health", (_req: Request, res: Response): void => {
+    res.json({
+        status: "healthy",
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+    });
+});
+
+// ============================================================
+// Session validation endpoint
+// ============================================================
+app.get("/api/validate-session", authenticateToken, (req: Request, res: Response): void => {
+    res.json({
+        valid: true,
+        user: { id: (req as any).user.userId },
     });
 });
 
@@ -205,24 +217,12 @@ app.use(
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// ============================================================
-// Session validation endpoint
-// ============================================================
-app.get("/api/validate-session", authenticateToken, (req: Request, res: Response): void => {
-    res.json({
-        valid: true,
-        user: { id: (req as any).user.userId },
-    });
-});
-
-// ============================================================
-// Health check
-// ============================================================
-app.get("/health", (_req: Request, res: Response): void => {
-    res.json({
-        status: "healthy",
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
+// Add a catch-all 404 logger for handled routes to debug 404s
+app.use((req: Request, res: Response) => {
+    console.warn(`⚠️  404 - Route not found: ${req.method} ${req.url}`);
+    res.status(404).json({
+        success: false,
+        message: `Route not found: ${req.method} ${req.url}`
     });
 });
 
