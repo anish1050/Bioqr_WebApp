@@ -63,23 +63,34 @@ export async function logActivity(activity: string, req?: any, userId?: string |
     try {
         const user = (req?.user as any) || {};
         const finalUserId = userId || user.id || user.userId || "System/Guest";
-        
-        const ip = req?.ip || (req?.headers["x-forwarded-for"] as string)?.split(",")[0].trim() || req?.connection?.remoteAddress;
+
+        // Extract real IP prioritizing Forwarded headers (crucial when proxied through Vercel to Render)
+        const ip = (req?.headers["x-forwarded-for"] as string)?.split(",")[0].trim() || 
+                   req?.headers["x-real-ip"] || 
+                   req?.ip || 
+                   req?.connection?.remoteAddress;
+                   
         const detectedPlatform = platform || req?.headers["x-platform"] || req?.headers["x-client-type"] || "web";
 
-        // Collect user details if available
+        // De-serialize user info if available
         const firstName = user.first_name || user.firstName || req?.body?.firstName;
         const lastName = user.last_name || user.lastName || req?.body?.lastName;
         const username = user.username || req?.body?.username;
         const email = user.email || req?.body?.email;
 
         // Geolocation Fallback using geoip-lite
-        const geo = ip && ip !== "::1" && ip !== "127.0.0.1" ? geoip.lookup(ip) : null;
+        const geo = ip && ip !== "::1" && ip !== "127.0.0.1" && !ip.startsWith("10.") && !ip.startsWith("192.168.") ? geoip.lookup(ip) : null;
 
         if (!isMongoConnected) {
             console.log(`📝 [${detectedPlatform}] Skip MongoDB: ${activity} - User: ${username || finalUserId}`);
             return;
         }
+
+        // Vercel provided headers are lowercase in Express
+        const h = req?.headers || {};
+        const country = h["x-vercel-ip-country"] || h["x-render-ip-country"] || h["cf-ipcountry"] || geo?.country || "Unknown";
+        const city = h["x-vercel-ip-city"] || h["x-vercel-city"] || h["x-render-ip-city"] || geo?.city || "Unknown";
+        const region = h["x-vercel-ip-country-region"] || h["x-vercel-region"] || h["x-render-ip-region"] || geo?.region || "Unknown";
 
         const logEntry = new LogModel({
             userId: finalUserId.toString(),
@@ -92,19 +103,16 @@ export async function logActivity(activity: string, req?: any, userId?: string |
             lastName,
             username,
             email,
-            // Extract Vercel/Render headers, fallback to GeoIP
-            country: req?.headers["x-vercel-ip-country"] || req?.headers["x-render-ip-country"] || req?.headers["cf-ipcountry"] || geo?.country || "Unknown",
-            city: (req?.headers["x-vercel-ip-city"] 
-                ? decodeURIComponent(req.headers["x-vercel-ip-city"] as string) 
-                : (req?.headers["x-render-ip-city"] || geo?.city || "Unknown")),
-            region: req?.headers["x-vercel-ip-country-region"] || req?.headers["x-render-ip-region"] || geo?.region || "Unknown",
-            latitude: req?.headers["x-vercel-ip-latitude"] || (geo?.ll ? geo.ll[0].toString() : "Unknown"),
-            longitude: req?.headers["x-vercel-ip-longitude"] || (geo?.ll ? geo.ll[1].toString() : "Unknown"),
-            timezone: req?.headers["x-vercel-ip-timezone"] || geo?.timezone || "Unknown",
+            country,
+            city: city !== "Unknown" ? (typeof city === "string" ? decodeURIComponent(city as string) : city) : "Unknown",
+            region,
+            latitude: h["x-vercel-ip-latitude"] || (geo?.ll ? geo.ll[0].toString() : "Unknown"),
+            longitude: h["x-vercel-ip-longitude"] || (geo?.ll ? geo.ll[1].toString() : "Unknown"),
+            timezone: h["x-vercel-ip-timezone"] || geo?.timezone || "Unknown",
         });
 
         await logEntry.save();
-        console.log(`📝 [${detectedPlatform}] Activity Logged: ${activity} - User: ${username || finalUserId}`);
+        console.log(`📝 [${detectedPlatform}] Activity Logged: ${activity} - User: ${username || finalUserId} - Loc: ${city}, ${country}`);
     } catch (err) {
         console.error("❌ Error saving activity log:", err);
     }
