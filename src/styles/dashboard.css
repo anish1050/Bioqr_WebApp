@@ -445,10 +445,10 @@
   width: 100%;
   max-width: 1000px;
   min-height: 220px;
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.15) 100%);
   backdrop-filter: blur(10px);
-  border: 2px dashed rgba(79, 70, 229, 0.3);
-  border-radius: var(--border-radius-2xl);
+  border: 2px dashed rgba(59, 130, 246, 0.5);
+  border-radius: var(--border-radius-xl);
   color: var(--text-primary);
   text-decoration: none;
   font-weight: 800;
@@ -517,6 +517,7 @@
   gap: var(--space-4);
   box-shadow: var(--shadow-md);
   transition: var(--transition-all);
+  cursor: pointer;
 }
 
 .stat-card:hover {

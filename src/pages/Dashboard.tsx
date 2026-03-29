@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FileBox, HardDrive, UploadCloud, Search, CheckCircle,
   XCircle, Eye, Trash2, Loader, Info, QrCode, Shield, AlertCircle
@@ -44,6 +44,7 @@ const formatDate = (dateString: string) => {
 
 const Dashboard: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'files'>('dashboard');
@@ -286,7 +287,7 @@ const Dashboard: React.FC = () => {
   };
 
   const handleGoToSecurity = () => {
-    window.location.href = '/dashboard/security';
+    navigate('/dashboard/security');
   };
 
   const totalSize = files.reduce((acc, file) => acc + (file.size || 0), 0);
@@ -305,7 +306,7 @@ const Dashboard: React.FC = () => {
         </div>
 
         <div className="quick-stats">
-          <div className="stat-card">
+          <div className="stat-card" onClick={() => setActiveTab('files')}>
             <div className="stat-icon"><FileBox size={24} /></div>
             <div className="stat-content">
               <h3>{files.length}</h3>
@@ -313,7 +314,7 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="stat-card">
+          <div className="stat-card" onClick={() => setActiveTab('files')}>
             <div className="stat-icon"><HardDrive size={24} /></div>
             <div className="stat-content">
               <h3>{formatFileSize(totalSize)}</h3>
@@ -321,7 +322,7 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="stat-card" onClick={hasBiometric === false ? handleGoToSecurity : undefined} style={{ cursor: hasBiometric === false ? 'pointer' : 'default' }}>
+          <div className="stat-card" onClick={handleGoToSecurity}>
             <div className="stat-icon" style={{ color: hasBiometric === false ? '#f59e0b' : '#10b981' }}>
               <Shield size={24} />
             </div>
@@ -340,16 +341,17 @@ const Dashboard: React.FC = () => {
         )}
 
         <div className="dashboard-cta">
-          <button 
-            className="cta-btn" 
-            onClick={() => {
-              setActiveTab('files');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-          >
-            <QrCode />
-            <span>Start Generating QR Codes</span>
-          </button>
+            <button 
+              className="cta-btn" 
+              onClick={() => {
+                setActiveTab('files');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              style={{ borderColor: '#3b82f6', background: 'rgba(59, 130, 246, 0.05)' }}
+            >
+              <QrCode size={48} color="#3b82f6" />
+              <span style={{ color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '1px' }}>Start Generating QR Codes</span>
+            </button>
         </div>
 
 

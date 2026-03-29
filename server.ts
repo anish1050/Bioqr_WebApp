@@ -143,10 +143,24 @@ app.get("/bioqr/csrf-token", (req: Request, res: Response): void => {
 });
 
 // ============================================================
-// Request logging middleware
+// Activity Logging Middleware (Logs to MongoDB Log Collection)
 // ============================================================
-app.use((req: Request, _res: Response, next: NextFunction) => {
-    console.log(`📝 ${req.method} ${req.url} - ${new Date().toISOString()}`);
+app.use((req: Request, res: Response, next: NextFunction) => {
+    const url = req.originalUrl || req.url;
+    // Track API requests, auth calls, and specific service endpoints
+    const isServiceCall = 
+        url.startsWith("/bioqr") || 
+        url.startsWith("/api") || 
+        url.startsWith("/auth") ||
+        url === "/";
+
+    if (isServiceCall && !url.includes("csrf-token") && !url.includes("debug-ping")) {
+        res.on("finish", () => {
+            const activity = `Service Call: ${req.method} ${url} - Status ${res.statusCode}`;
+            // Use the logger helper to store in MongoDB
+            log(activity, req);
+        });
+    }
     next();
 });
 
