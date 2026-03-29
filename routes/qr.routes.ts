@@ -166,7 +166,7 @@ router.get(
                 </head>
                 <body>
                     <div class="card">
-                        <div class="icon">🛡️</div>
+
                         <h1>Security Verification</h1>
                         <p>This content is protected. Please verify your identity and location to proceed.</p>
                         <button id="verify-btn" class="btn">Verify & Unlock</button>
@@ -187,7 +187,7 @@ router.get(
                                 // 1. Check Geolocation if required
                                 if (${needsLocation}) {
                                     status.style.display = 'block';
-                                    status.innerText = "📍 Requesting location...";
+                                    status.innerText = "Requesting location...";
                                     const pos = await new Promise((res, rej) => {
                                         navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true });
                                     });

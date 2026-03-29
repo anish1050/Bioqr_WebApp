@@ -26,27 +26,39 @@ router.post(
         }
         upload.single("file")(req as any, res as any, async (err: any) => {
             if (err) {
-                console.error("❌ Multer error:", err);
+                console.error("❌ Multer middleware error:", err);
                 res.status(400).json({ success: false, message: `Upload error: ${err.message}` });
                 return;
             }
 
-            // userId already retrieved above
             const file = (req as any).file;
+            const userId = (req as any).user?.userId;
+
+            console.log("📁 Multer result:", { 
+                file: file ? { 
+                    originalname: file.originalname,
+                    path: file.path, 
+                    size: file.size 
+                } : "missing",
+                userId 
+            });
+
             if (!file) {
                 res.status(400).json({ success: false, message: "No file uploaded" });
                 return;
             }
 
+            let result: any = null;
             try {
-                // Upload to Cloudinary
-                const result = await cloudinary.uploader.upload(file.path, {
+                console.log("☁️ Uploading to Cloudinary...");
+                result = await cloudinary.uploader.upload(file.path, {
                     resource_type: "auto",
                     original_filename: file.originalname,
                     folder: "bioqr_user_files",
                 });
+                console.log("✅ Cloudinary upload successful:", result.secure_url);
 
-                // Insert into database
+                console.log("💾 Inserting record into database...");
                 const fileId = await FileQueries.create({
                     user_id: userId,
                     filename: file.originalname,
@@ -54,22 +66,35 @@ router.post(
                     filepath: result.secure_url,
                     size: file.size,
                 });
+                console.log("✅ Database record created, ID:", fileId);
 
                 // Clean up local temp file
-                try { fs.unlinkSync(file.path); } catch (_e) { /* ignore */ }
+                try { 
+                    fs.unlinkSync(file.path); 
+                    console.log("🧹 Local file cleaned up:", file.path);
+                } catch (_e) { 
+                    console.warn("⚠️ Local file cleanup failed:", file.path);
+                }
 
-                console.log("✅ File uploaded to Cloudinary:", fileId);
                 log(`File uploaded: ${file.originalname}`, req, userId);
                 res.json({
                     success: true,
                     message: "File uploaded successfully!",
                     file_id: fileId,
+                    url: result.secure_url
                 });
             } catch (uploadError: any) {
-                console.error("❌ Upload failed:", uploadError);
-                res.status(500).json({ success: false, message: "Upload failed" });
+                console.error("❌ THE UPLOAD FAILED AT SOME STEP:", uploadError);
+                res.status(500).json({ 
+                    success: false, 
+                    message: "Upload failed",
+                    debug_error: uploadError.message || "Unknown error",
+                    step: file ? (result ? "Database Insertion" : "Cloudinary Upload") : "Prep"
+                });
             }
+
         });
+
     }
 );
 

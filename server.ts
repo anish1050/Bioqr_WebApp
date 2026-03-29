@@ -33,6 +33,10 @@ initFaceRecognitionModels();
 
 const app = express();
 
+// Trust proxy for Vercel/Render to correctly get IP and geolocation headers
+app.set("trust proxy", true);
+
+
 // 💡 TOP-LEVEL DEBUG LOGGER
 app.use((req, res, next) => {
     console.log(`📡 [EXPRESS RECEIVE] ${req.method} ${req.url}`);

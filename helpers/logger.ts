@@ -82,18 +82,18 @@ export async function logActivity(activity: string, req?: any, userId?: string |
             activity,
             method: req?.method,
             url: req?.originalUrl || req?.url,
-            ip: req?.ip || req?.headers["x-forwarded-for"] || req?.connection?.remoteAddress,
+            ip: req?.ip || (req?.headers["x-forwarded-for"] as string)?.split(",")[0].trim() || req?.connection?.remoteAddress,
             platform: detectedPlatform,
             firstName,
             lastName,
             username,
             email,
             // Extract Vercel/Render headers
-            country: req?.headers["x-vercel-ip-country"] || req?.headers["x-render-ip-country"] || "Unknown",
+            country: req?.headers["x-vercel-ip-country"] || req?.headers["x-render-ip-country"] || req?.headers["cf-ipcountry"] || "Unknown",
             city: req?.headers["x-vercel-ip-city"] 
                 ? decodeURIComponent(req.headers["x-vercel-ip-city"] as string) 
                 : (req?.headers["x-render-ip-city"] || "Unknown"),
-            region: req?.headers["x-vercel-ip-country-region"] || "Unknown",
+            region: req?.headers["x-vercel-ip-country-region"] || req?.headers["x-render-ip-region"] || "Unknown",
             latitude: req?.headers["x-vercel-ip-latitude"] || "Unknown",
             longitude: req?.headers["x-vercel-ip-longitude"] || "Unknown",
             timezone: req?.headers["x-vercel-ip-timezone"] || "Unknown",

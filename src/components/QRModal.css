@@ -487,3 +487,25 @@
 .qr-modal::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
+
+/* Modal Blocking Animations */
+@keyframes modal-shake {
+  0%, 100% { transform: translateY(0); }
+  25% { transform: translateY(-4px); }
+  50% { transform: translateY(4px); }
+  75% { transform: translateY(-2px); }
+}
+
+@keyframes close-btn-highlight {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0px var(--accent-primary)); }
+  50% { transform: scale(1.4); filter: drop-shadow(0 0 15px #ff4d4d); color: #ff4d4d; }
+}
+
+.modal-shake {
+  animation: modal-shake 0.15s ease-in-out;
+}
+
+.close-btn-highlight {
+  animation: close-btn-highlight 0.3s ease-in-out;
+}
+

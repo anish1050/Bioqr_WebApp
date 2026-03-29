@@ -60,6 +60,42 @@ const QRModal: React.FC<QRModalProps> = ({
   const [useFaceScanner, setUseFaceScanner] = useState(false);
   const [hasFaceEnrolled, setHasFaceEnrolled] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [isShaking, setIsShaking] = useState(false);
+  const [isCrossHighlighted, setIsCrossHighlighted] = useState(false);
+
+  // Windows-style Alert Sound (Synthesized)
+  const playWindowsAlert = () => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(440, audioCtx.currentTime); // A4
+      oscillator.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1); // Slide up to A5
+
+      gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.3);
+    } catch (e) {
+      console.warn("Audio context not available");
+    }
+  };
+
+  const handleOutsideClick = () => {
+    playWindowsAlert();
+    setIsShaking(true);
+    setIsCrossHighlighted(true);
+    setTimeout(() => {
+      setIsShaking(false);
+      setIsCrossHighlighted(false);
+    }, 300);
+  };
 
   // V2 Fields
   const [lat, setLat] = useState("");
@@ -181,11 +217,16 @@ const QRModal: React.FC<QRModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="qr-modal-overlay" onClick={onClose}>
-      <div className="qr-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="qr-modal-overlay" onClick={handleOutsideClick}>
+      <div className={`qr-modal ${isShaking ? 'modal-shake' : ''}`} onClick={(e) => e.stopPropagation()}>
         <div className="qr-modal-header">
           <h3><QrCode size={20} style={{ marginRight: "8px" }} /> QR V2 Generator</h3>
-          <button className="close-btn" onClick={onClose}><X size={24} /></button>
+          <button 
+            className={`close-btn ${isCrossHighlighted ? 'close-btn-highlight' : ''}`} 
+            onClick={onClose}
+          >
+            <X size={24} />
+          </button>
         </div>
 
         <div className="qr-modal-content">

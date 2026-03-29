@@ -339,6 +339,19 @@ const Dashboard: React.FC = () => {
           </div>
         )}
 
+        <div className="dashboard-cta">
+          <button 
+            className="cta-btn" 
+            onClick={() => {
+              setActiveTab('files');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          >
+            <QrCode />
+            <span>Start Generating QR Codes</span>
+          </button>
+        </div>
+
 
       </section>
 
@@ -478,20 +491,22 @@ const Dashboard: React.FC = () => {
 
       {/* Toast Notification */}
       {toastMessage.visible && toastMessage.text && (
-        <div className="toast show" style={{ bottom: '2rem', display: 'flex', alignItems: 'center' }}>
-          <div className="toast-content" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div className="toast-icon">
-              {toastMessage.type === 'success' && <CheckCircle color="#22c55e" />}
-              {toastMessage.type === 'error' && <XCircle color="#ef4444" />}
-              {toastMessage.type === 'info' && <Info color="#3b82f6" />}
+        <div className={`toast show ${toastMessage.type}`}>
+          <div className="toast-content">
+            <div className={`toast-icon ${toastMessage.type}`}>
+              {toastMessage.type === 'success' && <CheckCircle />}
+              {toastMessage.type === 'error' && <XCircle />}
+              {toastMessage.type === 'info' && <Info />}
+              {toastMessage.type === 'warning' && <AlertCircle />}
             </div>
             <span className="toast-message">{toastMessage.text}</span>
           </div>
-          <button className="toast-close" onClick={() => setToastMessage({ ...toastMessage, visible: false })} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', marginLeft: 'auto' }}>
+          <button className="toast-close" onClick={() => setToastMessage({ ...toastMessage, visible: false })}>
             <XCircle size={18} />
           </button>
         </div>
       )}
+
 
       {/* QR Modal */}
       {qrModalFile && (
