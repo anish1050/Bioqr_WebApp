@@ -310,6 +310,8 @@ export const QrTokenQueries = {
             style_bg = '#FFFFFF'
         } = data;
 
+        const finalFileId = (fileIds && fileIds.length > 0) ? fileIds[0] : 0;
+
         const result = await execute(
             `INSERT INTO qr_tokens (
                 token, user_id, file_id, expires_at, is_one_time, is_unshareable, 
@@ -317,7 +319,7 @@ export const QrTokenQueries = {
                 vcard_data, style_color, style_bg
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-                token, userId, fileIds.length === 1 ? fileIds[0] : (fileIds.length > 1 ? 0 : 0), expiresAt, 
+                token, userId, finalFileId, expiresAt, 
                 is_one_time, is_unshareable, require_auth, latitude, longitude, radius, 
                 start_time, qr_type, vcard_data, style_color, style_bg
             ]
