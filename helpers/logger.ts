@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import geoip from "geoip-lite";
 
 dotenv.config();
 
@@ -63,7 +64,7 @@ export async function logActivity(activity: string, req?: any, userId?: string |
         const user = (req?.user as any) || {};
         const finalUserId = userId || user.id || user.userId || "System/Guest";
         
-        // Detect platform from headers or explicit parameter
+        const ip = req?.ip || (req?.headers["x-forwarded-for"] as string)?.split(",")[0].trim() || req?.connection?.remoteAddress;
         const detectedPlatform = platform || req?.headers["x-platform"] || req?.headers["x-client-type"] || "web";
 
         // Collect user details if available
@@ -71,6 +72,9 @@ export async function logActivity(activity: string, req?: any, userId?: string |
         const lastName = user.last_name || user.lastName || req?.body?.lastName;
         const username = user.username || req?.body?.username;
         const email = user.email || req?.body?.email;
+
+        // Geolocation Fallback using geoip-lite
+        const geo = ip && ip !== "::1" && ip !== "127.0.0.1" ? geoip.lookup(ip) : null;
 
         if (!isMongoConnected) {
             console.log(`📝 [${detectedPlatform}] Skip MongoDB: ${activity} - User: ${username || finalUserId}`);
@@ -82,21 +86,21 @@ export async function logActivity(activity: string, req?: any, userId?: string |
             activity,
             method: req?.method,
             url: req?.originalUrl || req?.url,
-            ip: req?.ip || (req?.headers["x-forwarded-for"] as string)?.split(",")[0].trim() || req?.connection?.remoteAddress,
+            ip,
             platform: detectedPlatform,
             firstName,
             lastName,
             username,
             email,
-            // Extract Vercel/Render headers
-            country: req?.headers["x-vercel-ip-country"] || req?.headers["x-render-ip-country"] || req?.headers["cf-ipcountry"] || "Unknown",
-            city: req?.headers["x-vercel-ip-city"] 
+            // Extract Vercel/Render headers, fallback to GeoIP
+            country: req?.headers["x-vercel-ip-country"] || req?.headers["x-render-ip-country"] || req?.headers["cf-ipcountry"] || geo?.country || "Unknown",
+            city: (req?.headers["x-vercel-ip-city"] 
                 ? decodeURIComponent(req.headers["x-vercel-ip-city"] as string) 
-                : (req?.headers["x-render-ip-city"] || "Unknown"),
-            region: req?.headers["x-vercel-ip-country-region"] || req?.headers["x-render-ip-region"] || "Unknown",
-            latitude: req?.headers["x-vercel-ip-latitude"] || "Unknown",
-            longitude: req?.headers["x-vercel-ip-longitude"] || "Unknown",
-            timezone: req?.headers["x-vercel-ip-timezone"] || "Unknown",
+                : (req?.headers["x-render-ip-city"] || geo?.city || "Unknown")),
+            region: req?.headers["x-vercel-ip-country-region"] || req?.headers["x-render-ip-region"] || geo?.region || "Unknown",
+            latitude: req?.headers["x-vercel-ip-latitude"] || (geo?.ll ? geo.ll[0].toString() : "Unknown"),
+            longitude: req?.headers["x-vercel-ip-longitude"] || (geo?.ll ? geo.ll[1].toString() : "Unknown"),
+            timezone: req?.headers["x-vercel-ip-timezone"] || geo?.timezone || "Unknown",
         });
 
         await logEntry.save();
