@@ -12,6 +12,7 @@ import Status from './pages/Status';
 import Help from './pages/Help';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
 
 // Authenticated Pages
 import Dashboard from './pages/Dashboard';
@@ -28,6 +29,7 @@ function App() {
         {/* Auth Pages (without Navbar/Footer layout intentionally, they have their own styles) */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
 
         {/* Public Pages with MainLayout */}
         <Route path="/" element={<MainLayout />}>

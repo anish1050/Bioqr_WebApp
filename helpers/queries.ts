@@ -14,6 +14,9 @@ export interface User {
     oauth_provider: string | null;
     oauth_id: string | null;
     avatar_url: string | null;
+    mobile_number?: string;
+    email_verified?: boolean;
+    mobile_number_verified?: boolean;
     created_at: Date;
     updated_at: Date;
     isNewUser?: boolean;
@@ -62,6 +65,17 @@ export interface QrToken {
     style_bg?: string;
 }
 
+export interface OtpVerification {
+    id: number;
+    identifier: string;    // email or mobile
+    otp_hash: string;
+    type: 'email' | 'mobile';
+    user_data: string;     // JSON serialized temp user data (names, username, password hash)
+    attempts: number;
+    expires_at: Date;
+    created_at: Date;
+}
+
 // ============================================================
 // Generic promisified query helper
 // ============================================================
@@ -105,7 +119,7 @@ export const UserQueries = {
     findByEmailOrUsername: (loginField: string): Promise<User | undefined> => {
         const isEmail = loginField.includes("@");
         const sql = isEmail
-            ? "SELECT * FROM users WHERE email = ?"
+             ? "SELECT * FROM users WHERE email = ?"
             : "SELECT * FROM users WHERE username = ?";
         return query<User>(sql, [loginField]).then((r) => r[0]);
     },
@@ -137,11 +151,23 @@ export const UserQueries = {
         last_name: string;
         username: string;
         email: string;
-        password: string;
+        password: string | null;
+        mobile_number?: string;
+        email_verified?: boolean;
+        mobile_number_verified?: boolean;
     }): Promise<number> => {
         const result = await execute(
-            "INSERT INTO users (first_name, last_name, username, email, password) VALUES (?, ?, ?, ?, ?)",
-            [data.first_name, data.last_name, data.username, data.email, data.password]
+            "INSERT INTO users (first_name, last_name, username, email, password, mobile_number, email_verified, mobile_number_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                data.first_name,
+                data.last_name,
+                data.username,
+                data.email,
+                data.password,
+                data.mobile_number || null,
+                data.email_verified || false,
+                data.mobile_number_verified || false
+            ]
         );
         return result.insertId;
     },
@@ -181,6 +207,13 @@ export const UserQueries = {
         execute(
             "UPDATE users SET oauth_provider = ?, oauth_id = ?, avatar_url = COALESCE(avatar_url, ?) WHERE id = ?",
             [provider, oauthId, avatarUrl, id]
+        ),
+
+    /** Update a user's password */
+    updatePassword: (userId: number, hashedPassword: string): Promise<any> =>
+        execute(
+            "UPDATE users SET password = ? WHERE id = ?",
+            [hashedPassword, userId]
         ),
 };
 
@@ -525,5 +558,46 @@ export const SystemQueries = {
         await execute(`DELETE FROM qr_tokens WHERE user_id ${anishExclusion}`);
         await execute(`DELETE FROM user_sessions WHERE user_id ${anishExclusion}`);
         return { success: true };
+    }
+};
+
+// ============================================================
+// OTP Verification Queries
+// ============================================================
+
+export const OtpQueries = {
+    async create(data: { identifier: string; otp_hash: string; type: 'email' | 'mobile'; user_data: any }) {
+        return execute(
+            'INSERT INTO otp_verifications (identifier, otp_hash, type, user_data, expires_at) VALUES (?, ?, ?, ?, NOW() + INTERVAL 15 MINUTE)',
+            [data.identifier, data.otp_hash, data.type, JSON.stringify(data.user_data)]
+        );
+    },
+
+    async countRecentRequests(identifier: string): Promise<number> {
+        const rows = await query<any>(
+            'SELECT COUNT(*) as count FROM otp_verifications WHERE identifier = ? AND created_at > (NOW() - INTERVAL 1 HOUR)',
+            [identifier]
+        );
+        return rows[0]?.count || 0;
+    },
+
+    async findActive(identifier: string) {
+        const rows = await query<any>(
+            'SELECT * FROM otp_verifications WHERE identifier = ? AND expires_at > NOW() ORDER BY created_at DESC LIMIT 1',
+            [identifier]
+        );
+        return rows[0] || null;
+    },
+
+    async incrementAttempts(id: number) {
+        return execute('UPDATE otp_verifications SET attempts = attempts + 1 WHERE id = ?', [id]);
+    },
+
+    async delete(id: number) {
+        return execute('DELETE FROM otp_verifications WHERE id = ?', [id]);
+    },
+
+    async cleanup() {
+        return execute('DELETE FROM otp_verifications WHERE expires_at < NOW() OR attempts >= 3');
     }
 };

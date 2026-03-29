@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Shield, Mail, Phone, MapPin } from "lucide-react";
+import { Mail, Phone, MapPin } from "lucide-react";
+import Logo from "./Logo";
 
 const Footer: React.FC = () => {
   const footerSections = [
@@ -39,7 +40,7 @@ const Footer: React.FC = () => {
         <div className="footer-content">
           <div className="footer-brand">
             <div className="footer-logo">
-              <Shield className="logo-icon" />
+              <Logo className="logo-icon" />
               <span className="logo-text">BioQR</span>
             </div>
             <p>

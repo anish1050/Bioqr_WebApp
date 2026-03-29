@@ -1,70 +1,42 @@
-import React, { useState, useEffect } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
-import { User, Mail, Lock, Eye, EyeOff, Loader, CheckCircle, XCircle, ShieldCheck } from "lucide-react";
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { 
+  User, Mail, Lock, Eye, EyeOff,
+  Smartphone, MailCheck,
+  Fingerprint, CheckCircle2, XCircle, Loader2,
+  ArrowRight
+} from 'lucide-react';
+import axios from "axios";
 import "../styles/register.css";
 import SEO from "../components/SEO";
 import Navbar from "../components/Navbar";
 
-const API_BASE = '';
+const API_BASE = '/bioqr'; // Backend routes are mounted under /bioqr
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
 
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
+    first_name: "",
+    last_name: "",
     username: "",
     email: "",
+    mobile_number: "",
     password: "",
-    confirmPassword: "",
-    terms: false,
-    newsletter: false
+    confirm_password: "",
+    terms: false
   });
 
+  const [step, setStep] = useState<'info' | 'verify'>('info');
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState({ text: "", type: "" });
-  const [csrfToken, setCsrfToken] = useState("");
-
-  const [passwordReqs, setPasswordReqs] = useState({
-    length: false,
-    lowercase: false,
-    uppercase: false,
-    number: false
-  });
-
-  useEffect(() => {
-    const fetchCsrf = async () => {
-      try {
-        const csrfResponse = await fetch(`${API_BASE}/bioqr/csrf-token`, { credentials: 'include' });
-        const csrfData = await csrfResponse.json();
-        setCsrfToken(csrfData.csrfToken);
-      } catch (err) {
-        console.error('Failed to fetch CSRF token:', err);
-      }
-    };
-    fetchCsrf();
-
-    const urlParams = new URLSearchParams(location.search);
-    const error = urlParams.get('error');
-
-    if (error) {
-      let errorMessage = 'Registration failed';
-      if (error === 'oauth_failed') errorMessage = 'Social registration failed. Please try again or use email registration.';
-      else if (error === 'session_failed') errorMessage = 'Session creation failed. Please try again.';
-      else if (error === 'no_user') errorMessage = 'Registration failed. Please try again.';
-      showMessage(errorMessage, 'error');
-      navigate('/register', { replace: true });
-    }
-  }, [navigate, location]);
-
-  const showMessage = (text: string, type: string) => {
-    setMessage({ text, type });
-    setTimeout(() => {
-      setMessage({ text: "", type: "" });
-    }, 5000);
-  };
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  
+  // Verification States
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailOtp, setEmailOtp] = useState("");
+  const [attemptsRemaining, setAttemptsRemaining] = useState<number | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -72,273 +44,268 @@ const Register: React.FC = () => {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+    // Reset errors when user types
+    if (error) setError("");
+  };
 
-    if (name === 'password') {
-      setPasswordReqs({
-        length: value.length >= 8,
-        lowercase: /[a-z]/.test(value),
-        uppercase: /[A-Z]/.test(value),
-        number: /\d/.test(value)
+  const getPasswordStrength = (password: string) => {
+    let score = 0;
+    if (password.length >= 8) score += 25;
+    if (/[a-z]/.test(password)) score += 25;
+    if (/[A-Z]/.test(password)) score += 25;
+    if (/\d/.test(password)) score += 25;
+    return score;
+  };
+
+  const passwordStrength = getPasswordStrength(formData.password);
+
+  const handleSendEmailOtp = async () => {
+
+    if (!formData.first_name || !formData.email || !formData.password) {
+      setError("Please fill all fields before verifying email.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    
+    try {
+      const response = await axios.post(`${API_BASE}/users/register/send-email-otp`, {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        mobile_number: formData.mobile_number
       });
+
+      if (response.data.success) {
+        setEmailSent(true);
+        setStep('verify');
+        setSuccess("Verification code sent to your email!");
+      } else {
+        setError(response.data.message || "Failed to send OTP.");
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Server error. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getPasswordStrength = () => {
-    const metRequirements = Object.values(passwordReqs).filter(Boolean).length;
-    if (metRequirements === 4) return { strength: 100, label: 'Strong', class: 'strong' };
-    if (metRequirements >= 3) return { strength: 75, label: 'Good', class: 'good' };
-    if (metRequirements >= 2) return { strength: 50, label: 'Fair', class: 'fair' };
-    if (formData.password.length > 0) return { strength: 25, label: 'Weak', class: 'weak' };
-    return { strength: 0, label: 'Weak', class: 'weak' };
-  };
-
-  const passwordStrength = getPasswordStrength();
-
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleFinalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!formData.firstName || !formData.lastName || !formData.username || !formData.email || !formData.password) {
-      showMessage('Please fill in all required fields', 'error');
+    if (!emailOtp || emailOtp.length !== 6) {
+      setError("Please enter a valid 6-digit code.");
       return;
     }
 
-    if (formData.password !== formData.confirmPassword) {
-      showMessage('Passwords do not match', 'error');
-      return;
-    }
-
-    if (!Object.values(passwordReqs).every(Boolean)) {
-      showMessage('Please meet all password requirements', 'error');
-      return;
-    }
-
-    if (!formData.terms) {
-      showMessage('Please agree to the Terms of Service and Privacy Policy', 'error');
-      return;
-    }
-
-    setIsLoading(true);
+    setLoading(true);
+    setError("");
 
     try {
-      const payload = {
-        first_name: formData.firstName.trim().replace(/<[^>]*>/g, ''),
-        last_name: formData.lastName.trim().replace(/<[^>]*>/g, ''),
-        username: formData.username.trim().replace(/<[^>]*>/g, ''),
-        email: formData.email.trim().replace(/<[^>]*>/g, ''),
-        password: formData.password
-      };
-
-      const response = await fetch(`${API_BASE}/bioqr/users/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-csrf-token': csrfToken,
-        },
-        credentials: 'include',
-        body: JSON.stringify(payload),
+      const response = await axios.post(`${API_BASE}/users/register/verify-email`, {
+        email: formData.email,
+        otp: emailOtp
       });
 
-      const result = await response.json();
-
-      if (result.success) {
-        showMessage('Account created successfully! Redirecting to login...', 'success');
-        setTimeout(() => {
-          navigate('/login');
-        }, 2000);
+      if (response.data.success) {
+        setSuccess("Account created successfully! Redirecting...");
+        setTimeout(() => navigate('/login'), 2000);
       } else {
-        showMessage(result.message || 'Registration failed', 'error');
+        setError(response.data.message || "Verification failed.");
+        if (response.data.attemptsRemaining !== undefined) {
+          setAttemptsRemaining(response.data.attemptsRemaining);
+        }
       }
-    } catch (error) {
-      console.error('Registration error:', error);
-      showMessage('Network error. Please try again.', 'error');
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Verification failed.");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  };
-
-  const handleOAuthRegistration = (provider: string) => {
-    window.location.href = `${API_BASE}/auth/${provider}`;
   };
 
   return (
-    <div className="register-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <SEO title="Create Account" description="Join BioQR to securely manage, authenticate, and share your files seamlessly." />
-      {/* Animated background elements */}
-      <div className="background-animation">
-        <div className="floating-shapes">
-          <div className="shape shape-1"></div>
-          <div className="shape shape-2"></div>
-          <div className="shape shape-3"></div>
-          <div className="shape shape-4"></div>
-          <div className="shape shape-5"></div>
-        </div>
-      </div>
-
+    <div style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '6.5rem', paddingBottom: '3rem', paddingLeft: '1rem', paddingRight: '1rem', position: 'relative', overflowY: 'auto', overflowX: 'hidden', background: '#020617' }}>
+      <SEO title="Create Account" description="Join BioQR to securely manage and verify your identity." />
+      
       <Navbar />
 
-      {/* Registration form */}
-      <section className="register-section" style={{ position: 'relative', zIndex: 10 }}>
-        <div className="register-card">
-          <div className="card-header" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <h2 style={{ textAlign: 'center', margin: 0 }}>Create Your Account</h2>
+      {/* Background Decor */}
+      <div className="absolute top-0 -left-1/4 w-1/2 h-1/2 bg-blue-glow blur-huge rounded-full animate-pulse" />
+      <div className="absolute bottom-0 -right-1/4 w-1/2 h-1/2 bg-emerald-glow blur-huge rounded-full animate-pulse delay-700" />
+      
+      <div className="w-full max-w-5xl z-10 animate-in fade-in">
+        <div className="premium-card auth-layout rounded-3xl overflow-hidden min-h-[540px]">
+          
+          {/* Left Panel: Branding & Progress (Wider) */}
+          <div className="left-panel">
+            <div className="flex flex-col h-full justify-between">
+              <div>
+                
+                <div className="space-y-8">
+                  <div className="space-y-5">
+                    <h2 className="text-4xl font-extrabold text-white leading-tight">Securely Share your Files Digital.</h2>
+                    <p className="text-slate-400 text-lg font-medium leading-relaxed">Experience the next generation of authentication with biometric-backed QR technology.</p>
+                  </div>
+
+                  <div className="space-y-6 pt-2">
+                    <div className={`flex items-center gap-5 transition-all duration-500 ${step === 'info' ? 'scale-105 opacity-100' : 'opacity-60 grayscale'}`}>
+                      <div className={`h-12 w-12 rounded-2xl flex items-center justify-center font-black text-xl shadow-lg ${emailSent ? 'bg-emerald-500 text-white' : 'bg-blue-600 text-white shadow-blue-500/20'}`}>
+                        {emailSent ? <CheckCircle2 size={24} /> : "01"}
+                      </div>
+                      <div>
+                        <h4 className="text-white font-bold text-lg">Basic Info</h4>
+                        <p className="text-slate-500 text-sm font-semibold uppercase tracking-widest">Account Details</p>
+                      </div>
+                    </div>
+                    
+                    <div className="ml-6 border-l-2 border-slate-800 h-10 w-0" />
+
+                    <div className={`flex items-center gap-5 transition-all duration-500 ${step === 'verify' ? 'scale-105 opacity-100' : 'opacity-60 grayscale'}`}>
+                      <div className={`h-12 w-12 rounded-2xl flex items-center justify-center font-black text-xl shadow-lg ${emailSent ? 'bg-blue-600 text-white shadow-blue-500/20' : 'bg-slate-800 text-slate-500'}`}>
+                        02
+                      </div>
+                      <div>
+                        <h4 className="text-white font-bold text-lg">Email Verification</h4>
+                        <p className="text-slate-500 text-sm font-semibold uppercase tracking-widest">Confirm your email</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+
+            </div>
           </div>
 
-          <form id="registerForm" className="register-form" onSubmit={handleRegister}>
-            {/* Name fields */}
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="firstName">First Name</label>
-                <div className={`input-wrapper ${formData.firstName ? 'focused' : ''}`}>
-                  <User className="input-icon" size={20} />
-                  <input type="text" id="firstName" name="firstName" placeholder="Your first name" required autoComplete="given-name" value={formData.firstName} onChange={handleChange} />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="lastName">Last Name</label>
-                <div className={`input-wrapper ${formData.lastName ? 'focused' : ''}`}>
-                  <User className="input-icon" size={20} />
-                  <input type="text" id="lastName" name="lastName" placeholder="Your last name" required autoComplete="family-name" value={formData.lastName} onChange={handleChange} />
-                </div>
-              </div>
-            </div>
-
-            <div className="form-row">
-              {/* Username */}
-              <div className="form-group">
-                <label htmlFor="username">Username</label>
-                <div className={`input-wrapper ${formData.username ? 'focused' : ''}`}>
-                  <User className="input-icon" size={20} />
-                  <input type="text" id="username" name="username" placeholder="Choose a unique username" required autoComplete="username" minLength={3} maxLength={20} value={formData.username} onChange={handleChange} />
-                </div>
-                <div className="field-hint">3-20 characters, letters, numbers, and underscores only</div>
-              </div>
-
-              {/* Email */}
-              <div className="form-group">
-                <label htmlFor="email">Email Address</label>
-                <div className={`input-wrapper ${formData.email ? 'focused' : ''}`}>
-                  <Mail className="input-icon" size={20} />
-                  <input type="email" id="email" name="email" placeholder="your.email@example.com" required autoComplete="email" value={formData.email} onChange={handleChange} />
-                </div>
-              </div>
-            </div>
-
-            <div className="form-row">
-              {/* Password */}
-              <div className="form-group">
-                <label htmlFor="password">Password</label>
-                <div className={`input-wrapper ${formData.password ? 'focused' : ''}`}>
-                  <Lock className="input-icon" size={20} />
-                  <input type={showPassword ? "text" : "password"} id="password" name="password" placeholder="Create a strong password" required autoComplete="new-password" minLength={8} value={formData.password} onChange={handleChange} />
-                  <button type="button" className={`password-toggle ${showPassword ? 'active' : ''}`} aria-label="Toggle password visibility" onClick={() => setShowPassword(!showPassword)}>
-                    {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
-                  </button>
-                </div>
-
-                {/* Password strength indicator */}
-                <div className="password-strength">
-                  <div className="strength-bar">
-                    <div className={`strength-fill ${passwordStrength.class}`} style={{ width: `${passwordStrength.strength}%` }}></div>
-                  </div>
-                  <div className="strength-text">Password strength: <span>{passwordStrength.label}</span></div>
-                </div>
-
-                {/* Password requirements */}
-                <div className="password-requirements">
-                  <div className={`requirement ${passwordReqs.length ? 'met' : ''}`}>
-                    <ShieldCheck size={16} className="req-icon" /> At least 8 characters
-                  </div>
-                  <div className={`requirement ${passwordReqs.lowercase ? 'met' : ''}`}>
-                    <ShieldCheck size={16} className="req-icon" /> One lowercase letter
-                  </div>
-                  <div className={`requirement ${passwordReqs.uppercase ? 'met' : ''}`}>
-                    <ShieldCheck size={16} className="req-icon" /> One uppercase letter
-                  </div>
-                  <div className={`requirement ${passwordReqs.number ? 'met' : ''}`}>
-                    <ShieldCheck size={16} className="req-icon" /> One number
-                  </div>
-                </div>
-              </div>
-
-              {/* Confirm Password */}
-              <div className="form-group">
-                <label htmlFor="confirmPassword">Confirm Password</label>
-                <div className={`input-wrapper ${formData.confirmPassword ? 'focused' : ''}`}>
-                  <Lock className="input-icon" size={20} />
-                  <input type={showPassword ? "text" : "password"} id="confirmPassword" name="confirmPassword" placeholder="Confirm your password" required autoComplete="new-password" value={formData.confirmPassword} onChange={handleChange} />
-                  <button type="button" className={`password-toggle ${showPassword ? 'active' : ''}`} aria-label="Toggle password visibility" onClick={() => setShowPassword(!showPassword)}>
-                    {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Terms and Privacy */}
-            <div className="form-group">
-              <label className="checkbox-container">
-                <input type="checkbox" id="terms" name="terms" required checked={formData.terms} onChange={handleChange} />
-                <span className="checkmark"></span>
-                <span className="checkbox-text">I agree to the <a href="#" className="link">Terms of Service</a> and <a href="#" className="link">Privacy Policy</a></span>
-              </label>
-            </div>
-
-            {/* Newsletter signup */}
-            <div className="form-group">
-              <label className="checkbox-container">
-                <input type="checkbox" id="newsletter" name="newsletter" checked={formData.newsletter} onChange={handleChange} />
-                <span className="checkmark"></span>
-                <span className="checkbox-text">Send me product updates and security tips</span>
-              </label>
-            </div>
-
-            <button type="submit" className="register-btn" disabled={isLoading}>
-              {!isLoading ? <span className="btn-text">Create Account</span> : (
-                <div className="btn-loading" style={{ display: 'flex' }}>
-                  <Loader className="spinner" size={18} style={{ marginRight: '8px' }} />
-                  <span>Creating account...</span>
+          {/* Right Panel: Form Content (Spacious) */}
+          <div className="right-panel">
+            <div className="flex flex-col h-full justify-center">
+              {error && (
+                <div className="mb-4 p-4 bg-red-alert border rounded-2xl flex items-center gap-3 animate-in fade-in">
+                  <XCircle className="text-red-400 h-5 w-5 shrink-0" />
+                  <p className="text-red-400 text-sm font-semibold">{error}</p>
                 </div>
               )}
-            </button>
-          </form>
+              {success && (
+                <div className="mb-4 p-4 bg-emerald-alert border rounded-2xl flex items-center gap-3 animate-in fade-in">
+                  <CheckCircle2 className="text-emerald-400 h-5 w-5 shrink-0" />
+                  <p className="text-emerald-400 text-sm font-semibold">{success}</p>
+                </div>
+              )}
 
-          <div className="divider">
-            <span>or create account with</span>
-          </div>
+            {step === 'info' ? (
+              <div className="form-grid animate-in fade-in slide-in-from-right-4">
+                <div className="form-group text-left">
+                  <label className="premium-label">First Name</label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                    <input type="text" name="first_name" placeholder="John" className="premium-input" value={formData.first_name} onChange={handleChange} />
+                  </div>
+                </div>
+                <div className="form-group text-left">
+                  <label className="premium-label">Last Name</label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                    <input type="text" name="last_name" placeholder="Doe" className="premium-input" value={formData.last_name} onChange={handleChange} />
+                  </div>
+                </div>
 
-          <div className="social-login">
-            <button type="button" className="social-btn google-btn" onClick={() => handleOAuthRegistration('google')}>
-              <svg viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-              </svg>
-              Continue with Google
-            </button>
-            <button type="button" className="social-btn github-btn" onClick={() => handleOAuthRegistration('github')}>
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-              </svg>
-              Continue with GitHub
-            </button>
-          </div>
+                <div className="form-group text-left md:col-span-2">
+                  <label className="premium-label">Username</label>
+                  <div className="relative">
+                    <Fingerprint className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                    <input type="text" name="username" placeholder="johndoe7" className="premium-input" value={formData.username} onChange={handleChange} />
+                  </div>
+                </div>
 
-          <div className="signin-link" style={{ textAlign: 'center', marginTop: '1.5rem', color: 'var(--text-secondary)' }}>
-            <p>Already have an account? <Link to="/login" style={{ color: 'var(--primary-color)', fontWeight: 600 }}>Sign in</Link></p>
+                <div className="form-group text-left md:col-span-2">
+                  <label className="premium-label">Mobile Number (Optional)</label>
+                  <div className="relative">
+                    <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                    <input type="tel" name="mobile_number" placeholder="+91 9876543210" className="premium-input" value={formData.mobile_number} onChange={handleChange} disabled={loading} />
+                  </div>
+                </div>
+
+                <div className="form-group text-left md:col-span-2">
+                  <label className="premium-label">Email Address</label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                    <input type="email" name="email" placeholder="john@example.com" className="premium-input" value={formData.email} onChange={handleChange} />
+                  </div>
+                </div>
+
+                <div className="form-group text-left md:col-span-2">
+                  <label className="premium-label">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                    <input type={showPassword ? "text" : "password"} name="password" placeholder="••••••••" className="premium-input hide-ms-reveal" value={formData.password} onChange={handleChange} />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-white rounded-lg transition-all focus:outline-none" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8' }}>
+                      {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
+                    </button>
+                  </div>
+                  {formData.password && (
+                    <div className="mt-3 flex items-center gap-3 bg-slate-800/20 p-2 rounded-lg border border-white/5">
+                      <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                        <div className={`h-full transition-all duration-700 ease-out ${passwordStrength >= 75 ? 'bg-emerald-500 shadow-glow' : passwordStrength >= 50 ? 'bg-blue-500 shadow-glow' : 'bg-red-500 shadow-glow'}`} style={{ width: `${passwordStrength}%` }} />
+                      </div>
+                      <span className={`text-[10px] font-bold uppercase tracking-wider ${passwordStrength === 100 ? 'text-emerald-400' : passwordStrength >= 50 ? 'text-blue-400' : 'text-red-400'}`}>{passwordStrength === 100 ? 'Strong' : passwordStrength >= 50 ? 'Medium' : 'Weak'}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="md:col-span-2 pt-1">
+                  <button type="button" onClick={handleSendEmailOtp} disabled={loading || !formData.email || !formData.password || !formData.first_name || !formData.last_name || !formData.username} className="w-full py-3 register-btn-primary text-white rounded-xl font-extrabold shadow-2xl flex items-center justify-center gap-3 transition-all transform active:scale-[0.97] disabled:opacity-50 text-sm uppercase tracking-widest">
+                    {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <><MailCheck className="h-5 w-5" /> <span>Verify Email</span> <ArrowRight className="h-5 w-5" /></>}
+                  </button>
+                </div>
+                
+                <p className="text-center text-xs text-slate-500">
+                  Already have an account? <Link to="/login" className="text-blue-400 hover:text-blue-300 font-medium">Log in</Link>
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-8 animate-in fade-in slide-in-from-right-4 h-full flex flex-col justify-center">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-blue-glow rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-500">
+                    <MailCheck className="h-8 w-8 text-blue-400" />
+                  </div>
+                  <h2 className="text-xl font-bold text-white mb-2">Check your email</h2>
+                  <p className="text-slate-400 text-sm">We've sent a 6-digit verification code to <span className="text-white font-medium">{formData.email}</span></p>
+                </div>
+
+                <form onSubmit={handleFinalSubmit} className="space-y-6">
+                  <div className="form-group">
+                    <div className="flex justify-center gap-2">
+                      <input
+                        type="text"
+                        maxLength={6}
+                        value={emailOtp}
+                        onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ''))}
+                        className="w-full max-w-[240px] bg-slate-800/50 border border-white/10 rounded-2xl py-4 text-center text-3xl font-bold tracking-[0.5em] text-white focus:border-emerald-500 outline-none transition-all"
+                        placeholder="000000"
+                      />
+                    </div>
+                    {attemptsRemaining !== null && (
+                      <p className="text-center text-xs text-red-400 mt-2">Invalid code. {attemptsRemaining} attempts left.</p>
+                    )}
+                  </div>
+
+                  <button type="submit" disabled={loading || emailOtp.length !== 6} className="w-full py-3 register-btn-primary text-white rounded-xl font-bold shadow-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50">
+                    {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <><CheckCircle2 className="h-5 w-5" /> <span>Complete Registration</span></>}
+                  </button>
+
+                  <button type="button" onClick={() => setStep('info')} className="w-full text-slate-500 hover:text-white text-xs font-medium transition-colors">
+                    Wrong email? Go back
+                  </button>
+                </form>
+              </div>
+            )}
+            </div>
           </div>
         </div>
-      </section>
-
-      {message.text && (
-        <div id="message" className={`message-container ${message.type}`} style={{ display: 'block' }}>
-          <div className="message-content">
-            {message.type === 'success' && <CheckCircle size={24} style={{ color: '#10b981' }} />}
-            {message.type === 'error' && <XCircle size={24} style={{ color: '#ef4444' }} />}
-            <span className="message-text">{message.text}</span>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 };

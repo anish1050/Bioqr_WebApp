@@ -6,48 +6,38 @@ import { generateTokens, JWT_REFRESH_SECRET } from "../helpers/tokens.js";
 import { authenticateToken } from "../helpers/auth.js";
 import { authLimiter } from "../helpers/rateLimiters.js";
 import { optionalDoubleCsrfProtection } from "../helpers/csrf.js";
-import { UserQueries, SessionQueries } from "../helpers/queries.js";
+import { UserQueries, SessionQueries, OtpQueries } from "../helpers/queries.js";
 import { log } from "../helpers/logger.js";
+import { sendVerificationOtp } from "../helpers/email.js";
+import crypto from "crypto";
 
 const router = Router();
 
 // ============================================================
-// Registration (rate limited + CSRF protected)
+// ============================================================
+// Registration Step 1: Send Email Verification OTP
 // ============================================================
 router.post(
-    "/users/register",
+    "/users/register/send-email-otp",
     authLimiter,
-    optionalDoubleCsrfProtection,
     async (req: Request, res: Response): Promise<void> => {
-        const first_name = sanitizeInput(req.body.first_name, 50);
-        const last_name = sanitizeInput(req.body.last_name, 50);
-        const username = sanitizeInput(req.body.username, 20);
-        const email = sanitizeInput(req.body.email, 100);
-        const password: string = req.body.password;
-
-        console.log("📝 Registration attempt:", { first_name, last_name, username, email });
+        const { first_name, last_name, username, email, mobile_number, password } = req.body;
 
         if (!first_name || !last_name || !username || !email || !password) {
-            res.json({ success: false, message: "All fields are required" });
-            return;
-        }
-
-        if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
-            res.json({
-                success: false,
-                message: "Username must be 3-20 characters, letters, numbers, and underscores only",
-            });
-            return;
-        }
-
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            res.json({ success: false, message: "Invalid email format" });
+            res.status(400).json({ success: false, message: "Missing required fields" });
             return;
         }
 
         try {
-            const duplicates = await UserQueries.findDuplicates(email, username);
+            // Rate Limit Check (Max 3 per hour)
+            const recentRequests = await OtpQueries.countRecentRequests(email);
+            if (recentRequests >= 3) {
+                res.status(429).json({ success: false, message: "Too many OTP requests. Please try again after an hour." });
+                return;
+            }
 
+            // Check for existing users
+            const duplicates = await UserQueries.findDuplicates(email, username);
             if (duplicates.length > 0) {
                 const existing = duplicates[0];
                 if (existing.email === email) {
@@ -60,32 +50,242 @@ router.post(
                 }
             }
 
+            // Prepare Email OTP.
+            const otpCode = crypto.randomInt(100000, 999999).toString();
+            const hashedOtp = await bcrypt.hash(otpCode, 10);
             const hashedPassword = await bcrypt.hash(password, 10);
-            const userId = await UserQueries.create({
-                first_name,
-                last_name,
-                username,
-                email,
-                password: hashedPassword,
+
+            // Create temporary entry in otp_verifications tracking user state
+            await OtpQueries.create({
+                identifier: email,
+                otp_hash: hashedOtp,
+                type: 'email',
+                user_data: { 
+                    first_name, 
+                    last_name, 
+                    username, 
+                    email, 
+                    password: hashedPassword, 
+                    mobile_number: mobile_number || null,
+                    mobile_verified: false,
+                    email_verified: false 
+                }
             });
 
-            console.log("✅ User registered successfully:", userId);
-            (req as any).user = {
-                id: userId,
-                first_name,
-                last_name,
-                username,
-                email
-            };
-            log(`User registered: ${username}`, req, userId);
-            res.json({
-                success: true,
-                message: "User registered successfully!",
-                user_id: userId,
+            // Send verification email
+            const emailSent = await sendVerificationOtp(email, otpCode, first_name);
+            
+            if (emailSent) {
+                res.json({ success: true, message: "Verification code sent to your email." });
+            } else {
+                res.status(500).json({ success: false, message: "Failed to send verification email." });
+            }
+        } catch (error) {
+            console.error("❌ Email Verification Sender Error:", error);
+            res.status(500).json({ success: false, message: "Server error during registration step 1" });
+        }
+    }
+);
+
+// ============================================================
+// Registration Step 2: Finalize With Email OTP
+// ============================================================
+router.post(
+    "/users/register/verify-email",
+    authLimiter,
+    async (req: Request, res: Response): Promise<void> => {
+        const { email, otp } = req.body;
+
+        if (!email || !otp) {
+            res.json({ success: false, message: "Email and code are required" });
+            return;
+        }
+
+        try {
+            const record = await OtpQueries.findActive(email);
+            
+            if (!record) {
+                res.json({ success: false, message: "Verification link expired or invalid" });
+                return;
+            }
+
+            const isMatch = await bcrypt.compare(otp, record.otp_hash);
+            
+            if (!isMatch) {
+                await OtpQueries.incrementAttempts(record.id);
+                const updatedRecord = await OtpQueries.findActive(email);
+                const attemptsRemaining = 3 - (updatedRecord?.attempts || 0);
+                
+                if (attemptsRemaining <= 0) {
+                    await OtpQueries.delete(record.id);
+                    res.json({ success: false, message: "Too many incorrect attempts. This OTP is now invalid." });
+                } else {
+                    res.json({ 
+                        success: false, 
+                        message: "Incorrect verification code",
+                        attemptsRemaining: attemptsRemaining
+                    });
+                }
+                return;
+            }
+
+            // Extract data and create user
+            const userData = JSON.parse(record.user_data);
+            
+            // Mark email as verified for the final user row
+            const userId = await UserQueries.create({
+                ...userData,
+                email_verified: true,
+                mobile_number_verified: false
+            });
+
+            await OtpQueries.delete(record.id);
+
+            (req as any).user = userData;
+            await log(`User registered: ${userData.username}`, req, userId);
+
+            res.json({ 
+                success: true, 
+                message: "Email verified! Account created successfully.",
+                user_id: userId
             });
         } catch (error) {
-            console.error("❌ Registration error:", error);
-            res.status(500).json({ success: false, message: "Database error" });
+            console.error("❌ Final Verification Error:", error);
+            res.status(500).json({ success: false, message: "Registration failed." });
+        }
+    }
+);
+
+// ============================================================
+// Forgot Password Step 1: Send Reset OTP
+// ============================================================
+router.post(
+    "/users/forgot-password/send-otp",
+    authLimiter,
+    async (req: Request, res: Response): Promise<void> => {
+        const { email } = req.body;
+
+        if (!email) {
+            res.status(400).json({ success: false, message: "Email is required" });
+            return;
+        }
+
+        try {
+            // Rate limit: max 3 reset requests per hour
+            const recentRequests = await OtpQueries.countRecentRequests(email);
+            if (recentRequests >= 3) {
+                res.status(429).json({ success: false, message: "Too many reset requests. Please try again after an hour." });
+                return;
+            }
+
+            // Check if user exists
+            const user = await UserQueries.findByEmail(email);
+            if (!user) {
+                // Don't reveal whether the email exists for security
+                res.json({ success: true, message: "If an account with that email exists, a reset code has been sent." });
+                return;
+            }
+
+            // Check if user is OAuth-only (no password set)
+            if (!user.password) {
+                res.json({ success: false, message: "This account uses social login. Please sign in with Google or GitHub." });
+                return;
+            }
+
+            // Generate OTP
+            const otpCode = crypto.randomInt(100000, 999999).toString();
+            const hashedOtp = await bcrypt.hash(otpCode, 10);
+
+            // Store OTP with user_data containing user ID for password update
+            await OtpQueries.create({
+                identifier: email,
+                otp_hash: hashedOtp,
+                type: 'email',
+                user_data: { userId: user.id, purpose: 'password_reset' }
+            });
+
+            // Send reset email
+            const { sendPasswordResetOtp } = await import("../helpers/email.js");
+            await sendPasswordResetOtp(email, otpCode, user.first_name);
+
+            res.json({ success: true, message: "If an account with that email exists, a reset code has been sent." });
+        } catch (error) {
+            console.error("❌ Forgot Password Error:", error);
+            res.status(500).json({ success: false, message: "Server error. Please try again." });
+        }
+    }
+);
+
+// ============================================================
+// Forgot Password Step 2: Verify OTP & Reset Password
+// ============================================================
+router.post(
+    "/users/forgot-password/reset",
+    authLimiter,
+    async (req: Request, res: Response): Promise<void> => {
+        const { email, otp, newPassword } = req.body;
+
+        if (!email || !otp || !newPassword) {
+            res.status(400).json({ success: false, message: "Email, code, and new password are required" });
+            return;
+        }
+
+        if (newPassword.length < 8) {
+            res.status(400).json({ success: false, message: "Password must be at least 8 characters" });
+            return;
+        }
+
+        try {
+            const record = await OtpQueries.findActive(email);
+
+            if (!record) {
+                res.json({ success: false, message: "Reset code expired or invalid. Please request a new one." });
+                return;
+            }
+
+            // Verify it's a password reset OTP
+            const userData = JSON.parse(record.user_data);
+            if (userData.purpose !== 'password_reset') {
+                res.json({ success: false, message: "Invalid reset code." });
+                return;
+            }
+
+            const isMatch = await bcrypt.compare(otp, record.otp_hash);
+
+            if (!isMatch) {
+                await OtpQueries.incrementAttempts(record.id);
+                const updatedRecord = await OtpQueries.findActive(email);
+                const attemptsRemaining = 3 - (updatedRecord?.attempts || 0);
+
+                if (attemptsRemaining <= 0) {
+                    await OtpQueries.delete(record.id);
+                    res.json({ success: false, message: "Too many incorrect attempts. Please request a new code." });
+                } else {
+                    res.json({
+                        success: false,
+                        message: "Incorrect code",
+                        attemptsRemaining
+                    });
+                }
+                return;
+            }
+
+            // OTP verified — update password
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+            await UserQueries.updatePassword(userData.userId, hashedPassword);
+
+            // Clean up OTP record
+            await OtpQueries.delete(record.id);
+
+            // Invalidate all existing sessions for security
+            await SessionQueries.invalidateAll(userData.userId);
+
+            await log(`Password reset for user ID: ${userData.userId}`, req, userData.userId);
+
+            res.json({ success: true, message: "Password reset successfully! You can now sign in." });
+        } catch (error) {
+            console.error("❌ Password Reset Error:", error);
+            res.status(500).json({ success: false, message: "Server error during password reset." });
         }
     }
 );
