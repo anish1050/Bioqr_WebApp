@@ -4,10 +4,7 @@ import {
   Loader,
   XCircle,
   Download,
-  Share2,
   QrCode,
-  Shield,
-  Camera,
   MapPin,
   Settings,
   ChevronDown,
@@ -59,7 +56,6 @@ const QRModal: React.FC<QRModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [useFaceScanner, setUseFaceScanner] = useState(false);
-  const [hasFaceEnrolled, setHasFaceEnrolled] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
   const [isCrossHighlighted, setIsCrossHighlighted] = useState(false);
@@ -123,7 +119,6 @@ const QRModal: React.FC<QRModalProps> = ({
         try {
           const faceRes = await fetch(`${API_BASE}/bioqr/auth/face/status`, { headers: { "Authorization": `Bearer ${accessToken}` } });
           const faceData = await faceRes.json();
-          setHasFaceEnrolled(!!faceData.enrolled);
           if (faceData.enrolled) setUseFaceScanner(true);
         } catch (err) { console.error("Error checking biometric status:", err); }
       };
@@ -133,15 +128,17 @@ const QRModal: React.FC<QRModalProps> = ({
 
   const handleGenerateQR = async () => {
     setError(null);
-    setStep("verifying");
-    try {
-      if (!useFaceScanner) {
+    if (!useFaceScanner) {
+      setStep("verifying");
+      try {
         await verify();
         await completeQRGeneration();
+      } catch (err: any) {
+        setError(err.message || "An error occurred");
+        setStep("form");
       }
-    } catch (err: any) {
-      setError(err.message || "An error occurred");
-      setStep("form");
+    } else {
+      setStep("verifying");
     }
   };
 
@@ -240,6 +237,17 @@ const QRModal: React.FC<QRModalProps> = ({
               </div>
 
               {qrType === 'file' && <div className="file-info"><p><strong>Target:</strong> {filename}</p></div>}
+              {qrType === 'text' && (
+                <div className="form-group">
+                  <label>Message Content</label>
+                  <textarea 
+                    value={textContent} 
+                    onChange={e => setTextContent(e.target.value)} 
+                    placeholder="Enter the text to encode in the QR..."
+                    className="qr-textarea"
+                  />
+                </div>
+              )}
               {qrType === 'vcard' && (
                 <div className="settings-grid" style={{ marginBottom: '1rem' }}>
                   <div className="input-row"><label>First Name</label><input value={vcard.firstName} onChange={e => setVcard({ ...vcard, firstName: e.target.value })} /></div>
