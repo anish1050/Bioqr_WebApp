@@ -342,7 +342,7 @@
 .generate-btn {
   width: 100%;
   padding: 1rem;
-  background: linear-gradient(135deg, #7c3aed, #5b21b6);
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -359,7 +359,7 @@
 
 .generate-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
 }
 
 .generate-btn:disabled {
