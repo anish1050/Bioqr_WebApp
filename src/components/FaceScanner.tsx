@@ -10,8 +10,8 @@ interface FaceScannerProps {
 
 const FaceScanner: React.FC<FaceScannerProps> = ({ 
   onCapture, 
-  statusText = "Align your face within the frame",
-  actionLabel = "Scanned"
+  statusText = "Align your face for Bio-Verification",
+  actionLabel = "Verification Successful"
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -32,8 +32,29 @@ const FaceScanner: React.FC<FaceScannerProps> = ({
       const allDevices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = allDevices.filter(d => d.kind === "videoinput");
       setDevices(videoDevices);
-      if (videoDevices.length > 0 && !selectedDeviceId) {
-        setSelectedDeviceId(videoDevices[0].deviceId);
+      
+      if (videoDevices.length > 0) {
+        // AI Logic: Prioritize actual hardware over virtual software cameras
+        const physicalCamera = videoDevices.find(d => {
+          const label = d.label.toLowerCase();
+          if (!label) return false;
+          // Priority 1: Trusted hardware names
+          if (label.includes('uvc webcam') || label.includes('integrated')) return true;
+          // Priority 2: Not a known virtual camera
+          return !label.includes('virtual') && !label.includes('a16') && !label.includes('obs') && !label.includes('droidcam');
+        });
+
+        // Smart defaulting: switch to physical if no ID is set, or if current ID is a virtual placeholder
+        const currentLabel = videoDevices.find(d => d.deviceId === selectedDeviceId)?.label.toLowerCase() || "";
+        const isCurrentVirtual = currentLabel.includes('virtual') || currentLabel.includes('a16');
+
+        if (!selectedDeviceId || (isCurrentVirtual && physicalCamera)) {
+          const nextId = physicalCamera ? physicalCamera.deviceId : videoDevices[0].deviceId;
+          if (nextId !== selectedDeviceId) {
+            setSelectedDeviceId(nextId);
+            console.log(`📸 BioQR: Auto-selected hardware camera: ${physicalCamera?.label || videoDevices[0].label}`);
+          }
+        }
       }
     } catch (err) {
       console.error("Error listing cameras:", err);

@@ -174,11 +174,29 @@ const Home: React.FC = () => {
         
         <div className="container">
           <div className="app-download-grid">
+            <div className="app-mockup-container-dual">
+              <div className="glass-panel mockup-glow"></div>
+              <div className="phone-mockup phone-back">
+                <img 
+                  src="/images/app-screen-generated.jpg" 
+                  alt="BioQR Generated QR Screen" 
+                  className="phone-screen"
+                />
+              </div>
+              <div className="phone-mockup phone-front">
+                <img 
+                  src="/images/app-screen-options.jpg" 
+                  alt="BioQR Options Screen" 
+                  className="phone-screen"
+                />
+              </div>
+            </div>
+
             <div className="app-download-content">
               <div className="section-marker">03</div>
               <h2 className="section-headline download-headline">
-                DOWNLOAD<br />
-                OUR APP
+                DOWNLOAD OUR<br />
+                ANDROID APP
               </h2>
               <p className="download-description">
                 Download our latest version of the app, and get exciting experiences every day. Professional security, biometrics, and QR authentication in the palm of your hand.
@@ -188,15 +206,6 @@ const Home: React.FC = () => {
                   Download Now
                 </a>
               </div>
-            </div>
-
-            <div className="app-mockup-container">
-              <div className="glass-panel mockup-glow"></div>
-              <img 
-                src="/images/app_mockup.png" 
-                alt="BioQR Android App Mockup" 
-                className="app-mockup-image"
-              />
             </div>
           </div>
         </div>
