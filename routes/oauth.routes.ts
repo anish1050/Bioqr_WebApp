@@ -16,17 +16,16 @@ router.get(
         const origin = req.headers.origin;
         const host = req.get("host");
 
-        (req as any).session.authSource = referer || origin || "direct";
-
+        // Special check for Android initiation
+        const queryOrigin = req.query.origin;
+        (req as any).session.authSource = queryOrigin || referer || origin || "direct";
+        
         const isRegistration =
             referer &&
             (referer.includes("/register.html") || referer.includes("/register"));
         (req as any).session.isOAuthRegistration = isRegistration;
 
         console.log("🔍 Google OAuth initiation:");
-        console.log("  - Referer:", referer);
-        console.log("  - Origin:", origin);
-        console.log("  - Host:", host);
         console.log("  - AuthSource stored:", (req as any).session.authSource);
         console.log("  - Is Registration:", isRegistration);
 
@@ -119,9 +118,16 @@ router.get(
                 })
             );
 
-            redirectUrl = `${baseRedirectUrl}/dashboard?token=${accessToken}&refresh=${refreshToken}&user=${userPayload}`;
-            console.log(`📡 Redirecting to frontend at: ${baseRedirectUrl}`);
-            console.log("✅ Google login successful - redirecting to dashboard");
+            // SPECIAL REDIRECT FOR ANDROID
+            if (authSource === "android" || req.headers["x-client-type"] === "android") {
+                redirectUrl = `bioqr://auth?token=${accessToken}&refresh=${refreshToken}&user=${userPayload}`;
+                console.log("📱 Redirecting to Android App:", redirectUrl);
+            } else {
+                redirectUrl = `${baseRedirectUrl}/dashboard?token=${accessToken}&refresh=${refreshToken}&user=${userPayload}`;
+                console.log(`📡 Redirecting to frontend at: ${baseRedirectUrl}`);
+            }
+            
+            console.log("✅ Google login successful");
             log(`User logged in via Google: ${user.username}`, req, user.id);
         }
 
@@ -145,7 +151,9 @@ router.get(
         const origin = req.headers.origin;
         const host = req.get("host");
 
-        (req as any).session.authSource = referer || origin || "direct";
+        // Special check for Android initiation
+        const queryOrigin = req.query.origin;
+        (req as any).session.authSource = queryOrigin || referer || origin || "direct";
 
         const isRegistration =
             referer &&
@@ -155,7 +163,7 @@ router.get(
         console.log("🔍 GitHub OAuth initiation:");
         console.log("  - Referer:", referer);
         console.log("  - Origin:", origin);
-        console.log("  - Host:", host);
+        console.log("  - Query Origin:", queryOrigin);
         console.log("  - AuthSource stored:", (req as any).session.authSource);
         console.log("  - Is Registration:", isRegistration);
 
@@ -248,9 +256,16 @@ router.get(
                 })
             );
 
-            redirectUrl = `${baseRedirectUrl}/dashboard?token=${accessToken}&refresh=${refreshToken}&user=${userPayload}`;
-            console.log(`📡 Redirecting to frontend at: ${baseRedirectUrl}`);
-            console.log("✅ GitHub login successful - redirecting to dashboard");
+            // SPECIAL REDIRECT FOR ANDROID
+            if (authSource === "android" || req.headers["x-client-type"] === "android") {
+                redirectUrl = `bioqr://auth?token=${accessToken}&refresh=${refreshToken}&user=${userPayload}`;
+                console.log("📱 Redirecting to Android App:", redirectUrl);
+            } else {
+                redirectUrl = `${baseRedirectUrl}/dashboard?token=${accessToken}&refresh=${refreshToken}&user=${userPayload}`;
+                console.log(`📡 Redirecting to frontend at: ${baseRedirectUrl}`);
+            }
+
+            console.log("✅ GitHub login successful");
             log(`User logged in via GitHub: ${user.username}`, req, user.id);
         }
 
