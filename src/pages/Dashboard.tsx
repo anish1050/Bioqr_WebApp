@@ -45,6 +45,7 @@ const formatDate = (dateString: string) => {
 const Dashboard: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'files'>('dashboard');
@@ -61,6 +62,11 @@ const Dashboard: React.FC = () => {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState({ text: '', type: 'info', visible: false });
+
+  const scrollToFiles = () => {
+    setActiveTab('files');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // Handle Hash change for tabs
   useEffect(() => {
@@ -342,15 +348,11 @@ const Dashboard: React.FC = () => {
 
         <div className="dashboard-cta">
             <button 
-              className="cta-btn" 
-              onClick={() => {
-                setActiveTab('files');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              style={{ borderColor: '#3b82f6', background: 'rgba(59, 130, 246, 0.05)' }}
+              className="cta-btn primary-blue" 
+              onClick={scrollToFiles}
             >
-              <QrCode size={48} color="#3b82f6" />
-              <span style={{ color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '1px' }}>Start Generating QR Codes</span>
+              <QrCode size={48} color="white" />
+              <span style={{ color: 'white', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 'bold' }}>Start Generating QR Codes</span>
             </button>
         </div>
 

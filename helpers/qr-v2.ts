@@ -1,4 +1,5 @@
 import { Request } from "express";
+import geoip from "geoip-lite";
 
 /**
  * Calculates the Haversine distance between two points on the Earth
@@ -48,15 +49,19 @@ export async function getScanDetails(req: Request) {
     const ip = (req.headers["x-forwarded-for"] as string || req.socket.remoteAddress || "").split(",")[0].trim();
     const ua = req.headers["user-agent"];
     
-    // Extract location from Vercel/Render headers
-    const country = (req.headers["x-vercel-ip-country"] || req.headers["x-render-ip-country"] || "Unknown") as string;
-    const cityHeader = req.headers["x-vercel-ip-city"] as string;
-    const city = cityHeader ? decodeURIComponent(cityHeader) : (req.headers["x-render-ip-city"] as string || "Unknown");
+    // Geolocation Fallback using geoip-lite
+    const geo = ip && ip !== "::1" && ip !== "127.0.0.1" && !ip.startsWith("10.") && !ip.startsWith("192.168.") ? geoip.lookup(ip) : null;
+
+    // Extract location from Vercel/Render headers or fallback to geoip
+    const h = req.headers || {};
+    const country = h["x-vercel-ip-country"] || h["x-render-ip-country"] || h["cf-ipcountry"] || geo?.country || "Unknown";
+    const cityRaw = h["x-vercel-ip-city"] || h["x-vercel-city"] || h["x-render-ip-city"] || geo?.city || "Unknown";
+    const city = cityRaw !== "Unknown" ? (typeof cityRaw === "string" ? decodeURIComponent(cityRaw as string) : cityRaw) : "Unknown";
 
     return {
         ip,
         ua,
-        country,
-        city
+        country: country as string,
+        city: city as string
     };
 }
