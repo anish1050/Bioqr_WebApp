@@ -14,7 +14,8 @@ import {
   ChevronUp,
   User,
   Hash,
-  Type
+  Type,
+  Info
 } from "lucide-react";
 import { useBiometricVerification } from "./BiometricVerifier";
 import FaceScanner from "./FaceScanner";
@@ -255,9 +256,29 @@ const QRModal: React.FC<QRModalProps> = ({
               </div>
 
               <div className="checkbox-group">
-                <label className="checkbox-label"><input type="checkbox" checked={isOneTime} onChange={(e) => setIsOneTime(e.target.checked)} /> One-time use</label>
-                <label className="checkbox-label"><input type="checkbox" checked={isUnshareable} onChange={(e) => setIsUnshareable(e.target.checked)} /> Unshareable (Protected View)</label>
-                <label className="checkbox-label"><input type="checkbox" checked={requireAuth} onChange={(e) => setRequireAuth(e.target.checked)} /> 🧬 Biometric Lock on Scan</label>
+                <div className="checkbox-item-container">
+                    <label className="checkbox-label"><input type="checkbox" checked={isOneTime} onChange={(e) => setIsOneTime(e.target.checked)} /> One-time use</label>
+                    <div className="info-tooltip-container">
+                        <Info size={14} className="info-icon" />
+                        <span className="tooltip-text">QR code becomes invalid immediately after the first successful scan.</span>
+                    </div>
+                </div>
+
+                <div className="checkbox-item-container">
+                    <label className="checkbox-label"><input type="checkbox" checked={isUnshareable} onChange={(e) => setIsUnshareable(e.target.checked)} /> Unshareable (Protected View)</label>
+                    <div className="info-tooltip-container">
+                        <Info size={14} className="info-icon" />
+                        <span className="tooltip-text">Enables Spotlight mode (hides most of the screen) and adds a dynamic watermark of the viewer's IP/Location.</span>
+                    </div>
+                </div>
+
+                <div className="checkbox-item-container">
+                    <label className="checkbox-label"><input type="checkbox" checked={requireAuth} onChange={(e) => setRequireAuth(e.target.checked)} /> 🧬 Biometric Lock on Scan</label>
+                    <div className="info-tooltip-container">
+                        <Info size={14} className="info-icon" />
+                        <span className="tooltip-text">The person scanning must verify their face against YOUR profile before the file is revealed.</span>
+                    </div>
+                </div>
               </div>
 
               <button className="settings-toggle" onClick={() => setAdvancedOpen(!advancedOpen)}>

@@ -250,6 +250,65 @@
   cursor: not-allowed;
 }
 
+/* Tooltip Styles */
+.checkbox-item-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.info-tooltip-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    color: #888;
+    cursor: help;
+    padding: 4px;
+}
+
+.info-tooltip-container:hover {
+    color: #7c3aed;
+}
+
+.tooltip-text {
+    visibility: hidden;
+    width: 220px;
+    background-color: #0b0b14;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 10px;
+    position: absolute;
+    z-index: 10001;
+    bottom: 125%;
+    right: 0;
+    margin-left: -110px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    border: 1px solid #333;
+    pointer-events: none;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+}
+
+.tooltip-text::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    right: 10px;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #333 transparent transparent transparent;
+}
+
+.info-tooltip-container:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
 .security-notice {
   display: flex;
   align-items: center;
