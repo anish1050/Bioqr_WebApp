@@ -317,7 +317,7 @@ export const QrTokenQueries = {
                 vcard_data, style_color, style_bg
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-                token, userId, fileIds.length === 1 ? fileIds[0] : null, expiresAt, 
+                token, userId, fileIds.length === 1 ? fileIds[0] : (fileIds.length > 1 ? 0 : 0), expiresAt, 
                 is_one_time, is_unshareable, require_auth, latitude, longitude, radius, 
                 start_time, qr_type, vcard_data, style_color, style_bg
             ]
