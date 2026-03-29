@@ -46,11 +46,16 @@ export function formatVCard(data: {
  * Extracts scan details from request
  */
 export async function getScanDetails(req: Request) {
-    const ip = (req.headers["x-forwarded-for"] as string || req.socket.remoteAddress || "").split(",")[0].trim();
+    // Extract real IP prioritizing Forwarded headers (sync with logger.ts for consistency)
+    const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0].trim() || 
+               req.headers["x-real-ip"] || 
+               (req as any).ip || 
+               req.socket.remoteAddress || "";
+
     const ua = req.headers["user-agent"];
     
     // Geolocation Fallback using geoip-lite
-    const geo = ip && ip !== "::1" && ip !== "127.0.0.1" && !ip.startsWith("10.") && !ip.startsWith("192.168.") ? geoip.lookup(ip) : null;
+    const geo = ip && ip !== "::1" && ip !== "127.0.0.1" && !ip.startsWith("10.") && !ip.startsWith("192.168.") ? geoip.lookup(ip as string) : null;
 
     // Extract location from Vercel/Render headers or fallback to geoip
     const h = req.headers || {};
@@ -59,7 +64,7 @@ export async function getScanDetails(req: Request) {
     const city = cityRaw !== "Unknown" ? (typeof cityRaw === "string" ? decodeURIComponent(cityRaw as string) : cityRaw) : "Unknown";
 
     return {
-        ip,
+        ip: ip as string,
         ua,
         country: country as string,
         city: city as string

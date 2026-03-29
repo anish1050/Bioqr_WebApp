@@ -3,7 +3,7 @@ import crypto from "crypto";
 import QRCode from "qrcode";
 import { authenticateToken } from "../helpers/auth.js";
 import { FileQueries, QrTokenQueries, WebAuthnCredentialQueries, FaceRecognitionQueries } from "../helpers/queries.js";
-import { log } from "../helpers/logger.js";
+import { log, getLocationFromIp } from "../helpers/logger.js";
 import { calculateDistance, formatVCard, getScanDetails } from "../helpers/qr-v2.js";
 
 const router = Router();
@@ -178,6 +178,9 @@ router.get(
             // Log Scan Event (Analytics)
             const scanDetails = await getScanDetails(req);
             await QrTokenQueries.logScan(qrToken.id, scanDetails);
+            
+            // Rich logging to MongoDB
+            log(`QR Scanned: ${(qrToken.qr_type || 'Unknown').toUpperCase()} [Token: ${token.slice(0,8)}...]`, req, qrToken.user_id);
 
             // Check Time Restriction (Start Time)
             if (qrToken.start_time && new Date() < new Date(qrToken.start_time)) {
@@ -216,87 +219,105 @@ router.get(
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
                     <title>Guardian Verification - BioQR</title>
                     <style>
-                        body { background: #0f172a; color: white; font-family: 'Inter', system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
-                        .card { background: #1e293b; padding: 2.5rem; border-radius: 1.5rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); width: 100%; max-width: 450px; text-align: center; border: 1px solid #334155; position: relative; overflow: hidden; }
-                        h1 { font-size: 1.75rem; color: #38bdf8; margin-bottom: 0.5rem; }
-                        p { color: #94a3b8; line-height: 1.5; margin-bottom: 2rem; }
-                        .btn { background: #38bdf8; color: #0f172a; border: none; padding: 1rem 2rem; border-radius: 0.75rem; font-weight: 700; cursor: pointer; width: 100%; transition: all 0.2s; font-size: 1rem; }
-                        .btn:hover { background: #7dd3fc; transform: translateY(-2px); }
-                        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-                        .status { margin-top: 1.5rem; font-size: 0.875rem; color: #f43f5e; display: none; }
+                        body { background: #010409; color: white; font-family: -apple-system, system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; }
+                        .card { background: #0d1117; padding: 2.5rem; border-radius: 2rem; box-shadow: 0 0 80px rgba(56,189,248,0.1); width: 100%; max-width: 400px; text-align: center; border: 1px solid #30363d; }
+                        h1 { font-size: 1.5rem; color: #38bdf8; margin-bottom: 0.5rem; font-weight: 800; letter-spacing: -0.5px; }
+                        p { color: #8b949e; font-size: 0.9rem; margin-bottom: 2rem; }
                         
-                        /* Guard Rail UI */
-                        #camera-container { width: 240px; height: 240px; border-radius: 50%; overflow: hidden; margin: 0 auto 2rem; border: 4px solid #38bdf8; display: none; position: relative; background: #000; }
-                        #video { width: 100%; height: 100%; object-fit: cover; }
-                        .scan-line { position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: #38bdf8; box-shadow: 0 0 15px #38bdf8; animation: scanning 2s ease-in-out infinite; z-index: 10; display: none; }
-                        @keyframes scanning { 0% { top: 0; } 50% { top: 100%; } 100% { top: 0; } }
+                        #camera-container { width: 280px; height: 280px; border-radius: 50%; overflow: hidden; margin: 0 auto 2rem; border: 4px solid #30363d; position: relative; background: #000; box-shadow: inset 0 0 20px rgba(0,0,0,1); }
+                        #video { width: 100%; height: 100%; object-fit: cover; filter: contrast(1.1); }
+                        
+                        /* Scanning Visuals */
+                        .face-oval { position: absolute; inset: 20px; border: 2px dashed rgba(56,189,248,0.3); border-radius: 50%; pointer-events: none; z-index: 5; }
+                        .scan-beam { position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: #38bdf8; box-shadow: 0 0 15px #38bdf8; z-index: 10; animation: beam 2s infinite ease-in-out; display: none; }
+                        @keyframes beam { 0% { top: 10%; opacity: 0; } 50% { top: 90%; opacity: 1; } 100% { top: 10%; opacity: 0; } }
+                        
+                        .progress-bar { height: 4px; background: #30363d; border-radius: 10px; margin-top: 1rem; overflow: hidden; display: none; }
+                        .progress-fill { height: 100%; width: 0%; background: #38bdf8; transition: width 0.1s linear; }
+                        
+                        .btn { background: #38bdf8; color: #000; border: none; padding: 1.2rem; border-radius: 1rem; font-weight: 800; cursor: pointer; width: 100%; transition: all 0.3s; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; }
+                        .btn:hover { background: #7dd3fc; transform: scale(1.02); }
+                        .status { margin-top: 1.5rem; font-size: 0.8rem; color: #f43f5e; font-weight: 600; min-height: 1.2rem; }
                     </style>
                 </head>
                 <body>
                     <div class="card">
                         <div id="camera-container">
                             <video id="video" autoplay muted playsinline></video>
-                            <div id="scan-line" class="scan-line"></div>
+                            <div class="face-oval"></div>
+                            <div id="scan-beam" class="scan-beam"></div>
                         </div>
 
-                        <h1>Identity Guard Rail</h1>
-                        <p id="sub-text">This content is protected by **Biometric Lock**. Face scan is required to unlock this file.</p>
+                        <h1>Biometric Lock</h1>
+                        <p id="sub-text">Align your face within the circle to unlock securely.</p>
                         
-                        <button id="verify-btn" class="btn">Start Face Scan</button>
+                        <div id="progress" class="progress-bar"><div id="fill" class="progress-fill"></div></div>
+                        <button id="start-btn" class="btn">Start Secure Scan</button>
                         <div id="status" class="status"></div>
                         
                         <canvas id="canvas" style="display:none;"></canvas>
                     </div>
 
                     <script>
-                        const btn = document.getElementById('verify-btn');
+                        const startBtn = document.getElementById('start-btn');
                         const status = document.getElementById('status');
                         const video = document.getElementById('video');
-                        const camContainer = document.getElementById('camera-container');
-                        const scanLine = document.getElementById('scan-line');
-                        const subText = document.getElementById('sub-text');
+                        const beam = document.getElementById('scan-beam');
+                        const fill = document.getElementById('fill');
+                        const progress = document.getElementById('progress');
                         const canvas = document.getElementById('canvas');
 
-                        btn.onclick = async () => {
-                            if (btn.innerText === "Start Face Scan") {
-                                try {
-                                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-                                    video.srcObject = stream;
-                                    camContainer.style.display = 'block';
-                                    scanLine.style.display = 'block';
-                                    btn.innerText = "Verify Identity";
-                                    subText.innerText = "Position your face in the circle for scanning.";
-                                } catch (err) {
-                                    status.style.display = 'block';
-                                    status.innerText = "❌ Camera access denied: " + err.message;
-                                }
-                                return;
-                            }
-
-                            btn.disabled = true;
-                            status.style.display = 'none';
-                            
+                        async function startScan() {
                             try {
-                                // 1. Capture Face
-                                canvas.width = video.videoWidth;
-                                canvas.height = video.videoHeight;
-                                canvas.getContext('2d').drawImage(video, 0, 0);
-                                const base64Image = canvas.toDataURL('image/jpeg', 0.8);
+                                startBtn.style.display = 'none';
+                                status.innerText = "Initializing Lens...";
+                                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 } });
+                                video.srcObject = stream;
+                                
+                                // Industry Practice: Wait for video to be ready before starting auto-capture
+                                video.onloadedmetadata = () => {
+                                    status.innerText = "Hold steady... scanning";
+                                    beam.style.display = 'block';
+                                    progress.style.display = 'block';
+                                    autoCapture();
+                                };
+                            } catch (err) {
+                                startBtn.style.display = 'block';
+                                status.innerText = "❌ ACCESS ERROR: Camera Required";
+                            }
+                        }
 
-                                // 2. Get Geolocation if required
-                                let lat = null, lon = null;
-                                if (${needsLocation}) {
-                                    status.style.display = 'block';
-                                    status.innerText = "📍 Confirming location...";
-                                    const pos = await new Promise((res, rej) => {
-                                        navigator.geolocation.getCurrentPosition(res, rej, { timeout: 5000 });
-                                    });
-                                    lat = pos.coords.latitude;
-                                    lon = pos.coords.longitude;
+                        async function autoCapture() {
+                            let p = 0;
+                            const interval = setInterval(() => {
+                                p += 2;
+                                fill.style.width = p + '%';
+                                if (p >= 100) {
+                                    clearInterval(interval);
+                                    performVerify();
                                 }
+                            }, 30); // ~1.5 seconds total scan time
+                        }
 
-                                // 3. Submit for Verification (Guard Rail)
-                                status.innerText = "🔐 Authenticating Biometrics...";
+                        async function performVerify() {
+                            status.innerText = "🔐 Verifying Identity Map...";
+                            beam.style.borderColor = '#10b981';
+                            
+                            // Industry Practice: Compress and Crop to 300x300 for 10x faster network transmission
+                            const size = 300;
+                            canvas.width = size;
+                            canvas.height = size;
+                            const ctx = canvas.getContext('2d');
+                            
+                            // Center crop
+                            const minSide = Math.min(video.videoWidth, video.videoHeight);
+                            const sx = (video.videoWidth - minSide) / 2;
+                            const sy = (video.videoHeight - minSide) / 2;
+                            ctx.drawImage(video, sx, sy, minSide, minSide, 0, 0, size, size);
+                            
+                            const base64Image = canvas.toDataURL('image/jpeg', 0.7);
+
+                            try {
                                 const verifyRes = await fetch('/verify-scan-face/' + window.location.pathname.split('/').pop(), {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
@@ -304,34 +325,32 @@ router.get(
                                 });
                                 
                                 const data = await verifyRes.json();
-                                
                                 if (data.success) {
                                     status.style.color = '#10b981';
-                                    status.innerText = "✅ Identity Verified! Unlocking...";
-                                    
-                                    const params = new URLSearchParams(window.location.search);
-                                    params.set('verified', 'true');
-                                    if (lat) {
-                                        params.set('lat', lat);
-                                        params.set('lon', lon);
-                                    }
+                                    status.innerText = "✅ IDENTITY MATCHED";
                                     setTimeout(() => {
+                                        const params = new URLSearchParams(window.location.search);
+                                        params.set('verified', 'true');
                                         window.location.href = window.location.pathname + '?' + params.toString();
-                                    }, 1000);
+                                    }, 800);
                                 } else {
-                                    throw new Error(data.message || "Identity Match Failed");
+                                    throw new Error(data.message);
                                 }
-
                             } catch (err) {
-                                btn.disabled = false;
-                                status.style.display = 'block';
-                                status.innerText = "❌ Access Denied: " + (err.message || "Unknown error");
+                                status.innerText = "❌ ACCESS DENIED: Identity Mismatch";
+                                setTimeout(() => {
+                                    fill.style.width = '0%';
+                                    autoCapture(); // Retry automatically
+                                }, 2000);
                             }
-                        };
+                        }
+
+                        startBtn.onclick = startScan;
                     </script>
                 </body>
                 </html>
                 `;
+
                 res.send(verificationHtml);
                 return;
             }
@@ -563,8 +582,21 @@ router.get(
         try {
             const userId = (req as any).user?.userId;
             const stats = await QrTokenQueries.getScanStatsByUserId(userId);
-            res.json(stats);
+
+            // Enrich unknown locations using MongoDB historical logs
+            const enrichedStats = await Promise.all(stats.map(async (s) => {
+                if (s.city === "Unknown" || s.country === "Unknown") {
+                    const resolved = await getLocationFromIp(s.ip_address);
+                    if (resolved) {
+                        return { ...s, city: resolved.city, country: resolved.country };
+                    }
+                }
+                return s;
+            }));
+
+            res.json(enrichedStats);
         } catch (err) {
+            console.error("❌ Analytics Enrichment Error:", err);
             res.status(500).json({ error: "Failed to fetch analytics" });
         }
     }

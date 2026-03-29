@@ -50,7 +50,7 @@ const LogSchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now },
 });
 
-const LogModel = mongoose.model("Log", LogSchema, "logs");
+export const LogModel = mongoose.model("Log", LogSchema, "logs");
 
 /**
  * Helper function to log user activity to MongoDB
@@ -116,6 +116,30 @@ export async function logActivity(activity: string, req?: any, userId?: string |
     } catch (err) {
         console.error("❌ Error saving activity log:", err);
     }
+}
+
+/**
+ * Helper to resolve city/country for an IP from historical logs
+ */
+export async function getLocationFromIp(ip: string): Promise<{ city: string, country: string } | null> {
+    if (!isMongoConnected || !ip || ip === "::1" || ip === "127.0.0.1") return null;
+    try {
+        const latestWithLocation = await LogModel.findOne({
+            ip: ip,
+            city: { $ne: "Unknown" },
+            country: { $ne: "Unknown" }
+        }).sort({ timestamp: -1 });
+
+        if (latestWithLocation) {
+            return {
+                city: latestWithLocation.city || "Unknown",
+                country: latestWithLocation.country || "Unknown"
+            };
+        }
+    } catch (err) {
+        console.error("❌ Error fetching location from logs:", err);
+    }
+    return null;
 }
 
 // Export a shorter alias for convenience
