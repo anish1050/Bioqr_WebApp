@@ -1,6 +1,8 @@
 import { Router, Request, Response } from "express";
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 import QRCode from "qrcode";
+import { JWT_SECRET } from "../helpers/tokens.js";
 import { authenticateToken } from "../helpers/auth.js";
 import { FileQueries, QrTokenQueries, WebAuthnCredentialQueries, FaceRecognitionQueries } from "../helpers/queries.js";
 import { log, getLocationFromIp } from "../helpers/logger.js";
@@ -24,8 +26,7 @@ router.post("/verify-scan-face/:token", async (req: Request, res: Response) => {
         // 1. Get owner's enrolled face
         const ownerRecord = await FaceRecognitionQueries.findByUserId(qrToken.user_id);
         if (!ownerRecord) {
-            // If owner hasn't enrolled, we fallback to session verification or allow if simple geolocation matches
-            // but for "Unshareable", we should ideally require enrollment.
+            // Log fallback or denial
             return res.status(403).json({ success: false, message: "Owner has not enabled biometric guard rails for this file." });
         }
 
@@ -34,7 +35,7 @@ router.post("/verify-scan-face/:token", async (req: Request, res: Response) => {
         const currentDescriptor = await extractFaceDescriptorFromBase64(base64Image);
         if (!currentDescriptor) return res.status(400).json({ success: false, message: "No face detected in scan." });
 
-        // 3. Compare
+        // 3. Compare (Distance check)
         const savedDescriptor = new Float32Array(Object.values(JSON.parse(ownerRecord.descriptor)));
         let sum = 0;
         for (let i = 0; i < savedDescriptor.length; i++) {
@@ -42,11 +43,16 @@ router.post("/verify-scan-face/:token", async (req: Request, res: Response) => {
             sum += diff * diff;
         }
         const distance = Math.sqrt(sum);
-        const isMatch = distance < 0.6;
+        const isMatch = distance < 0.6; // Industry standard for face-api
 
         log(`Scan Guard Rail: ${isMatch ? "Unlocked" : "Blocked"} (dist: ${distance.toFixed(4)})`, req, qrToken.user_id);
 
         if (isMatch) {
+            // 💡 Secure Verification: Use session to bridge the redirect
+            if ((req as any).session) {
+                (req as any).session.verifiedTokens = (req as any).session.verifiedTokens || {};
+                (req as any).session.verifiedTokens[token] = true;
+            }
             res.json({ success: true, verified: true });
         } else {
             res.status(401).json({ success: false, message: "Identity mismatch. Access denied." });
@@ -205,7 +211,10 @@ router.get(
             // ============================================================
             // SMART VERIFICATION (Biometrics & Geofencing)
             // ============================================================
-            const isVerified = req.query.verified === "true";
+            // Loophole Closed: We check BOTH query param AND session token
+            // Query param is just for backward UI flow, the session is the real source of truth.
+            const sessionIsVerified = (req as any).session?.verifiedTokens?.[token] === true;
+            const isVerified = req.query.verified === "true" && sessionIsVerified;
             const needsLocation = qrToken.latitude !== null && qrToken.longitude !== null;
             const needsAuth = qrToken.require_auth === true;
 
@@ -429,144 +438,223 @@ router.get(
                 await QrTokenQueries.markAsUsed(qrToken.id);
             }
 
-            // Unshareable / Protected View logic
-            if (qrToken.is_unshareable) {
-                try {
-                    // Mark as strictly used for unshareable files (Burn after reading)
-                    // This kills the link immediately so refresh/rescan won't work
+            // Secure Serving: All files now use the Safe Viewer for branding and security
+            try {
+                const fileResponse = await fetch(file.filepath);
+                const buffer = await fileResponse.arrayBuffer();
+                const base64Data = Buffer.from(buffer).toString("base64");
+                const mime = file.mimetype;
+                
+                // One-time use / Burn-after-reading enforcement (Final Mark)
+                if (qrToken.is_unshareable) {
                     await QrTokenQueries.markAsUsed(qrToken.id);
-
-                    const fileResponse = await fetch(file.filepath);
-                    const buffer = await fileResponse.arrayBuffer();
-                    const base64Data = Buffer.from(buffer).toString("base64");
-                    const mime = file.mimetype || (file.filename.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg');
-                    
-                    let contentTag = "";
-                    if (mime.startsWith("image/")) {
-                        contentTag = `<img id="protected-content" src="data:${mime};base64,${base64Data}" alt="Secret" />`;
-                    } else if (mime === "application/pdf") {
-                        contentTag = `<embed id="protected-content" src="data:application/pdf;base64,${base64Data}" type="application/pdf" width="100%" height="90vh" />`;
-                    }
-
-                    const viewerHtml = `
-                    <!DOCTYPE html>
-                    <html lang="en">
-                    <head>
-                        <meta charset="UTF-8">
-                        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-                        <title>ULTRA-SECURE VIEW | BioQR</title>
-                        <style>
-                            :root { --accent: #ef4444; --bg: #000000; --text: #f8fafc; }
-                            body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; margin: 0; height: 100vh; overflow: hidden; user-select: none; -webkit-user-select: none; }
-                            
-                            /* Flashlight Spotlight Effect */
-                            #privacy-mask {
-                                position: fixed; inset: 0; z-index: 5000;
-                                background: black;
-                                pointer-events: none;
-                                cursor: none;
-                                background: radial-gradient(circle 100px at 50% 50%, rgba(255,255,255,0) 0%, rgba(0,0,0,1) 100%);
-                            }
-
-                            #guardian-overlay { position: fixed; inset: 0; z-index: 1000; pointer-events: none; overflow: hidden; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; opacity: 0.08; transform: rotate(-10deg) scale(1.2); }
-                            .watermark { font-size: 0.8rem; color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 10px; text-transform: uppercase; letter-spacing: 1px; }
-
-                            .guardian-ui { position: fixed; top: 0; left: 0; right: 0; padding: 1.25rem; z-index: 6000; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); }
-                            .security-pill { background: #10b981; color: #000; font-size: 0.65rem; font-weight: 800; padding: 4px 10px; border-radius: 100px; text-transform: uppercase; }
-
-                            #content-container { width: 100%; height: 100vh; display: flex; align-items: center; justify-content: center; padding: 40px; box-sizing: border-box; filter: grayscale(0.2); }
-                            #protected-content { max-width: 95%; max-height: 90%; border-radius: 4px; box-shadow: 0 0 100px rgba(255,255,255,0.05); }
-                            
-                            #shield-blackout { position: fixed; inset: 0; background: black; z-index: 9999; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: var(--accent); }
-                            .alert-icon { font-size: 5rem; margin-bottom: 1rem; }
-                            
-                            .footer-notif { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); background: rgba(239, 68, 68, 0.2); border: 1px solid var(--accent); padding: 0.8rem 1.5rem; border-radius: 5rem; font-size: 0.7rem; color: #fff; font-weight: 600; z-index: 6000; letter-spacing: 0.5px; white-space: nowrap; }
-                        </style>
-                    </head>
-                    <body oncontextmenu="return false;">
-                        <div id="shield-blackout">
-                            <div class="alert-icon">🔒</div>
-                            <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem;">SHIELD VOID</h1>
-                            <p style="opacity: 0.8; max-width: 300px; margin: 0 auto;">Recording attempt or loss of focus detected. Link permanently revoked.</p>
-                        </div>
-
-                        <div id="privacy-mask"></div>
-
-                        <div id="guardian-overlay">
-                            ${Array(32).fill(`<div class="watermark">STRICT CONFIDENTIAL<br>CLIENT-IP: ${scanDetails.ip}<br>S-ID: ${qrToken.id}</div>`).join('')}
-                        </div>
-
-                        <div class="guardian-ui">
-                            <div>
-                                <span style="color: var(--accent); font-weight: 900; letter-spacing: 2px;">NON-SHAREABLE</span>
-                                <span style="font-size: 0.6rem; opacity: 0.4; margin-left: 10px;">AUTHID: ${token.slice(0,10)}</span>
-                            </div>
-                            <div class="security-pill">Identity Bound</div>
-                        </div>
-
-                        <div id="content-container">
-                            ${contentTag}
-                        </div>
-
-                        <div class="footer-notif">
-                            ⚠️ BURN AFTER READING ACTIVE: DO NOT CLOSE OR REFRESH
-                        </div>
-
-                        <script>
-                            const mask = document.getElementById('privacy-mask');
-                            const shield = document.getElementById('shield-blackout');
-
-                            // Spotlight Reveal (Flashlight)
-                            const updateSpotlight = (x, y) => {
-                                mask.style.background = \`radial-gradient(circle 120px at \${x}px \${y}px, rgba(255,255,255,0) 0%, rgba(0,0,0,1) 95%)\`;
-                            };
-
-                            document.addEventListener('mousemove', (e) => updateSpotlight(e.clientX, e.clientY));
-                            document.addEventListener('touchmove', (e) => updateSpotlight(e.touches[0].clientX, e.touches[0].clientY));
-
-                            // Terminate session on any suspicious action
-                            const killAccess = () => {
-                                shield.style.display = 'flex';
-                                setTimeout(() => window.location.href = 'about:blank', 3000);
-                            };
-
-                            document.addEventListener('visibilitychange', () => { if (document.hidden) killAccess(); });
-                            
-                            // Blocking Hotkeys & Capture
-                            document.addEventListener('keydown', (e) => {
-                                if ((e.ctrlKey || e.metaKey) && ['p','s','u','i','c','a','j','k'].includes(e.key.toLowerCase())) {
-                                    e.preventDefault();
-                                    killAccess();
-                                }
-                            });
-
-                            document.addEventListener('keyup', (e) => {
-                                if (e.key === 'PrintScreen') {
-                                    navigator.clipboard.writeText('BIOQR-SECURITY-VIOLATION');
-                                    killAccess();
-                                }
-                            });
-
-                            // Mobile Screenshot Detection (Approximation)
-                            window.addEventListener('resize', () => {
-                                if (window.outerWidth - window.innerWidth > 100) killAccess();
-                            });
-                        </script>
-                    </body>
-                    </html>
-                    `;
-                    res.send(viewerHtml);
-                    return;
-                } catch (e) {
-                    console.error("❌ Guardian error:", e);
-                    res.status(500).send("Security system error.");
-                    return;
                 }
+
+                // Consolidated Safe Viewer
+                const isUnshareable = !!qrToken.is_unshareable;
+                const isRequiredAuth = !!qrToken.require_auth;
+                const accentColor = isUnshareable ? "#ef4444" : (isRequiredAuth ? "#8b5cf6" : "#3b82f6");
+                const statusLabel = isUnshareable ? "BURN-ON-READ" : (isRequiredAuth ? "BIO-SECURED" : "SECURED VIEW");
+                
+                let contentTag = "";
+                if (mime.startsWith("image/")) {
+                    contentTag = `<img id="protected-content" src="data:${mime};base64,${base64Data}" alt="Secret" />`;
+                } else if (mime === "application/pdf") {
+                    contentTag = `<embed id="protected-content" src="data:application/pdf;base64,${base64Data}" type="application/pdf" width="100%" height="90vh" />`;
+                } else if (mime.startsWith("video/")) {
+                    contentTag = `<video id="protected-content" src="data:${mime};base64,${base64Data}" controls controlsList="${isUnshareable ? 'nodownload' : ''}" />`;
+                } else {
+                    // Fallback: Secure download link
+                    contentTag = `
+                        <div style="text-align:center; padding: 2rem; background: rgba(255,255,255,0.05); border-radius: 20px; border: 1px dashed ${accentColor}44;">
+                            <div style="font-size:4rem;margin-bottom:1.5rem; filter: drop-shadow(0 0 10px ${accentColor});">📄</div>
+                            <h2 style="margin-bottom: 0.5rem;">${file.filename}</h2>
+                            <p style="opacity: 0.6; font-size: 0.9rem; margin-bottom: 2rem;">Decrypted Secure File</p>
+                            <a href="data:${mime};base64,${base64Data}" download="${file.filename}" 
+                               style="background:${accentColor}; color:#000; padding:1.25rem 2.5rem; border-radius:12px; text-decoration:none; font-weight:800; display:inline-block; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 10px 30px ${accentColor}44;"
+                               onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 15px 40px ${accentColor}66'"
+                               onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 30px ${accentColor}44'"
+                            >
+                                DOWNLOAD FILE
+                            </a>
+                        </div>
+                    `;
+                }
+
+                const safeViewerHtml = `
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+                    <title>${statusLabel} | BioQR Guardian</title>
+                    <style>
+                        :root { 
+                            --accent: ${accentColor}; 
+                            --bg: #000000; 
+                            --text: #f8fafc;
+                        }
+                        
+                        * { box-sizing: border-box; }
+                        
+                        body { 
+                            background: var(--bg); 
+                            color: var(--text); 
+                            font-family: 'Inter', -apple-system, system-ui, sans-serif; 
+                            margin: 0; 
+                            min-height: 100vh; 
+                            overflow-x: hidden; 
+                            user-select: none; 
+                            -webkit-user-select: none;
+                            display: flex;
+                            flex-direction: column;
+                        }
+
+                        /* Glassmorphism Header */
+                        .guardian-ui { 
+                            position: fixed; 
+                            top: 0; left: 0; right: 0; 
+                            padding: 1.25rem 2rem; 
+                            z-index: 6000; 
+                            background: rgba(0,0,0,0.8); 
+                            backdrop-filter: blur(20px); 
+                            -webkit-backdrop-filter: blur(20px);
+                            display: flex; 
+                            justify-content: space-between; 
+                            align-items: center; 
+                            border-bottom: 1px solid rgba(255,255,255,0.1);
+                        }
+
+                        .guardian-ui::after {
+                            content: '';
+                            position: absolute;
+                            bottom: -1px; left: 0; right: 0;
+                            height: 1px;
+                            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+                        }
+
+                        .id-pill { font-size: 0.6rem; font-weight: 700; opacity: 0.4; letter-spacing: 1px; }
+                        .status-badge { background: var(--accent); color: #000; font-size: 0.65rem; font-weight: 900; padding: 6px 14px; border-radius: 100px; text-transform: uppercase; box-shadow: 0 0 20px var(--accent)44; }
+
+                        #content-container { 
+                            flex: 1;
+                            width: 100%; 
+                            display: flex; 
+                            align-items: center; 
+                            justify-content: center; 
+                            padding: 100px 20px 40px; 
+                        }
+
+                        #protected-content { 
+                            max-width: 100%; 
+                            max-height: 80vh; 
+                            border-radius: 12px; 
+                            box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+                            border: 1px solid rgba(255,255,255,0.1);
+                        }
+
+                        ${isUnshareable ? `
+                        #privacy-mask { 
+                            position: fixed; inset: 0; z-index: 5000; 
+                            background: radial-gradient(circle 120px at 50% 50%, rgba(255,255,255,0) 0%, rgba(0,0,0,1) 90%);
+                            pointer-events: none;
+                        }
+                        ` : ""}
+
+                        #shield-blackout { 
+                            position: fixed; inset: 0; background: #000; 
+                            z-index: 9999; display: none; 
+                            flex-direction: column; align-items: center; justify-content: center; 
+                            text-align: center; color: var(--accent);
+                        }
+                        
+                        .footer-notif { 
+                            position: fixed; 
+                            bottom: 2rem; left: 50%; transform: translateX(-50%); 
+                            background: rgba(15, 23, 42, 0.9); 
+                            border: 1px solid var(--accent)44; 
+                            padding: 1rem 2rem; 
+                            border-radius: 100px; 
+                            font-size: 0.75rem; 
+                            color: #fff; 
+                            font-weight: 700; 
+                            z-index: 6000; 
+                            letter-spacing: 1px;
+                            backdrop-filter: blur(10px);
+                            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+                        }
+
+                        @keyframes pulse-accent {
+                            0%, 100% { opacity: 0.8; }
+                            50% { opacity: 1; }
+                        }
+                        
+                        .pulse { animation: pulse-accent 2s infinite ease-in-out; }
+                    </style>
+                </head>
+                <body>
+                    <div id="shield-blackout">
+                        <div style="font-size: 5rem; margin-bottom: 2rem;">🛡️</div>
+                        <h1 style="font-size: 2.5rem; margin-bottom: 1rem; color: #fff;">SESSION VOID</h1>
+                        <p style="opacity: 0.6; max-width: 320px; line-height: 1.6;">Security violation or focus loss detected. Session terminating...</p>
+                    </div>
+
+                    ${isUnshareable ? '<div id="privacy-mask"></div>' : ""}
+
+                    <div class="guardian-ui">
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <span style="color: var(--accent); font-weight: 900; letter-spacing: 2px; font-size: 0.9rem;">${statusLabel}</span>
+                            <span class="id-pill">ACCESS_TOKEN: ${token.slice(0,12)}</span>
+                        </div>
+                        <div class="status-badge">BIO-VERIFIED</div>
+                    </div>
+
+                    <div id="content-container">
+                        ${contentTag}
+                    </div>
+
+                    <div class="footer-notif pulse">
+                        ${isUnshareable ? '⚠️ SINGLE VIEW ACTIVE: DEVICE PROTECTED' : '✅ SECURE BIOMETRIC SESSION ACTIVE'}
+                    </div>
+
+                    <script>
+                        const mask = document.getElementById('privacy-mask');
+                        const shield = document.getElementById('shield-blackout');
+                        const killAccess = () => {
+                            shield.style.display = 'flex';
+                            setTimeout(() => window.location.href = 'about:blank', 2500);
+                        };
+
+                        ${isUnshareable ? `
+                        const updateSpotlight = (x, y) => {
+                            mask.style.background = \`radial-gradient(circle 120px at \${x}px \${y}px, rgba(255,255,255,0) 0%, rgba(0,0,0,1) 95%)\`;
+                        };
+                        document.addEventListener('mousemove', (e) => updateSpotlight(e.clientX, e.clientY));
+                        document.addEventListener('touchmove', (e) => {
+                            if(e.touches.length > 0) updateSpotlight(e.touches[0].clientX, e.touches[0].clientY);
+                        });
+                        ` : ""}
+
+                        // Security hooks
+                        document.addEventListener('visibilitychange', () => { if (document.hidden) killAccess(); });
+                        document.addEventListener('contextmenu', (e) => e.preventDefault());
+                        document.addEventListener('keydown', (e) => {
+                            const forbidden = ['p','s','u','i','c','a','j','k'];
+                            if (e.key === 'PrintScreen' || ((e.ctrlKey || e.metaKey) && forbidden.includes(e.key.toLowerCase()))) {
+                                e.preventDefault();
+                                killAccess();
+                            }
+                        });
+                    </script>
+                </body>
+                </html>
+                `;
+                res.header("Content-Security-Policy", "default-src 'self' 'unsafe-inline' data:; img-src 'self' data:;");
+                res.send(safeViewerHtml);
+            } catch (e) {
+                console.error("❌ Secure Proxy Error:", e);
+                res.status(500).send("Security system error.");
             }
-
-
-            res.redirect(302, file.filepath);
-
         } catch (error) {
             console.error("❌ QR access error:", error);
             res.status(500).json({ success: false, message: "Internal server error" });
