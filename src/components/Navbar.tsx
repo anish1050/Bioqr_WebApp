@@ -30,6 +30,9 @@ const Navbar: React.FC = () => {
               <Link to="/#security" onClick={closeMenu}>Security</Link>
             </li>
             <li>
+              <Link to="/#download" onClick={closeMenu}>Download</Link>
+            </li>
+            <li>
               <Link to="/about" className={isActive("/about") ? "active" : ""} onClick={closeMenu}>About</Link>
             </li>
             <li>

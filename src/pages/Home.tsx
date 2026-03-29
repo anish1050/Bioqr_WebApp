@@ -164,6 +164,43 @@ const Home: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* Section 03: Mobile Protection */}
+      <section id="download" className="app-download-section">
+        {/* Decorative background elements inspiration from the user image */}
+        <div className="bg-blob blob-1"></div>
+        <div className="bg-blob blob-2"></div>
+        <div className="dot-pattern dots-1"></div>
+        
+        <div className="container">
+          <div className="app-download-grid">
+            <div className="app-download-content">
+              <div className="section-marker">03</div>
+              <h2 className="section-headline download-headline">
+                DOWNLOAD<br />
+                OUR APP
+              </h2>
+              <p className="download-description">
+                Download our latest version of the app, and get exciting experiences every day. Professional security, biometrics, and QR authentication in the palm of your hand.
+              </p>
+              <div className="download-cta">
+                <a href="/downloads/BioQR.apk" className="btn-pill-download" download>
+                  Download Now
+                </a>
+              </div>
+            </div>
+
+            <div className="app-mockup-container">
+              <div className="glass-panel mockup-glow"></div>
+              <img 
+                src="/images/app_mockup.png" 
+                alt="BioQR Android App Mockup" 
+                className="app-mockup-image"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
     </>
   );
 };

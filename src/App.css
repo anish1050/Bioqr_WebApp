@@ -1601,6 +1601,145 @@
   will-change: transform;
 }
 
+
+
+/* App Download Section Inspired Layout */
+.app-download-section {
+  padding: 8rem 0;
+  position: relative;
+  overflow: hidden;
+  background: #000000;
+}
+
+.bg-blob {
+  position: absolute;
+  filter: blur(80px);
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.3;
+}
+
+.blob-1 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, #00d2ff 0%, #3a7bd5 100%);
+  top: -100px;
+  right: -50px;
+  border-radius: 50%;
+}
+
+.blob-2 {
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, #00f2fe 0%, #4facfe 100%);
+  bottom: 10%;
+  left: 30%;
+  border-radius: 50%;
+}
+
+.dot-pattern {
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  background-image: radial-gradient(#ffffff 2px, transparent 2px);
+  background-size: 20px 20px;
+  z-index: 1;
+  opacity: 0.1;
+  pointer-events: none;
+}
+
+.dots-1 {
+  bottom: 100px;
+  left: 100px;
+}
+
+.app-download-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5rem;
+  align-items: center;
+  position: relative;
+  z-index: 5;
+}
+
+.download-headline {
+  font-size: 4.5rem;
+  font-weight: 900;
+  line-height: 1.1;
+  margin-bottom: 2rem;
+  color: #FFFFFF;
+}
+
+.download-description {
+  font-size: 1.25rem;
+  color: #888888;
+  max-width: 500px;
+  margin-bottom: 3rem;
+  line-height: 1.6;
+}
+
+.btn-pill-download {
+  display: inline-block;
+  padding: 1.2rem 3.5rem;
+  background: linear-gradient(90deg, #00d2ff 0%, #0084ff 100%);
+  color: #000;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.1rem;
+  border-radius: 100px;
+  box-shadow: 0 10px 30px rgba(0, 210, 255, 0.3);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.btn-pill-download:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 40px rgba(0, 210, 255, 0.5);
+  background: linear-gradient(90deg, #33e1ff 0%, #3399ff 100%);
+}
+
+.app-mockup-container {
+  display: flex;
+  justify-content: flex-end;
+  position: relative;
+}
+
+.app-mockup-image {
+  width: 100%;
+  max-width: 500px;
+  height: auto;
+  border-radius: 30px;
+  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.8);
+  animation: float 6s ease-in-out infinite;
+  z-index: 5;
+}
+
+@media (max-width: 1200px) {
+  .download-headline {
+    font-size: 3.5rem;
+  }
+}
+
+@media (max-width: 968px) {
+  .app-download-grid {
+    grid-template-columns: 1fr;
+    text-align: center;
+    gap: 4rem;
+  }
+
+  .app-download-content {
+    align-items: center;
+  }
+
+  .download-description {
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  .app-mockup-container {
+    justify-content: center;
+  }
+}
+
 /* Reduce motion for users who prefer it */
 @media (prefers-reduced-motion: reduce) {
   * {

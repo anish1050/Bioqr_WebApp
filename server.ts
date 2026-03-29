@@ -271,17 +271,6 @@ if (process.env.NODE_ENV === "production") {
     }
 }
 
-// ============================================================
-// Maintenance Job (every 30 days)
-// ============================================================
-setInterval(async () => {
-    try {
-        const stats = await SystemQueries.performMaintenance();
-        console.log(`🧹 Monthly maintenance completed: Sessions/Tokens cleaned (excluding anish).`);
-    } catch (err) {
-        console.error("❌ Error performing maintenance:", err);
-    }
-}, 30 * 24 * 60 * 60 * 1000);
 
 // ============================================================
 // Error handling middleware
