@@ -31,7 +31,7 @@ const AnalyticsPage: React.FC = () => {
                     <h2 style={{ fontSize: '2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <BarChart3 color="#38bdf8" size={32} /> QR Scan Activity
                     </h2>
-                    <button onClick={fetchStats} className="btn" style={{ background: '#334155', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button onClick={fetchStats} className="btn" style={{ background: '#334155', display: 'flex', alignItems: 'center', gap: '8px', width: 'fit-content' }}>
                         <RefreshCcw size={16} /> Refresh logs
                     </button>
                 </div>

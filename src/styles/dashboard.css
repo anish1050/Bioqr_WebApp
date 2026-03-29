@@ -443,8 +443,9 @@
   justify-content: center;
   gap: var(--space-4);
   width: 100%;
-  max-width: 1000px;
-  min-height: 220px;
+  max-width: 500px;
+  margin: 0 auto;
+  min-height: 200px;
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.15) 100%);
   backdrop-filter: blur(10px);
   border: 2px dashed rgba(59, 130, 246, 0.5);
@@ -452,7 +453,7 @@
   color: var(--text-primary);
   text-decoration: none;
   font-weight: 800;
-  font-size: 2.25rem;
+  font-size: 1.5rem;
   transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   position: relative;
@@ -479,9 +480,21 @@
   box-shadow: 0 40px 80px -20px rgba(79, 70, 229, 0.4);
 }
 
-.cta-btn:hover::before {
-  opacity: 0.05;
+.cta-btn span, .cta-btn svg {
+  position: relative;
+  z-index: 1;
 }
+
+.cta-btn:hover::before {
+  opacity: 1;
+}
+
+.cta-btn:hover span, .cta-btn:hover svg {
+  color: #ffffff !important;
+  stroke: currentColor;
+}
+
+
 
 .cta-btn span, 
 .cta-btn svg {
@@ -1713,32 +1726,7 @@
   margin-bottom: var(--space-12);
 }
 
-.cta-btn {
-  padding: 1rem 2.5rem;
-  font-size: 1.1rem;
-  border-radius: var(--border-radius-xl);
-  box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-  border: none;
-  color: white;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  font-weight: 700;
-  letter-spacing: 0.5px;
-}
-
-.cta-btn:hover {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow: 0 20px 25px -5px rgba(59, 130, 246, 0.4);
-  filter: brightness(1.1);
-}
-
-.cta-btn:active {
-  transform: translateY(-1px) scale(0.98);
-}
+/* Removed duplicate .cta-btn definition */
 
 .cta-btn svg {
   width: 24px;
