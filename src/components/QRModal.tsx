@@ -59,6 +59,7 @@ const QRModal: React.FC<QRModalProps> = ({
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
   const [isCrossHighlighted, setIsCrossHighlighted] = useState(false);
+  const [showCustomDuration, setShowCustomDuration] = useState(false);
 
   // Windows-style Alert Sound (Synthesized)
   const playWindowsAlert = () => {
@@ -257,10 +258,41 @@ const QRModal: React.FC<QRModalProps> = ({
               )}
 
               <div className="form-group">
-                <label>Validity Duration</label>
-                <select value={duration} onChange={(e) => setDuration(Number(e.target.value))}>
-                  {DURATION_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                </select>
+                <div className="label-with-info">
+                    <label>Validity Duration</label>
+                    <div className="info-tooltip-container">
+                        <Info size={14} className="info-icon" />
+                        <span className="tooltip-text">How long the QR code remains active before it automatically expires.</span>
+                    </div>
+                </div>
+                <div className="duration-selector-container">
+                    <select 
+                        value={showCustomDuration ? "custom" : duration} 
+                        onChange={(e) => {
+                            if (e.target.value === "custom") {
+                                setShowCustomDuration(true);
+                            } else {
+                                setShowCustomDuration(false);
+                                setDuration(Number(e.target.value));
+                            }
+                        }}
+                    >
+                        {DURATION_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                        <option value="custom">Custom Duration...</option>
+                    </select>
+                    {showCustomDuration && (
+                        <div className="custom-duration-input" style={{ marginTop: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <input 
+                                type="number" 
+                                value={duration} 
+                                onChange={(e) => setDuration(Number(e.target.value))} 
+                                min="1"
+                                style={{ flex: 1 }}
+                            />
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Minutes</span>
+                        </div>
+                    )}
+                </div>
               </div>
 
               <div className="checkbox-group">
@@ -290,7 +322,13 @@ const QRModal: React.FC<QRModalProps> = ({
               </div>
 
               <button className="settings-toggle" onClick={() => setAdvancedOpen(!advancedOpen)}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Settings size={18} /> Advanced (Geofencing & Styling)</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Settings size={18} /> Advanced (Geofencing & Styling)
+                    <div className="info-tooltip-container" onClick={(e) => e.stopPropagation()}>
+                        <Info size={14} className="info-icon" />
+                        <span className="tooltip-text">Restrict scans to a specific location (Geofencing) or customize the visual appearance of the QR.</span>
+                    </div>
+                </span>
                 {advancedOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
               </button>
 

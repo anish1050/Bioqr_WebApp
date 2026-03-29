@@ -225,6 +225,17 @@
   cursor: not-allowed;
 }
 
+.label-with-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.label-with-info label {
+    margin-bottom: 0 !important;
+}
+
 .checkbox-group {
   margin: 1rem 0;
 }
