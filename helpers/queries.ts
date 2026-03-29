@@ -281,6 +281,10 @@ export const FileQueries = {
     /** Delete a file record owned by a user */
     deleteByIdAndUser: (fileId: number | string, userId: number): Promise<any> =>
         execute("DELETE FROM files WHERE id = ? AND user_id = ?", [fileId, userId]),
+
+    /** Count how many files a user has uploaded */
+    countByUser: (userId: number): Promise<number> =>
+        query<{ count: number }>("SELECT COUNT(*) as count FROM files WHERE user_id = ?", [userId]).then((r) => r[0].count),
 };
 
 // ============================================================

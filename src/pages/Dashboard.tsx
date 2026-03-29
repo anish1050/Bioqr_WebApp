@@ -213,6 +213,12 @@ const Dashboard: React.FC = () => {
     e.preventDefault();
     if (selectedFiles.length === 0 || !user) return;
     
+    // Check local limit first
+    if (files.length >= 5) {
+      showToast("You have reached the maximum limit of 5 files. Please delete some files first.", "warning");
+      return;
+    }
+
     // Validate sizes
     const maxSize = 10 * 1024 * 1024;
     const oversized = selectedFiles.filter(f => f.size > maxSize);
@@ -241,7 +247,10 @@ const Dashboard: React.FC = () => {
         if (response.ok) {
           successCount++;
         } else {
-          showToast(`Failed to upload ${file.name}`, 'error');
+          const errorData = await response.json().catch(() => ({}));
+          const errorMsg = errorData.message || `Failed to upload ${file.name}`;
+          showToast(errorMsg, response.status === 403 ? 'warning' : 'error');
+          if (response.status === 403) break; // Stop uploading more if limit hit
         }
       }
 
@@ -315,8 +324,17 @@ const Dashboard: React.FC = () => {
           <div className="stat-card" onClick={() => setActiveTab('files')}>
             <div className="stat-icon"><FileBox size={24} /></div>
             <div className="stat-content">
-              <h3>{files.length}</h3>
+              <h3>{files.length} <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>/ 5</span></h3>
               <p>Total Files</p>
+              <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', marginTop: '4px' }}>
+                <div style={{ 
+                  width: `${Math.min((files.length / 5) * 100, 100)}%`, 
+                  height: '100%', 
+                  background: files.length >= 5 ? '#ef4444' : '#10b981',
+                  borderRadius: '2px',
+                  transition: 'width 0.3s ease'
+                }} />
+              </div>
             </div>
           </div>
 
@@ -383,7 +401,7 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="upload-text">
               <h4>Upload New File</h4>
-              <p>Select files to upload securely (Max 10MB)</p>
+              <p>Select files to upload securely (Limit: 5 files, Max 10MB each)</p>
             </div>
           </div>
           
@@ -433,11 +451,19 @@ const Dashboard: React.FC = () => {
             )}
             
             <div className="upload-actions">
-              <button type="submit" className="btn btn-primary" disabled={isUploading || selectedFiles.length === 0}>
+              <button 
+                type="submit" 
+                className="btn btn-primary" 
+                disabled={isUploading || selectedFiles.length === 0 || files.length >= 5}
+              >
                 {isUploading ? (
                   <>
                     <Loader className="spinner" size={18} style={{ marginRight: '8px' }} />
                     {uploadProgress || 'Uploading...'}
+                  </>
+                ) : files.length >= 5 ? (
+                  <>
+                    Limit Reached (5/5)
                   </>
                 ) : (
                   <>

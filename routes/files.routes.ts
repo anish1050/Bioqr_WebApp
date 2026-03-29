@@ -17,13 +17,30 @@ router.post(
     "/upload",
     uploadLimiter,
     authenticateToken,
-    (req: Request, res: Response): void => {
+    async (req: Request, res: Response): Promise<void> => {
         const userId = (req as any).user?.userId;
         console.log("📁 Upload request received for user:", userId);
         if (!userId) {
             res.status(401).json({ success: false, message: "Unauthorized" });
             return;
         }
+
+        // Check file limit (5 files maximum)
+        try {
+            const fileCount = await FileQueries.countByUser(userId);
+            if (fileCount >= 5) {
+                res.status(403).json({ 
+                    success: false, 
+                    message: "You have reached the maximum limit of 5 files. Please delete some files to upload new ones." 
+                });
+                return;
+            }
+        } catch (err) {
+            console.error("❌ Error checking file count:", err);
+            res.status(500).json({ success: false, message: "Internal server error" });
+            return;
+        }
+
         upload.single("file")(req as any, res as any, async (err: any) => {
             if (err) {
                 console.error("❌ Multer middleware error:", err);
