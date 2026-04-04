@@ -455,13 +455,13 @@ export const QrTokenQueries = {
         const result = await execute(
             `INSERT INTO qr_tokens (
                 token, user_id, file_id, expires_at, is_one_time, is_unshareable, 
-                latitude, longitude, radius, qr_type, text_content,
+                require_auth, latitude, longitude, radius, qr_type, text_content,
                 vcard_data, style_color, style_bg,
                 receiver_user_id, bioseal_lock, lock_method
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 token, userId, finalFileId, expiresAt, 
-                is_one_time, is_unshareable, latitude, longitude, radius, 
+                is_one_time, is_unshareable, require_auth, latitude, longitude, radius, 
                 qr_type, text_content, vcard_data, style_color, style_bg,
                 receiver_user_id, bioseal_lock, lock_method
             ]
@@ -505,19 +505,27 @@ export const QrTokenQueries = {
         ),
 
     /** Log a scan event */
-    logScan: (tokenId: number, details: { ip?: string, ua?: string, country?: string, city?: string }): Promise<any> =>
+    logScan: (tokenId: number, details: { ip?: string, ua?: string, country?: string, city?: string, scannerUserId?: number | null }): Promise<any> =>
         execute(
-            `INSERT INTO qr_scans (qr_token_id, ip_address, user_agent, country, city)
-             VALUES (?, ?, ?, ?, ?)`,
-            [tokenId, details.ip, details.ua, details.country, details.city]
+            `INSERT INTO qr_scans (qr_token_id, ip_address, user_agent, country, city, scanner_user_id)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [tokenId, details.ip, details.ua, details.country, details.city, details.scannerUserId || null]
         ),
 
     /** Get scan statistics for a user's QR codes */
     getScanStatsByUserId: (userId: number): Promise<any[]> =>
         query(
-            `SELECT qt.token, qt.qr_type, qs.ip_address, qs.country, qs.city, qs.scanned_at
+            `SELECT 
+                qt.token, 
+                qt.qr_type, 
+                qs.ip_address, 
+                qs.country, 
+                qs.city, 
+                qs.scanned_at,
+                COALESCE(CONCAT(u.first_name, ' ', u.last_name), u.username, 'Guest') as scanner_name
              FROM qr_tokens qt
              JOIN qr_scans qs ON qt.id = qs.qr_token_id
+             LEFT JOIN users u ON qs.scanner_user_id = u.id
              WHERE qt.user_id = ?
              ORDER BY qs.scanned_at DESC`,
             [userId]

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, RefreshCcw, Activity } from 'lucide-react';
+import { BarChart3, RefreshCcw, Activity, User } from 'lucide-react';
 import SEO from '../components/SEO';
 
 const API_BASE = '';
@@ -50,6 +50,7 @@ const AnalyticsPage: React.FC = () => {
                             <tr>
                                 <th style={{ padding: '1rem' }}>QR TOKEN</th>
                                 <th style={{ padding: '1rem' }}>TYPE</th>
+                                <th style={{ padding: '1rem' }}>SCANNED BY</th>
                                 <th style={{ padding: '1rem' }}>LOCATION / IP</th>
                                 <th style={{ padding: '1rem' }}>SCANNED AT</th>
                             </tr>
@@ -62,6 +63,12 @@ const AnalyticsPage: React.FC = () => {
                                     <tr key={i} style={{ borderBottom: '1px solid #334155' }}>
                                         <td style={{ padding: '1rem' }}><code>{s.token.slice(0, 8)}...</code></td>
                                         <td style={{ padding: '1rem' }}><span style={{ background: '#0f172a', padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem' }}>{s.qr_type.toUpperCase()}</span></td>
+                                        <td style={{ padding: '1rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <User size={14} color={s.scanner_name === 'Guest' ? '#64748b' : '#38bdf8'} />
+                                                <span style={{ fontWeight: s.scanner_name === 'Guest' ? 'normal' : '600' }}>{s.scanner_name}</span>
+                                            </div>
+                                        </td>
                                         <td style={{ padding: '1rem' }}>{s.city}, {s.country} <br/><small style={{opacity: 0.5}}>{s.ip_address}</small></td>
                                         <td style={{ padding: '1rem' }}>{new Date(s.scanned_at).toLocaleString()}</td>
                                     </tr>

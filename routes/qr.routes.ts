@@ -216,8 +216,9 @@ router.get(
             }
 
             // Log Scan Event (Analytics)
+            const scannerUserId = (req as any).user?.userId || (req as any).session?.user?.id || null;
             const scanDetails = await getScanDetails(req);
-            await QrTokenQueries.logScan(qrToken.id, scanDetails);
+            await QrTokenQueries.logScan(qrToken.id, { ...scanDetails, scannerUserId });
             
             // Rich logging to MongoDB
             log(`QR Scanned: ${(qrToken.qr_type || 'Unknown').toUpperCase()} [Token: ${token.slice(0,8)}...]`, req, qrToken.user_id);
@@ -249,11 +250,21 @@ router.get(
             // Query param is just for backward UI flow, the session is the real source of truth.
             const sessionIsVerified = (req as any).session?.verifiedTokens?.[token] === true;
             const isVerified = req.query.verified === "true" && sessionIsVerified;
+
+            // If BioSeal matches (Receiver-locked), we attribute the scan to the receiver
+            if (isVerified && qrToken.receiver_user_id) {
+                const scanDetails = await getScanDetails(req);
+                await QrTokenQueries.logScan(qrToken.id, { ...scanDetails, scannerUserId: qrToken.receiver_user_id });
+            }
+
             const needsLocation = qrToken.latitude !== null && qrToken.longitude !== null;
-            const needsAuth = qrToken.receiver_user_id !== null; // BioSeal lock implies authentication needed
+            const needsAuth = !!qrToken.require_auth || qrToken.receiver_user_id !== null;
+
+            // Debug Log for troubleshooting skips
+            console.log(`[QR Access] Token: ${token}, needsAuth: ${needsAuth}, needsLoc: ${needsLocation}, isVerified: ${isVerified}`);
 
             if ((needsLocation || needsAuth) && !isVerified) {
-                // Serve the "Guardian" Verification Page
+                // Serve the "Guardian" Verification Page (Face Scan)
                 const verificationHtml = `
                 <!DOCTYPE html>
                 <html>
@@ -270,7 +281,6 @@ router.get(
                         #camera-container { width: 280px; height: 280px; border-radius: 50%; overflow: hidden; margin: 0 auto 2rem; border: 4px solid #30363d; position: relative; background: #000; box-shadow: inset 0 0 20px rgba(0,0,0,1); }
                         #video { width: 100%; height: 100%; object-fit: cover; filter: contrast(1.1); }
                         
-                        /* Scanning Visuals */
                         .face-oval { position: absolute; inset: 20px; border: 2px dashed rgba(56,189,248,0.3); border-radius: 50%; pointer-events: none; z-index: 5; }
                         .scan-beam { position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: #38bdf8; box-shadow: 0 0 15px #38bdf8; z-index: 10; animation: beam 2s infinite ease-in-out; display: none; }
                         @keyframes beam { 0% { top: 10%; opacity: 0; } 50% { top: 90%; opacity: 1; } 100% { top: 10%; opacity: 0; } }
@@ -317,7 +327,6 @@ router.get(
                                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 } });
                                 video.srcObject = stream;
                                 
-                                // Industry Practice: Wait for video to be ready before starting auto-capture
                                 video.onloadedmetadata = () => {
                                     status.innerText = "Hold steady... scanning";
                                     beam.style.display = 'block';
@@ -339,25 +348,19 @@ router.get(
                                     clearInterval(interval);
                                     performVerify();
                                 }
-                            }, 30); // ~1.5 seconds total scan time
+                            }, 30);
                         }
 
                         async function performVerify() {
                             status.innerText = "🔐 Verifying Identity Map...";
-                            beam.style.borderColor = '#10b981';
-                            
-                            // Industry Practice: Compress and Crop to 300x300 for 10x faster network transmission
                             const size = 300;
                             canvas.width = size;
                             canvas.height = size;
                             const ctx = canvas.getContext('2d');
-                            
-                            // Center crop
                             const minSide = Math.min(video.videoWidth, video.videoHeight);
                             const sx = (video.videoWidth - minSide) / 2;
                             const sy = (video.videoHeight - minSide) / 2;
                             ctx.drawImage(video, sx, sy, minSide, minSide, 0, 0, size, size);
-                            
                             const base64Image = canvas.toDataURL('image/jpeg', 0.7);
 
                             try {
@@ -366,7 +369,6 @@ router.get(
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ base64Image })
                                 });
-                                
                                 const data = await verifyRes.json();
                                 if (data.success) {
                                     status.style.color = '#10b981';
@@ -383,17 +385,15 @@ router.get(
                                 status.innerText = "❌ ACCESS DENIED: Identity Mismatch";
                                 setTimeout(() => {
                                     fill.style.width = '0%';
-                                    autoCapture(); // Retry automatically
+                                    autoCapture();
                                 }, 2000);
                             }
                         }
-
                         startBtn.onclick = startScan;
                     </script>
                 </body>
                 </html>
                 `;
-
                 res.send(verificationHtml);
                 return;
             }
@@ -476,7 +476,7 @@ router.get(
             try {
                 const fileResponse = await fetch(file.filepath);
                 const buffer = await fileResponse.arrayBuffer();
-                const base64Data = Buffer.from(buffer).toString("base64");
+const base64Data = Buffer.from(buffer).toString("base64");
                 const mime = file.mimetype;
                 
                 // One-time use / Burn-after-reading enforcement (Final Mark)
@@ -484,9 +484,9 @@ router.get(
                     await QrTokenQueries.markAsUsed(qrToken.id);
                 }
 
-                // Consolidated Safe Viewer
+                // Consolidated Safe Viewer with Screenshot Protection
                 const isUnshareable = !!qrToken.is_unshareable;
-                const isRequiredAuth = qrToken.receiver_user_id !== null;
+                const isRequiredAuth = qrToken.receiver_user_id !== null || !!qrToken.require_auth;
                 const accentColor = isUnshareable ? "#ef4444" : (isRequiredAuth ? "#8b5cf6" : "#3b82f6");
                 const statusLabel = isUnshareable ? "BURN-ON-READ" : (isRequiredAuth ? "BIO-SECURED" : "SECURED VIEW");
                 
@@ -496,23 +496,13 @@ router.get(
                 } else if (mime === "application/pdf") {
                     contentTag = `<embed id="protected-content" src="data:application/pdf;base64,${base64Data}" type="application/pdf" width="100%" height="90vh" />`;
                 } else if (mime.startsWith("video/")) {
-                    contentTag = `<video id="protected-content" src="data:${mime};base64,${base64Data}" controls controlsList="${isUnshareable ? 'nodownload' : ''}" />`;
+                    contentTag = `<video id="protected-content" src="data:${mime};base64,${base64Data}" controls controlsList="nodownload" oncontextmenu="return false;" />`;
                 } else {
-                    // Fallback: Secure download link
-                    contentTag = `
-                        <div style="text-align:center; padding: 2rem; background: rgba(255,255,255,0.05); border-radius: 20px; border: 1px dashed ${accentColor}44;">
-                            <div style="font-size:4rem;margin-bottom:1.5rem; filter: drop-shadow(0 0 10px ${accentColor});">📄</div>
-                            <h2 style="margin-bottom: 0.5rem;">${file.filename}</h2>
-                            <p style="opacity: 0.6; font-size: 0.9rem; margin-bottom: 2rem;">Decrypted Secure File</p>
-                            <a href="data:${mime};base64,${base64Data}" download="${file.filename}" 
-                               style="background:${accentColor}; color:#000; padding:1.25rem 2.5rem; border-radius:12px; text-decoration:none; font-weight:800; display:inline-block; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 10px 30px ${accentColor}44;"
-                               onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 15px 40px ${accentColor}66'"
-                               onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 30px ${accentColor}44'"
-                            >
-                                DOWNLOAD FILE
-                            </a>
-                        </div>
-                    `;
+                    contentTag = `<div id="protected-content" style="padding: 2.5rem; background: rgba(255,255,255,0.05); border-radius: 20px; border: 1px dashed ${accentColor}44; text-align:center;">
+                        <div style="font-size:3rem;margin-bottom:1rem;">📄</div>
+                        <h3>${file.filename}</h3>
+                        <a href="data:${mime};base64,${base64Data}" download="${file.filename}" style="background:${accentColor}; color:#000; padding:0.8rem 1.5rem; border-radius:8px; text-decoration:none; font-weight:800; display:inline-block; margin-top:1rem;">Download Decrypted File</a>
+                    </div>`;
                 }
 
                 const safeViewerHtml = `
@@ -526,22 +516,19 @@ router.get(
                         :root { 
                             --accent: ${accentColor}; 
                             --bg: #000000; 
-                            --text: #f8fafc;
+                            --panel: rgba(13, 17, 23, 0.8);
                         }
-                        
+
                         * { box-sizing: border-box; }
-                        
                         body { 
                             background: var(--bg); 
-                            color: var(--text); 
+                            color: white; 
                             font-family: 'Inter', -apple-system, system-ui, sans-serif; 
                             margin: 0; 
-                            min-height: 100vh; 
-                            overflow-x: hidden; 
+                            height: 100vh; 
+                            overflow: hidden; 
                             user-select: none; 
                             -webkit-user-select: none;
-                            display: flex;
-                            flex-direction: column;
                         }
 
                         /* Glassmorphism Header */
@@ -550,7 +537,7 @@ router.get(
                             top: 0; left: 0; right: 0; 
                             padding: 1.25rem 2rem; 
                             z-index: 6000; 
-                            background: rgba(0,0,0,0.8); 
+                            background: var(--panel); 
                             backdrop-filter: blur(20px); 
                             -webkit-backdrop-filter: blur(20px);
                             display: flex; 
@@ -618,6 +605,35 @@ router.get(
                             box-shadow: 0 10px 25px rgba(0,0,0,0.3);
                         }
 
+                        /* Forensic Watermarking */
+                        #watermark {
+                            position: fixed;
+                            inset: 0;
+                            z-index: 4500;
+                            pointer-events: none;
+                            opacity: 0.15;
+                            display: grid;
+                            grid-template-columns: repeat(4, 1fr);
+                            grid-template-rows: repeat(4, 1fr);
+                            font-size: 0.8rem;
+                            color: #fff;
+                            font-weight: 900;
+                            overflow: hidden;
+                        }
+                        
+                        .wm-item {
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            transform: rotate(-25deg);
+                            white-space: nowrap;
+                        }
+
+                        #content-container img, #content-container video {
+                            pointer-events: none;
+                            -webkit-user-drag: none;
+                        }
+
                         @keyframes pulse-accent {
                             0%, 100% { opacity: 0.8; }
                             50% { opacity: 1; }
@@ -631,6 +647,10 @@ router.get(
                         <div style="font-size: 5rem; margin-bottom: 2rem;">🛡️</div>
                         <h1 style="font-size: 2.5rem; margin-bottom: 1rem; color: #fff;">SESSION VOID</h1>
                         <p style="opacity: 0.6; max-width: 320px; line-height: 1.6;">Security violation or focus loss detected. Session terminating...</p>
+                    </div>
+
+                    <div id="watermark">
+                        ${Array(16).fill(`<div class="wm-item">${scanDetails.ip} | ${new Date().toISOString().split('T')[0]}</div>`).join('')}
                     </div>
 
                     ${isUnshareable ? '<div id="privacy-mask"></div>' : ""}
@@ -670,7 +690,10 @@ router.get(
                         ` : ""}
 
                         // Security hooks
-                        document.addEventListener('visibilitychange', () => { if (document.hidden) killAccess(); });
+                        const securityEvents = ['visibilitychange', 'blur'];
+                        securityEvents.forEach(evt => window.addEventListener(evt, () => {
+                            if (document.hidden || !document.hasFocus()) killAccess();
+                        }));
                         document.addEventListener('contextmenu', (e) => e.preventDefault());
                         document.addEventListener('keydown', (e) => {
                             const forbidden = ['p','s','u','i','c','a','j','k'];

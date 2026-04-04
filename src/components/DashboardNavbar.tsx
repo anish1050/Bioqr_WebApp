@@ -27,6 +27,7 @@ const DashboardNavbar: React.FC<DashboardNavbarProps> = ({ onMobileMenuToggle })
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState<UserInfo | null>(null);
+  const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
     const userInfo = localStorage.getItem('userInfo');
@@ -71,11 +72,22 @@ const DashboardNavbar: React.FC<DashboardNavbarProps> = ({ onMobileMenuToggle })
   };
 
   const getAvatarUrl = () => {
-    if (!user) return null;
-    if (user.provider === 'github' && user.github_avatar) return user.github_avatar;
-    if (user.provider === 'google' && user.google_avatar) return user.google_avatar;
-    if (user.avatar_url) return user.avatar_url;
-    return null;
+    if (!user || imgError) return null;
+    
+    let url = null;
+    if (user.provider === 'github' && user.github_avatar) url = user.github_avatar;
+    else if (user.provider === 'google' && user.google_avatar) url = user.google_avatar;
+    else if (user.avatar_url) url = user.avatar_url;
+
+    // Filter out "null" string or empty strings
+    if (!url || url === 'null' || url === 'undefined') return null;
+
+    // Handle relative paths
+    if (typeof url === 'string' && !url.startsWith('http') && !url.startsWith('/')) {
+      return `/${url}`;
+    }
+
+    return url;
   };
 
   const displayName = getUserDisplayName();
@@ -132,7 +144,13 @@ const DashboardNavbar: React.FC<DashboardNavbarProps> = ({ onMobileMenuToggle })
           <div className="user-profile" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div className="user-avatar" style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 600, fontSize: '0.8rem', position: 'relative', overflow: 'hidden' }}>
               {avatarUrl ? (
-                <img src={avatarUrl} alt="Avatar" className="profile-image" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                <img 
+                  src={avatarUrl} 
+                  alt="Avatar" 
+                  className="profile-image" 
+                  style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} 
+                  onError={() => setImgError(true)}
+                />
               ) : (
                 <span>{getInitials(displayName)}</span>
               )}
