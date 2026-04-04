@@ -250,7 +250,7 @@ router.get(
             const sessionIsVerified = (req as any).session?.verifiedTokens?.[token] === true;
             const isVerified = req.query.verified === "true" && sessionIsVerified;
             const needsLocation = qrToken.latitude !== null && qrToken.longitude !== null;
-            const needsAuth = qrToken.require_auth === true;
+            const needsAuth = qrToken.receiver_user_id !== null; // BioSeal lock implies authentication needed
 
             if ((needsLocation || needsAuth) && !isVerified) {
                 // Serve the "Guardian" Verification Page
@@ -486,7 +486,7 @@ router.get(
 
                 // Consolidated Safe Viewer
                 const isUnshareable = !!qrToken.is_unshareable;
-                const isRequiredAuth = !!qrToken.require_auth;
+                const isRequiredAuth = qrToken.receiver_user_id !== null;
                 const accentColor = isUnshareable ? "#ef4444" : (isRequiredAuth ? "#8b5cf6" : "#3b82f6");
                 const statusLabel = isUnshareable ? "BURN-ON-READ" : (isRequiredAuth ? "BIO-SECURED" : "SECURED VIEW");
                 

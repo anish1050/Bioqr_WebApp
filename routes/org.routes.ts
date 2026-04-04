@@ -5,34 +5,17 @@
  */
 
 import { Router, Request, Response } from 'express';
-import * as jwt from 'jsonwebtoken';
+import { authenticateToken } from '../helpers/auth.js';
 import { UserQueries, OrganisationQueries, TeamQueries, QrPermissionQueries } from '../helpers/queries.js';
 import { generateOrgId, generateTeamId } from '../helpers/uniqueId.js';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'bioqr-secret';
-
-// ─── Middleware ────────────────────────────────────────────────
-
-function authenticateToken(req: Request, res: Response, next: Function) {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    if (!token) return res.status(401).json({ success: false, message: 'Access token required' });
-
-    try {
-        const decoded = jwt.verify(token, JWT_SECRET) as any;
-        (req as any).userId = decoded.userId || decoded.id;
-        next();
-    } catch {
-        return res.status(403).json({ success: false, message: 'Invalid token' });
-    }
-}
 
 // ─── Create Organisation ──────────────────────────────────────
 
 router.post('/create', authenticateToken, async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).userId;
+        const userId = (req as any).user.userId;
         const { name, description, industry, website } = req.body;
 
         if (!name || name.trim().length < 2) {
@@ -109,7 +92,7 @@ router.get('/:orgUniqueId', authenticateToken, async (req: Request, res: Respons
 
 router.get('/:orgUniqueId/members', authenticateToken, async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).userId;
+        const userId = (req as any).user.userId;
         const org = await OrganisationQueries.findByOrgUniqueId(req.params.orgUniqueId as string);
         if (!org) return res.status(404).json({ success: false, message: 'Organisation not found' });
 
@@ -153,7 +136,7 @@ router.get('/:orgUniqueId/members', authenticateToken, async (req: Request, res:
 
 router.get('/:orgUniqueId/teams', authenticateToken, async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).userId;
+        const userId = (req as any).user.userId;
         const org = await OrganisationQueries.findByOrgUniqueId(req.params.orgUniqueId as string);
         if (!org) return res.status(404).json({ success: false, message: 'Organisation not found' });
 
@@ -181,7 +164,7 @@ router.get('/:orgUniqueId/teams', authenticateToken, async (req: Request, res: R
 
 router.post('/:orgUniqueId/teams', authenticateToken, async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).userId;
+        const userId = (req as any).user.userId;
         const { name, description } = req.body;
 
         if (!name || name.trim().length < 2) {
@@ -227,7 +210,7 @@ router.post('/:orgUniqueId/teams', authenticateToken, async (req: Request, res: 
 
 router.post('/:orgUniqueId/teams/:teamId/members', authenticateToken, async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).userId;
+        const userId = (req as any).user.userId;
         const { memberId } = req.body;
 
         if (!memberId) {
@@ -277,7 +260,7 @@ router.post('/:orgUniqueId/teams/:teamId/members', authenticateToken, async (req
 
 router.delete('/:orgUniqueId/teams/:teamId/members/:memberId', authenticateToken, async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).userId;
+        const userId = (req as any).user.userId;
         const memberId = parseInt(req.params.memberId as string, 10);
 
         const org = await OrganisationQueries.findByOrgUniqueId(req.params.orgUniqueId as string);
@@ -306,7 +289,7 @@ router.delete('/:orgUniqueId/teams/:teamId/members/:memberId', authenticateToken
 
 router.post('/:orgUniqueId/qr-permissions', authenticateToken, async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).userId;
+        const userId = (req as any).user.userId;
         const { memberId, targetMemberId } = req.body;
 
         if (!memberId || !targetMemberId) {
@@ -354,7 +337,7 @@ router.post('/:orgUniqueId/qr-permissions', authenticateToken, async (req: Reque
 
 router.delete('/:orgUniqueId/qr-permissions/:permissionId', authenticateToken, async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).userId;
+        const userId = (req as any).user.userId;
         const permissionId = parseInt(req.params.permissionId as string, 10);
 
         const org = await OrganisationQueries.findByOrgUniqueId(req.params.orgUniqueId as string);
@@ -378,7 +361,7 @@ router.delete('/:orgUniqueId/qr-permissions/:permissionId', authenticateToken, a
 
 router.get('/:orgUniqueId/qr-permissions', authenticateToken, async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).userId;
+        const userId = (req as any).user.userId;
         const org = await OrganisationQueries.findByOrgUniqueId(req.params.orgUniqueId as string);
         if (!org) return res.status(404).json({ success: false, message: 'Organisation not found' });
 
@@ -401,7 +384,7 @@ router.get('/:orgUniqueId/qr-permissions', authenticateToken, async (req: Reques
 
 router.get('/:orgUniqueId/qr-targets', authenticateToken, async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).userId;
+        const userId = (req as any).user.userId;
         const org = await OrganisationQueries.findByOrgUniqueId(req.params.orgUniqueId as string);
         if (!org) return res.status(404).json({ success: false, message: 'Organisation not found' });
 
@@ -476,7 +459,7 @@ router.get('/:orgUniqueId/qr-targets', authenticateToken, async (req: Request, r
 
 router.delete('/:orgUniqueId/members/:memberId', authenticateToken, async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).userId;
+        const userId = (req as any).user.userId;
         const memberId = parseInt(req.params.memberId as string, 10);
 
         const org = await OrganisationQueries.findByOrgUniqueId(req.params.orgUniqueId as string);
