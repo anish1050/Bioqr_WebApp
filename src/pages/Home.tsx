@@ -3,8 +3,6 @@ import { Link } from "react-router-dom";
 import SEO from "../components/SEO";
 import {
   Shield,
-  Zap,
-  Lock,
   Fingerprint,
   QrCode,
   Eye,
@@ -19,7 +17,7 @@ const Home: React.FC = () => {
       icon: Fingerprint,
       title: "Biometric Authentication",
       description:
-        "Advanced fingerprint and facial recognition with 99.9% accuracy",
+        "Advanced fingerprint and facial recognition for industry-leading security",
       hasImage: true,
     },
     {
@@ -55,32 +53,6 @@ const Home: React.FC = () => {
     },
   ];
 
-  const stats = [
-    {
-      icon: Shield,
-      value: "99.9%",
-      label: "Security Accuracy",
-      description: "Industry-leading precision in threat detection",
-    },
-    {
-      icon: Zap,
-      value: "10+",
-      label: "Trusted Users",
-      description: "Global enterprises rely on our security",
-    },
-    {
-      icon: Zap,
-      value: "0.3s",
-      label: "Average Auth Time",
-      description: "Lightning-fast authentication process",
-    },
-    {
-      icon: Lock,
-      value: "Zero",
-      label: "Breaches Recorded",
-      description: "Perfect security track record maintained",
-    },
-  ];
 
   return (
     <>
@@ -125,7 +97,7 @@ const Home: React.FC = () => {
             <div className="section-marker">01</div>
             <div className="section-title-container">
               <h2 className="section-headline">BIOMETRIC MASTERY</h2>
-              <p>ADVANCED FINGERPRINT AND FACIAL RECOGNITION WITH 99.9% ACCURACY.</p>
+              <p>ADVANCED FINGERPRINT AND FACIAL RECOGNITION FOR INDUSTRY-LEADING SECURITY.</p>
             </div>
           </div>
 
@@ -143,27 +115,6 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Section 02: Proven Results */}
-      <section id="security" className="stats-section">
-        <div className="container">
-          <div className="section-header-asymmetric reversed">
-            <div className="section-marker">02</div>
-            <div className="section-title-container">
-              <h2 className="section-headline">PROVEN RESULTS</h2>
-              <p>REAL-WORLD SECURITY METRICS FROM OUR GLOBAL NETWORK.</p>
-            </div>
-          </div>
-
-          <div className="stats-grid-premium">
-            {stats.map((stat, index) => (
-              <div key={index} className="stat-item-premium">
-                <div className="stat-number">{stat.value}</div>
-                <div className="stat-label-premium">{stat.label.toUpperCase()}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* Section 03: Mobile Protection */}
       <section id="download" className="app-download-section">

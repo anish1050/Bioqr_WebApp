@@ -50,7 +50,7 @@ const Footer: React.FC = () => {
             <div className="contact-info">
               <div className="contact-item">
                 <Mail className="contact-icon" />
-                <span>contact@bioqr.com</span>
+                <span>wearebioqr@gmail.com</span>
               </div>
               <div className="contact-item">
                 <Phone className="contact-icon" />

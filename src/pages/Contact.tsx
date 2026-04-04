@@ -258,7 +258,7 @@ const Contact: React.FC = () => {
                     </div>
                     <div className="method-details">
                       <h4>Email Support</h4>
-                      <p>support@bioqr.com</p>
+                      <p>wearebioqr@gmail.com</p>
                       <span className="response-time">Response within 4 hours</span>
                     </div>
                   </div>
@@ -340,7 +340,7 @@ const Contact: React.FC = () => {
             
             <div className="faq-item card">
               <h4>How can I report a security vulnerability?</h4>
-              <p>Please email security@bioqr.com for responsible disclosure. We take security reports very seriously and respond promptly.</p>
+              <p>Please email wearebioqr@gmail.com for responsible disclosure. We take security reports very seriously and respond promptly.</p>
             </div>
           </div>
         </div>

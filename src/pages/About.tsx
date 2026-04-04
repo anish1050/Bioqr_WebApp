@@ -26,20 +26,6 @@ const About: React.FC = () => {
               with dynamic QR code technology, creating an unbreachable fortress for your digital assets.
             </p>
           </div>
-          <div className="hero-stats">
-            <div className="stat">
-              <div className="stat-value">99.97%</div>
-              <div className="stat-label">Security Accuracy</div>
-            </div>
-            <div className="stat">
-              <div className="stat-value">0.3s</div>
-              <div className="stat-label">Auth Speed</div>
-            </div>
-            <div className="stat">
-              <div className="stat-value">10M+</div>
-              <div className="stat-label">Trusted Users</div>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -117,7 +103,7 @@ const About: React.FC = () => {
                 <Fingerprint />
               </div>
               <h3>Biometric Authentication</h3>
-              <p>Advanced fingerprint and facial recognition with 99.9% accuracy rate</p>
+              <p>Advanced fingerprint and facial recognition for industry-leading security</p>
             </div>
             <div className="tech-card">
               <div className="tech-icon">
