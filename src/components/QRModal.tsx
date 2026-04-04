@@ -20,9 +20,12 @@ const API_BASE = "";
 interface QRModalProps {
   isOpen: boolean;
   onClose: () => void;
-  fileId: number;
-  filename: string;
+  fileId?: number | null;
+  filename?: string | null;
   accessToken: string;
+  lockedReceiverId?: string | null; // e.g. "BQ-XXXXXX"
+  orgId?: number | null;
+  teamId?: number | null;
 }
 
 const DURATION_OPTIONS = [
@@ -40,6 +43,9 @@ const QRModal: React.FC<QRModalProps> = ({
   fileId,
   filename,
   accessToken,
+  lockedReceiverId,
+  orgId,
+  teamId,
 }) => {
   const [step, setStep] = useState<"form" | "generated">("form");
   const [qrType, setQrType] = useState<"file" | "vcard" | "text">("file");
@@ -107,9 +113,9 @@ const QRModal: React.FC<QRModalProps> = ({
       setToken(null);
       setError(null);
       setCopied(false);
-      setReceiverUniqueId("");
+      setReceiverUniqueId(lockedReceiverId || "");
     }
-  }, [isOpen]);
+  }, [isOpen, lockedReceiverId]);
 
   const handleGenerateQR = async () => {
     setError(null);
@@ -128,6 +134,8 @@ const QRModal: React.FC<QRModalProps> = ({
       is_unshareable: isUnshareable,
       style_color: styleColor,
       style_bg: styleBg,
+      org_id: orgId,
+      team_id: teamId,
     };
 
     if (qrType === "file") payload.file_id = fileId;
@@ -199,12 +207,20 @@ const QRModal: React.FC<QRModalProps> = ({
           {step === "form" && (
             <>
               <div className="qr-tabs">
-                <button className={`qr-tab ${qrType === 'file' ? 'active' : ''}`} onClick={() => setQrType('file')}><Hash size={16} /> File</button>
+                <button className={`qr-tab ${qrType === 'file' ? 'active' : ''}`} onClick={() => setQrType('file')} disabled={!fileId}><Hash size={16} /> File</button>
                 <button className={`qr-tab ${qrType === 'vcard' ? 'active' : ''}`} onClick={() => setQrType('vcard')}><User size={16} /> Contact</button>
                 <button className={`qr-tab ${qrType === 'text' ? 'active' : ''}`} onClick={() => setQrType('text')}><Type size={16} /> Text</button>
               </div>
 
-              {qrType === 'file' && <div className="file-info"><p><strong>Target:</strong> {filename}</p></div>}
+              {qrType === 'file' && (
+                <div className="file-info">
+                  {fileId ? (
+                    <p><strong>Target:</strong> {filename}</p>
+                  ) : (
+                    <p style={{ color: 'var(--error)' }}>No file selected. Please select a file from the dashboard first.</p>
+                  )}
+                </div>
+              )}
               {qrType === 'text' && (
                 <div className="form-group">
                   <label>Message Content</label>
@@ -295,6 +311,7 @@ const QRModal: React.FC<QRModalProps> = ({
                   placeholder="e.g. BQ-ABC12345"
                   className="qr-textarea"
                   style={{ height: 'auto', padding: '10px' }}
+                  disabled={!!lockedReceiverId}
                 />
               </div>
 

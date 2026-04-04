@@ -94,7 +94,9 @@ router.post(
                 style_color = "#000000",
                 style_bg = "#FFFFFF",
                 vcard_data,
-                receiver_unique_id
+                receiver_unique_id,
+                org_id,
+                team_id
             } = req.body;
 
             // 1. Validate File IDs if type is file
@@ -156,21 +158,24 @@ router.post(
             }
 
             // 4. Save to DB
-            await QrTokenQueries.create(token, userId, fileIds, expiresAt, {
-                is_one_time: is_one_time === true || is_one_time === "true",
-                is_unshareable: is_unshareable === true || is_unshareable === "true",
-                require_auth: require_auth === true || require_auth === "true",
+            const qrTokenId = await QrTokenQueries.create(token, userId, fileIds || [], expiresAt, {
+                is_one_time: !!is_one_time,
+                is_unshareable: !!is_unshareable,
+                require_auth: !!require_auth,
                 latitude: latitude ? parseFloat(latitude as string) : null,
                 longitude: longitude ? parseFloat(longitude as string) : null,
                 radius: radius ? parseInt(radius as string, 10) : null,
                 start_time: start_time ? new Date(start_time as string) : null,
                 qr_type: qr_type as any,
-                vcard_data: processedVCard || (qr_type === 'text' ? req.body.text_content : null),
+                text_content: req.body.text_content,
+                vcard_data: processedVCard,
                 style_color,
                 style_bg,
                 receiver_user_id: receiverId,
                 bioseal_lock: biosealLock,
-                lock_method: lockMethod as any
+                lock_method: lockMethod,
+                org_id: org_id ? parseInt(org_id as string, 10) : null,
+                team_id: team_id ? parseInt(team_id as string, 10) : null
             });
 
             // 5. Generate QR Image with Styling

@@ -76,6 +76,8 @@ export interface QrToken {
     status?: 'active' | 'revoked' | 'expired';
     style_color?: string;
     style_bg?: string;
+    org_id?: number | null;
+    team_id?: number | null;
 }
 
 export interface OtpVerification {
@@ -447,7 +449,9 @@ export const QrTokenQueries = {
             style_bg = '#FFFFFF',
             receiver_user_id = null,
             bioseal_lock = null,
-            lock_method = null
+            lock_method = null,
+            org_id = null,
+            team_id = null
         } = data;
 
         const finalFileId = (fileIds && fileIds.length > 0) ? fileIds[0] : 0;
@@ -457,13 +461,13 @@ export const QrTokenQueries = {
                 token, user_id, file_id, expires_at, is_one_time, is_unshareable, 
                 require_auth, latitude, longitude, radius, qr_type, text_content,
                 vcard_data, style_color, style_bg,
-                receiver_user_id, bioseal_lock, lock_method
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                receiver_user_id, bioseal_lock, lock_method, org_id, team_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 token, userId, finalFileId, expiresAt, 
                 is_one_time, is_unshareable, require_auth, latitude, longitude, radius, 
                 qr_type, text_content, vcard_data, style_color, style_bg,
-                receiver_user_id, bioseal_lock, lock_method
+                receiver_user_id, bioseal_lock, lock_method, org_id, team_id
             ]
         );
         const qrTokenId = result.insertId;

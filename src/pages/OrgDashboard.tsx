@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Users, Plus, LayoutDashboard, Copy, CheckCircle, 
-  XCircle, Key, UserPlus, ChevronDown, ChevronUp, X, Loader, AlertCircle
+  XCircle, Key, UserPlus, ChevronDown, ChevronUp, X, Loader, AlertCircle,
+  QrCode
 } from 'lucide-react';
 import '../styles/org-team.css';
 import SEO from '../components/SEO';
+import QRModal from '../components/QRModal';
 
 const API_BASE = '';
 
@@ -71,6 +73,12 @@ const OrgDashboard: React.FC = () => {
 
   // Expandable team members
   const [expandedTeamId, setExpandedTeamId] = useState<number | null>(null);
+
+  // QR Modal States
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+  const [qrReceiverId, setQrReceiverId] = useState<string | null>(null);
+  const [qrFileId, setQrFileId] = useState<number | null>(null);
+  const [qrFilename, setQrFilename] = useState<string | null>(null);
 
   const isSuperAdmin = userInfo?.user_type === 'org_super_admin';
   const isAdmin = isSuperAdmin || userInfo?.user_type === 'org_admin';
@@ -247,6 +255,13 @@ const OrgDashboard: React.FC = () => {
     }
   };
 
+  const openQRForMember = (member: OrgMember) => {
+    setQrReceiverId(member.unique_user_id);
+    setQrFileId(null);
+    setQrFilename(null);
+    setIsQRModalOpen(true);
+  };
+
   const getMemberName = (m: OrgMember) => {
     if (m.first_name && m.last_name) return `${m.first_name} ${m.last_name}`;
     return m.username || m.email;
@@ -382,9 +397,18 @@ const OrgDashboard: React.FC = () => {
                             </button>
                           </div>
                         ) : (
-                          <button className="action-btn btn-outline btn-sm" onClick={() => setAssigningMemberId(member.id)}>
-                            <UserPlus size={14} /> {member.team_id ? 'Reassign' : 'Assign Team'}
-                          </button>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button 
+                              className="action-btn btn-outline btn-sm qrc-btn" 
+                              onClick={() => openQRForMember(member)}
+                              title="Generate Secure QR for this member"
+                            >
+                              <QrCode size={14} /> QR
+                            </button>
+                            <button className="action-btn btn-outline btn-sm" onClick={() => setAssigningMemberId(member.id)}>
+                              <UserPlus size={14} /> {member.team_id ? 'Reassign' : 'Assign Team'}
+                            </button>
+                          </div>
                         )}
                       </>
                     )}
@@ -434,8 +458,17 @@ const OrgDashboard: React.FC = () => {
                         {teamMembers(team.id).length > 0 ? (
                           teamMembers(team.id).map(m => (
                             <div key={m.id} className="team-member-row">
-                              <span>{getMemberName(m)}</span>
-                              <span className="text-muted">{m.unique_user_id}</span>
+                              <div className="tm-info">
+                                <span>{getMemberName(m)}</span>
+                                <span className="text-muted">{m.unique_user_id}</span>
+                              </div>
+                              <button 
+                                className="action-btn btn-ghost btn-sm" 
+                                onClick={(e) => { e.stopPropagation(); openQRForMember(m); }}
+                                title="Generate QR"
+                              >
+                                <QrCode size={14} />
+                              </button>
                             </div>
                           ))
                         ) : (
@@ -586,6 +619,17 @@ const OrgDashboard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* QR Generation Modal */}
+      <QRModal 
+        isOpen={isQRModalOpen}
+        onClose={() => setIsQRModalOpen(false)}
+        fileId={qrFileId}
+        filename={qrFilename}
+        accessToken={localStorage.getItem('accessToken') || ''}
+        lockedReceiverId={qrReceiverId}
+        orgId={userInfo?.org_id}
+      />
     </>
   );
 };

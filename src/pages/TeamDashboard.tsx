@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Users, LayoutDashboard, Copy, CheckCircle, QrCode, Loader, XCircle } from 'lucide-react';
 import '../styles/org-team.css';
 import SEO from '../components/SEO';
+import QRModal from '../components/QRModal';
 
 const API_BASE = '';
 
@@ -32,6 +33,12 @@ const TeamDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [userInfo, setUserInfo] = useState<any>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | '' }>({ message: '', type: '' });
+
+  // QR Modal States
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+  const [qrReceiverId, setQrReceiverId] = useState<string | null>(null);
+  const [qrFileId, setQrFileId] = useState<number | null>(null);
+  const [qrFilename, setQrFilename] = useState<string | null>(null);
 
   useEffect(() => {
     const userStr = localStorage.getItem('userInfo');
@@ -107,14 +114,10 @@ const TeamDashboard: React.FC = () => {
   };
 
   const handleGenerateQrFor = (target: QrTarget) => {
-    // Navigate to the main dashboard with a "receiver" context
-    // Store the target info temporarily so QRModal can pick it up
-    localStorage.setItem('qrReceiverTarget', JSON.stringify({
-      id: target.id,
-      name: getTargetName(target),
-      unique_user_id: target.unique_user_id,
-    }));
-    navigate('/dashboard#files');
+    setQrReceiverId(target.unique_user_id);
+    setQrFileId(null);
+    setQrFilename(null);
+    setIsQRModalOpen(true);
   };
 
   const getSourceBadge = (source: string) => {
@@ -258,6 +261,7 @@ const TeamDashboard: React.FC = () => {
         )}
       </div>
 
+      {/* Toast */}
       {toast.message && (
         <div className="toast-container">
           <div className={`toast ${toast.type}`}>
@@ -266,6 +270,18 @@ const TeamDashboard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* QR Generation Modal */}
+      <QRModal 
+        isOpen={isQRModalOpen}
+        onClose={() => setIsQRModalOpen(false)}
+        fileId={qrFileId}
+        filename={qrFilename}
+        accessToken={localStorage.getItem('accessToken') || ''}
+        lockedReceiverId={qrReceiverId}
+        teamId={userInfo?.team_id}
+        orgId={userInfo?.org_id}
+      />
     </>
   );
 };
