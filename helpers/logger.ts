@@ -88,9 +88,12 @@ export async function logActivity(activity: string, req?: any, userId?: string |
 
         // Vercel provided headers are lowercase in Express
         const h = req?.headers || {};
-        const country = h["x-vercel-ip-country"] || h["x-render-ip-country"] || h["cf-ipcountry"] || geo?.country || "Unknown";
-        const city = h["x-vercel-ip-city"] || h["x-vercel-city"] || h["x-render-ip-city"] || geo?.city || "Unknown";
-        const region = h["x-vercel-ip-country-region"] || h["x-vercel-region"] || h["x-render-ip-region"] || geo?.region || "Unknown";
+        const isDev = process.env.NODE_ENV !== "production";
+        const defaultLoc = isDev ? "Testing on dev server" : "Unknown";
+
+        const country = h["x-vercel-ip-country"] || h["x-render-ip-country"] || h["cf-ipcountry"] || geo?.country || defaultLoc;
+        const city = h["x-vercel-ip-city"] || h["x-vercel-city"] || h["x-render-ip-city"] || geo?.city || defaultLoc;
+        const region = h["x-vercel-ip-country-region"] || h["x-vercel-region"] || h["x-render-ip-region"] || geo?.region || defaultLoc;
 
         const logEntry = new LogModel({
             userId: finalUserId.toString(),
@@ -104,11 +107,11 @@ export async function logActivity(activity: string, req?: any, userId?: string |
             username,
             email,
             country,
-            city: city !== "Unknown" ? (typeof city === "string" ? decodeURIComponent(city as string) : city) : "Unknown",
+            city: city !== defaultLoc ? (typeof city === "string" ? decodeURIComponent(city as string) : city) : defaultLoc,
             region,
-            latitude: h["x-vercel-ip-latitude"] || (geo?.ll ? geo.ll[0].toString() : "Unknown"),
-            longitude: h["x-vercel-ip-longitude"] || (geo?.ll ? geo.ll[1].toString() : "Unknown"),
-            timezone: h["x-vercel-ip-timezone"] || geo?.timezone || "Unknown",
+            latitude: h["x-vercel-ip-latitude"] || (geo?.ll ? geo.ll[0].toString() : defaultLoc),
+            longitude: h["x-vercel-ip-longitude"] || (geo?.ll ? geo.ll[1].toString() : defaultLoc),
+            timezone: h["x-vercel-ip-timezone"] || geo?.timezone || defaultLoc,
         });
 
         await logEntry.save();
@@ -122,18 +125,18 @@ export async function logActivity(activity: string, req?: any, userId?: string |
  * Helper to resolve city/country for an IP from historical logs
  */
 export async function getLocationFromIp(ip: string): Promise<{ city: string, country: string } | null> {
-    if (!isMongoConnected || !ip || ip === "::1" || ip === "127.0.0.1") return null;
+    const defaultLoc = process.env.NODE_ENV !== "production" ? "Testing on dev server" : "Unknown";
     try {
         const latestWithLocation = await LogModel.findOne({
             ip: ip,
-            city: { $ne: "Unknown" },
-            country: { $ne: "Unknown" }
+            city: { $ne: "Unknown", $not: /Testing on dev server/ },
+            country: { $ne: "Unknown", $not: /Testing on dev server/ }
         }).sort({ timestamp: -1 });
 
         if (latestWithLocation) {
             return {
-                city: latestWithLocation.city || "Unknown",
-                country: latestWithLocation.country || "Unknown"
+                city: latestWithLocation.city || defaultLoc,
+                country: latestWithLocation.country || defaultLoc
             };
         }
     } catch (err) {

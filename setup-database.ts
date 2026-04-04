@@ -17,7 +17,7 @@ const db = mysql.createConnection({
     connectTimeout: 30000, // 30 second timeout for TiDB cold starts
 });
 
-console.log("🔧 Setting up BioQR database...");
+console.log("🔧 Setting up BioQR database (BioSeal Architecture)...");
 
 db.connect((err) => {
     if (err) {
@@ -26,7 +26,7 @@ db.connect((err) => {
     }
     console.log("✅ Connected to database.");
 
-    // Define all table creation scripts
+    // Define all table creation scripts — ordered by dependency
     const tables = [
         {
             name: "users",
@@ -41,9 +41,58 @@ db.connect((err) => {
           oauth_provider VARCHAR(50) DEFAULT NULL,
           oauth_id VARCHAR(255) DEFAULT NULL,
           avatar_url TEXT DEFAULT NULL,
+          user_type ENUM('individual','org_super_admin','org_admin','org_member','team_lead','team_member','community_lead','community_member') DEFAULT 'individual',
+          unique_user_id VARCHAR(12) UNIQUE DEFAULT NULL,
+          org_id INT DEFAULT NULL,
+          team_id INT DEFAULT NULL,
+          biometric_enrolled BOOLEAN DEFAULT FALSE,
+          email_verified BOOLEAN DEFAULT FALSE,
+          mobile_number_verified BOOLEAN DEFAULT FALSE,
+          mobile_number VARCHAR(20) DEFAULT NULL,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          UNIQUE KEY unique_oauth (oauth_provider, oauth_id)
+          UNIQUE KEY unique_oauth (oauth_provider, oauth_id),
+          INDEX idx_unique_user_id (unique_user_id),
+          INDEX idx_user_type (user_type),
+          INDEX idx_org_id (org_id),
+          INDEX idx_team_id (team_id)
+        )
+      `
+        },
+        {
+            name: "organisations",
+            query: `
+        CREATE TABLE IF NOT EXISTS organisations (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          org_unique_id VARCHAR(12) UNIQUE NOT NULL,
+          name VARCHAR(200) NOT NULL,
+          description TEXT,
+          industry VARCHAR(100) DEFAULT NULL,
+          website VARCHAR(255) DEFAULT NULL,
+          created_by INT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
+          INDEX idx_org_unique_id (org_unique_id)
+        )
+      `
+        },
+        {
+            name: "teams",
+            query: `
+        CREATE TABLE IF NOT EXISTS teams (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          team_unique_id VARCHAR(12) UNIQUE NOT NULL,
+          name VARCHAR(200) NOT NULL,
+          description TEXT,
+          org_id INT DEFAULT NULL,
+          created_by INT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (org_id) REFERENCES organisations(id) ON DELETE SET NULL,
+          FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
+          INDEX idx_team_unique_id (team_unique_id),
+          INDEX idx_org_id (org_id)
         )
       `
         },
@@ -74,12 +123,24 @@ db.connect((err) => {
           is_one_time BOOLEAN DEFAULT FALSE,
           is_unshareable BOOLEAN DEFAULT FALSE,
           is_used BOOLEAN DEFAULT FALSE,
+          receiver_user_id INT DEFAULT NULL,
+          bioseal_lock TEXT DEFAULT NULL,
+          lock_method ENUM('face','fingerprint') DEFAULT NULL,
+          qr_type ENUM('file','vcard','text') DEFAULT 'file',
+          text_content TEXT DEFAULT NULL,
+          vcard_data TEXT DEFAULT NULL,
+          latitude DECIMAL(10,6) DEFAULT NULL,
+          longitude DECIMAL(10,6) DEFAULT NULL,
+          radius INT DEFAULT NULL,
+          style_color VARCHAR(10) DEFAULT '#000000',
+          style_bg VARCHAR(10) DEFAULT '#FFFFFF',
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           expires_at TIMESTAMP NOT NULL,
           FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
           FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE,
           INDEX idx_token (token),
-          INDEX idx_expires (expires_at)
+          INDEX idx_expires (expires_at),
+          INDEX idx_receiver (receiver_user_id)
         )
       `
         },
@@ -132,6 +193,23 @@ db.connect((err) => {
       `
         },
         {
+            name: "bio_seals",
+            query: `
+        CREATE TABLE IF NOT EXISTS bio_seals (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT UNIQUE NOT NULL,
+          method ENUM('face','fingerprint') NOT NULL,
+          sealed_template TEXT NOT NULL,
+          template_hash VARCHAR(64) NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+          INDEX idx_user_id (user_id),
+          INDEX idx_template_hash (template_hash)
+        )
+      `
+        },
+        {
             name: "face_recognition",
             query: `
         CREATE TABLE IF NOT EXISTS face_recognition (
@@ -143,10 +221,29 @@ db.connect((err) => {
           INDEX idx_user_id (user_id)
         )
       `
+        },
+        {
+            name: "qr_permissions",
+            query: `
+        CREATE TABLE IF NOT EXISTS qr_permissions (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          granter_id INT NOT NULL,
+          member_id INT NOT NULL,
+          target_member_id INT NOT NULL,
+          org_id INT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (granter_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (member_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (target_member_id) REFERENCES users(id) ON DELETE CASCADE,
+          UNIQUE KEY unique_permission (member_id, target_member_id),
+          INDEX idx_member_id (member_id),
+          INDEX idx_org_id (org_id)
+        )
+      `
         }
     ];
 
-    // Create tables one by one
+    // Create tables sequentially to respect foreign key dependencies
     let completedTables = 0;
 
     tables.forEach((table) => {
@@ -165,11 +262,14 @@ db.connect((err) => {
                     console.log(`  • ${table.name}`);
                 });
 
-                console.log("\n📝 Features supported:");
-                console.log("  • User registration and authentication");
+                console.log("\n📝 BioSeal Architecture Features:");
+                console.log("  • User registration (Individual / Organisation / Team)");
+                console.log("  • Bio-Seal biometric templates (face + fingerprint)");
+                console.log("  • Organisation & Team management");
+                console.log("  • Receiver-locked QR code generation");
+                console.log("  • Biometric verification on QR scan");
                 console.log("  • OAuth login (Google, GitHub)");
                 console.log("  • File upload and management");
-                console.log("  • QR code generation for file access");
                 console.log("  • Session management with refresh tokens");
 
                 db.end();

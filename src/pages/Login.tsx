@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { User, Mail, Lock, Eye, EyeOff, Loader2, CheckCircle2, XCircle, Info, LogIn, ShieldCheck } from "lucide-react";
+import { User, Mail, Lock, Eye, EyeOff, Loader2, CheckCircle2, XCircle, Info, LogIn, ShieldCheck, X } from "lucide-react";
 import "../styles/register.css";
 import SEO from "../components/SEO";
 import Navbar from "../components/Navbar";
@@ -20,8 +20,8 @@ const Login: React.FC = () => {
 
   const isEmail = loginField.includes('@');
 
+  // Fetch CSRF token — once on mount
   useEffect(() => {
-    // Fetch CSRF token
     const fetchCsrf = async () => {
       try {
         const csrfResponse = await fetch(`${API_BASE}/bioqr/csrf-token`, { credentials: 'include' });
@@ -35,12 +35,31 @@ const Login: React.FC = () => {
 
     // Check if user is already logged in
     const accessToken = localStorage.getItem('accessToken');
-    if (accessToken) {
-      navigate('/dashboard');
-      return;
+    const refreshToken = localStorage.getItem('refreshToken');
+    const userInfoStr = localStorage.getItem('userInfo');
+    const logoutFlag = localStorage.getItem('userLoggedOut');
+    
+    if (accessToken && refreshToken && userInfoStr && logoutFlag !== 'true') {
+      try {
+        const user = JSON.parse(userInfoStr);
+        const userType = user.user_type || 'individual';
+        let redirectPath = '/dashboard';
+        if (['org_super_admin', 'org_admin', 'org_member'].includes(userType)) {
+          redirectPath = '/dashboard/org';
+        } else if (['team_lead', 'team_member', 'community_lead', 'community_member'].includes(userType)) {
+          redirectPath = '/dashboard/team';
+        }
+        navigate(redirectPath);
+        return;
+      } catch (e) {
+        console.error('Failed to parse userInfo for auto-redirect', e);
+      }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    // Handle URL parameters (OAuth errors)
+  // Handle URL parameters (OAuth errors/messages) — once on mount
+  useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const error = urlParams.get('error');
     const msg = urlParams.get('message');
@@ -50,6 +69,7 @@ const Login: React.FC = () => {
       let errorMessage = 'Authentication failed';
       if (error === 'oauth_failed') errorMessage = 'Social login failed. Please try again.';
       else if (error === 'session_failed') errorMessage = 'Session creation failed. Please try again.';
+      else if (error === 'account_not_found') errorMessage = 'Account not found. Please register to create an account.';
       showMessage(errorMessage, 'error');
       navigate('/login', { replace: true });
     } else if (msg) {
@@ -65,7 +85,8 @@ const Login: React.FC = () => {
       showMessage(messageText, messageType);
       navigate('/login', { replace: true });
     }
-  }, [navigate, location]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const showMessage = (text: string, type: string) => {
     setMessage({ text, type });
@@ -113,9 +134,26 @@ const Login: React.FC = () => {
         localStorage.setItem('username', data.user.username);
         localStorage.setItem('userInfo', JSON.stringify(data.user));
 
-        showMessage('Login successful! Redirecting...', 'success');
+        let redirectPath = '/dashboard';
+        const userType = data.user.user_type || 'individual';
+        
+        if (['org_super_admin', 'org_admin', 'org_member'].includes(userType)) {
+          redirectPath = '/dashboard/org';
+        } else if (['team_lead', 'team_member', 'community_lead', 'community_member'].includes(userType)) {
+          redirectPath = '/dashboard/team';
+        }
+
+        // Warning missing bioseal
+        const hasBioseal = data.user.biometric_enrolled === true || data.user.biometric_enrolled === 1;
+        if (!hasBioseal) {
+           showMessage('Please set up BioSeal to fully secure your account.', 'info');
+           // Could redirect to a dedicated /enroll-bioseal page but dashboard covers everything for now
+        } else {
+           showMessage('Login successful! Redirecting...', 'success');
+        }
+
         setTimeout(() => {
-          window.location.replace('/dashboard');
+          window.location.replace(redirectPath);
         }, 1000);
       } else {
         showMessage(data.message || 'Login failed', 'error');
@@ -183,11 +221,14 @@ const Login: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center' }}>
               
               {message.text && (
-                <div style={{ marginBottom: '1rem', padding: '1rem', borderRadius: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', background: message.type === 'error' ? 'rgba(239, 68, 68, 0.1)' : message.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(6, 182, 212, 0.1)', border: `1px solid ${message.type === 'error' ? 'rgba(239, 68, 68, 0.2)' : message.type === 'success' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(6, 182, 212, 0.2)'}` }}>
-                  {message.type === 'success' && <CheckCircle2 style={{ color: '#34d399', width: '1.25rem', height: '1.25rem', flexShrink: 0 }} />}
-                  {message.type === 'error' && <XCircle style={{ color: '#f87171', width: '1.25rem', height: '1.25rem', flexShrink: 0 }} />}
-                  {message.type === 'info' && <Info style={{ color: '#22d3ee', width: '1.25rem', height: '1.25rem', flexShrink: 0 }} />}
-                  <p style={{ color: message.type === 'error' ? '#f87171' : message.type === 'success' ? '#34d399' : '#22d3ee', fontSize: '0.875rem', fontWeight: 600 }}>{message.text}</p>
+                <div className={`premium-alert ${message.type === 'error' ? 'premium-alert-error' : message.type === 'success' ? 'premium-alert-success' : 'premium-alert-info'}`}>
+                  {message.type === 'success' && <CheckCircle2 className="premium-alert-icon" />}
+                  {message.type === 'error' && <XCircle className="premium-alert-icon" />}
+                  {message.type === 'info' && <Info className="premium-alert-icon" />}
+                  <div className="premium-alert-content">{message.text}</div>
+                  <button onClick={() => setMessage({ text: "", type: "" })} className="premium-alert-close">
+                    <X size={16} />
+                  </button>
                 </div>
               )}
 
@@ -203,7 +244,7 @@ const Login: React.FC = () => {
                       <input 
                         type="text" 
                         placeholder="Enter username or email" 
-                        className="premium-input" 
+                        className="premium-input"
                         autoComplete="username"
                         value={loginField}
                         onChange={(e) => setLoginField(e.target.value)}

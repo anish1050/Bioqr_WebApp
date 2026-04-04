@@ -16,9 +16,10 @@ import ForgotPassword from './pages/ForgotPassword';
 
 // Authenticated Pages
 import Dashboard from './pages/Dashboard';
+import OrgDashboard from './pages/OrgDashboard';
+import TeamDashboard from './pages/TeamDashboard';
 import DashboardAbout from './pages/About';
 import DashboardContact from './pages/Contact';
-import Security from './pages/Security';
 import AnalyticsPage from './pages/Analytics';
 
 function App() {
@@ -43,9 +44,10 @@ function App() {
         {/* Authenticated Dashboard */}
         <Route path="/dashboard" element={<DashboardLayout />}>
           <Route index element={<Dashboard />} />
+          <Route path="org" element={<OrgDashboard />} />
+          <Route path="team" element={<TeamDashboard />} />
           <Route path="about" element={<DashboardAbout />} />
           <Route path="contact" element={<DashboardContact />} />
-          <Route path="security" element={<Security />} />
           <Route path="analytics" element={<AnalyticsPage />} />
         </Route>
 

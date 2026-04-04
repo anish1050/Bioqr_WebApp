@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FileBox, HardDrive, UploadCloud, Search, CheckCircle,
-  XCircle, Eye, Trash2, Loader, Info, QrCode, Shield, AlertCircle
+  XCircle, Eye, Trash2, Loader, Info, QrCode, Shield, AlertCircle, Scan, Send, Copy
 } from 'lucide-react';
 import '../styles/dashboard.css';
 import SEO from '../components/SEO';
@@ -14,10 +14,15 @@ interface UserInfo {
   id: number;
   email: string;
   name?: string;
+  first_name?: string;
+  last_name?: string;
   username?: string;
   provider?: string;
   github_name?: string;
   google_name?: string;
+  unique_user_id?: string;
+  user_type?: string;
+  biometric_enrolled?: boolean;
 }
 
 interface FileData {
@@ -53,7 +58,8 @@ const Dashboard: React.FC = () => {
 
   const [files, setFiles] = useState<FileData[]>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
-  const [hasBiometric, setHasBiometric] = useState<boolean | null>(null);
+  const [hasFace, setHasFace] = useState<boolean | null>(null);
+  const [hasWebAuthn, setHasWebAuthn] = useState<boolean | null>(null);
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [qrModalFile, setQrModalFile] = useState<FileData | null>(null);
@@ -84,42 +90,54 @@ const Dashboard: React.FC = () => {
       try {
         const parsedUser = JSON.parse(userInfoStr);
         setUser(parsedUser);
+        
+        // Smart Routing: Redirect to specialized dashboard if needed
+        const userType = parsedUser.user_type || 'individual';
+        if (['org_super_admin', 'org_admin', 'org_member'].includes(userType)) {
+          navigate('/dashboard/org');
+          return;
+        } else if (['team_lead', 'team_member'].includes(userType)) {
+          navigate('/dashboard/team');
+          return;
+        }
+
         fetchFiles(parsedUser.id);
         checkBiometricEnrollment();
       } catch (e) {
         console.error('Failed to parse user info', e);
       }
     }
-  }, []);
+  }, [navigate]);
 
   const checkBiometricEnrollment = async () => {
     try {
-      let hasWebAuthn = false;
-      let hasFace = false;
-
       // Check WebAuthn credentials
       try {
         const response = await authenticatedFetch(`${API_BASE}/bioqr/auth/webauthn/credentials`);
         if (response.ok) {
           const data = await response.json();
-          hasWebAuthn = data.count > 0;
+          setHasWebAuthn(data.count > 0);
+        } else {
+          setHasWebAuthn(false);
         }
       } catch (err) {
         console.error('Failed to check WebAuthn enrollment:', err);
+        setHasWebAuthn(false);
       }
 
-      // Check custom face enrollment
+      // Check custom face/BioSeal enrollment
       try {
         const faceRes = await authenticatedFetch(`${API_BASE}/bioqr/auth/face/status`);
         if (faceRes.ok) {
           const faceData = await faceRes.json();
-          hasFace = !!faceData.enrolled;
+          setHasFace(!!faceData.enrolled);
+        } else {
+          setHasFace(false);
         }
       } catch (err) {
         console.error('Failed to check face enrollment:', err);
+        setHasFace(false);
       }
-
-      setHasBiometric(hasWebAuthn || hasFace);
     } catch (err) {
       console.error('Failed to check biometric enrollment:', err);
     }
@@ -187,6 +205,15 @@ const Dashboard: React.FC = () => {
     setTimeout(() => {
       setToastMessage(prev => ({ ...prev, visible: false }));
     }, 5000);
+  };
+
+  const handleCopyId = (id: string) => {
+    navigator.clipboard.writeText(id).then(() => {
+      showToast('User ID copied to clipboard!', 'success');
+    }).catch(err => {
+      console.error('Failed to copy ID:', err);
+      showToast('Failed to copy ID', 'error');
+    });
   };
 
   const getUserDisplayName = () => {
@@ -301,10 +328,6 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleGoToSecurity = () => {
-    navigate('/dashboard/security');
-  };
-
   const totalSize = files.reduce((acc, file) => acc + (file.size || 0), 0);
 
   const filteredFiles = files.filter(f => f.filename.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -317,11 +340,27 @@ const Dashboard: React.FC = () => {
           <div className="welcome-content">
             <h2>Welcome back, <span>{getUserDisplayName()}</span>!</h2>
             <p>Manage your secure files.</p>
+            
+            {user?.unique_user_id && (
+              <div className="user-id-wrapper">
+                <div className="user-id-badge">
+                  <span className="user-id-label">Your ID:</span>
+                  <span>{user.unique_user_id}</span>
+                </div>
+                <button 
+                  className="copy-id-btn" 
+                  title="Copy ID"
+                  onClick={() => handleCopyId(user.unique_user_id!)}
+                >
+                  <Copy />
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
         <div className="quick-stats">
-          <div className="stat-card" onClick={() => setActiveTab('files')}>
+          <div className="stat-card">
             <div className="stat-icon"><FileBox size={24} /></div>
             <div className="stat-content">
               <h3>{files.length} <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>/ 5</span></h3>
@@ -338,7 +377,7 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="stat-card" onClick={() => setActiveTab('files')}>
+          <div className="stat-card">
             <div className="stat-icon"><HardDrive size={24} /></div>
             <div className="stat-content">
               <h3>{formatFileSize(totalSize)}</h3>
@@ -346,31 +385,42 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="stat-card" onClick={handleGoToSecurity}>
-            <div className="stat-icon" style={{ color: hasBiometric === false ? '#f59e0b' : '#10b981' }}>
-              <Shield size={24} />
+          <div className="stat-card no-click">
+            <div className="stat-icon" style={{ color: (hasFace || hasWebAuthn) ? '#10b981' : '#f59e0b', fontSize: '0.8rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+              <Shield size={20} />
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <span title="Face/BioSeal Status">{hasFace === null ? '?' : hasFace ? 'F✓' : 'F!'}</span>
+                <span title="WebAuthn Status">{hasWebAuthn === null ? '?' : hasWebAuthn ? 'W✓' : 'W!'}</span>
+              </div>
             </div>
             <div className="stat-content">
-              <h3>{hasBiometric === null ? '?' : hasBiometric ? '✓' : '!'}</h3>
               <p>Biometric Auth</p>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                {hasFace ? 'Face Ready' : 'No Face'} • {hasWebAuthn ? 'WebAuthn Ready' : 'No WebAuthn'}
+              </div>
             </div>
           </div>
         </div>
 
-        {hasBiometric === false && (
-          <div className="alert alert-warning" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', borderRadius: '6px', background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.3)', color: '#fbbf24', fontSize: '0.9rem' }}>
-            <AlertCircle size={18} />
-            <span>Face recognition is not enabled. <button onClick={handleGoToSecurity} style={{ background: 'transparent', border: 'none', color: '#fbbf24', textDecoration: 'underline', cursor: 'pointer', fontSize: 'inherit' }}>Enroll now</button> to secure QR code generation.</span>
-          </div>
-        )}
-
-        <div className="dashboard-cta">
+        <div className="dashboard-cta" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
             <button 
               className="cta-btn primary-blue" 
               onClick={scrollToFiles}
+              style={{ display: 'flex', flexDirection: 'column', padding: '2rem', gap: '1rem', height: '100%' }}
             >
-              <QrCode size={48} color="white" />
-              <span style={{ color: 'white', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 'bold' }}>Start Generating QR Codes</span>
+              <Send size={48} color="white" />
+              <span style={{ color: 'white', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 'bold' }}>Send a File</span>
+              <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', textTransform: 'none', letterSpacing: 'normal', margin: 0 }}>Upload a file and create a BioQR locked to the receiver's ID.</p>
+            </button>
+
+            <button 
+              className="cta-btn primary-indigo" 
+              onClick={() => alert("To receive a file, use your mobile device or web scanner to scan a sender's BioQR code. You will need to verify your biometrics to unlock it.")}
+              style={{ display: 'flex', flexDirection: 'column', padding: '2rem', gap: '1rem', background: 'linear-gradient(135deg, #6366f1, #4f46e5)', border: 'none', borderRadius: '12px', cursor: 'pointer', height: '100%' }}
+            >
+              <Scan size={48} color="white" />
+              <span style={{ color: 'white', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 'bold' }}>Receive a File</span>
+              <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', textTransform: 'none', letterSpacing: 'normal', margin: 0 }}>Scan & unlock a sender's BioQR.</p>
             </button>
         </div>
 

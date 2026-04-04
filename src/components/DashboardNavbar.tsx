@@ -7,6 +7,8 @@ interface UserInfo {
   id: number;
   email: string;
   username?: string;
+  first_name?: string;
+  last_name?: string;
   name?: string;
   provider?: string;
   github_name?: string;
@@ -14,6 +16,7 @@ interface UserInfo {
   avatar_url?: string;
   github_avatar?: string;
   google_avatar?: string;
+  user_type?: string;
 }
 
 interface DashboardNavbarProps {
@@ -37,18 +40,18 @@ const DashboardNavbar: React.FC<DashboardNavbarProps> = ({ onMobileMenuToggle })
   }, []);
 
   const handleLogout = () => {
-    if (window.confirm('Are you sure you want to logout?')) {
-      localStorage.setItem('userLoggedOut', 'true');
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('userInfo');
-      sessionStorage.clear();
-      navigate('/login');
-    }
+    localStorage.setItem('userLoggedOut', 'true');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('userInfo');
+    sessionStorage.clear();
+    navigate('/login');
   };
 
   const getUserDisplayName = () => {
     if (!user) return 'User';
+    if (user.first_name && user.last_name) return `${user.first_name} ${user.last_name}`;
+    if (user.first_name) return user.first_name;
     if (user.provider === 'github' && user.github_name) return user.github_name;
     if (user.provider === 'google' && user.google_name) return user.google_name;
     if (user.username && user.username !== user.email) return user.username;
@@ -90,19 +93,23 @@ const DashboardNavbar: React.FC<DashboardNavbarProps> = ({ onMobileMenuToggle })
           <ul>
             <li>
               <Link to="/dashboard" className={location.pathname === '/dashboard' ? 'active' : ''}>
-                Dashboard
-              </Link>
-            </li>
-            <li>
-              <Link to="/dashboard#files" className={location.hash === '#files' ? 'active' : ''}>
                 Files
               </Link>
             </li>
-            <li>
-              <Link to="/dashboard/security" className={location.pathname === '/dashboard/security' ? 'active' : ''}>
-                Security
-              </Link>
-            </li>
+            {user && ['org_super_admin', 'org_admin', 'org_member'].includes(user.user_type || '') && (
+              <li>
+                <Link to="/dashboard/org" className={location.pathname.startsWith('/dashboard/org') ? 'active' : ''}>
+                  Org Hub
+                </Link>
+              </li>
+            )}
+            {user && ['team_lead', 'team_member'].includes(user.user_type || '') && (
+              <li>
+                <Link to="/dashboard/team" className={location.pathname.startsWith('/dashboard/team') ? 'active' : ''}>
+                  Team Space
+                </Link>
+              </li>
+            )}
             <li>
               <Link to="/dashboard/analytics" className={location.pathname === '/dashboard/analytics' ? 'active' : ''}>
                 Analytics

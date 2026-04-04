@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { FaceRecognitionQueries } from "../helpers/queries.js";
+import { FaceRecognitionQueries, UserQueries } from "../helpers/queries.js";
 import { authenticateToken } from "../helpers/auth.js";
 import { authLimiter } from "../helpers/rateLimiters.js";
 import { extractFaceDescriptorFromBase64 } from "../helpers/faceRecognition.js";
@@ -107,8 +107,10 @@ router.get("/status", authenticateToken, async (req: Request, res: Response) => 
     const userId = (req as any).user?.userId;
     if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
     try {
+        const user = await UserQueries.findById(userId);
         const storedRecord = await FaceRecognitionQueries.findByUserId(userId);
-        res.json({ success: true, enrolled: !!storedRecord });
+        const isEnrolled = !!storedRecord || !!user?.biometric_enrolled;
+        res.json({ success: true, enrolled: isEnrolled });
     } catch (error) {
         res.status(500).json({ success: false, message: "Failed to check status" });
     }

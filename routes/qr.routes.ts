@@ -4,8 +4,9 @@ import jwt from "jsonwebtoken";
 import QRCode from "qrcode";
 import { JWT_SECRET } from "../helpers/tokens.js";
 import { authenticateToken } from "../helpers/auth.js";
-import { FileQueries, QrTokenQueries, WebAuthnCredentialQueries, FaceRecognitionQueries } from "../helpers/queries.js";
+import { FileQueries, QrTokenQueries, WebAuthnCredentialQueries, FaceRecognitionQueries, UserQueries, BioSealQueries } from "../helpers/queries.js";
 import { log, getLocationFromIp } from "../helpers/logger.js";
+import { verifyBioSeal } from "../helpers/bioseal.js";
 import { calculateDistance, formatVCard, getScanDetails } from "../helpers/qr-v2.js";
 
 const router = Router();
@@ -23,27 +24,30 @@ router.post("/verify-scan-face/:token", async (req: Request, res: Response) => {
 
         if (!base64Image) return res.status(400).json({ success: false, message: "Face scan required" });
 
-        // 1. Get owner's enrolled face
-        const ownerRecord = await FaceRecognitionQueries.findByUserId(qrToken.user_id);
-        if (!ownerRecord) {
-            // Log fallback or denial
-            return res.status(403).json({ success: false, message: "Owner has not enabled biometric guard rails for this file." });
-        }
-
-        // 2. Extract current scanner's face
+        // 1. Extract current scanner's face
         const { extractFaceDescriptorFromBase64 } = await import("../helpers/faceRecognition.js");
-        const currentDescriptor = await extractFaceDescriptorFromBase64(base64Image);
-        if (!currentDescriptor) return res.status(400).json({ success: false, message: "No face detected in scan." });
+        const currentDescriptorFloat32 = await extractFaceDescriptorFromBase64(base64Image);
+        if (!currentDescriptorFloat32) return res.status(400).json({ success: false, message: "No face detected in scan." });
+        
+        const currentDescriptorArray = Array.from(currentDescriptorFloat32);
+        let isMatch = false;
+        let distanceOutput = 0;
 
-        // 3. Compare (Distance check)
-        const savedDescriptor = new Float32Array(Object.values(JSON.parse(ownerRecord.descriptor)));
-        let sum = 0;
-        for (let i = 0; i < savedDescriptor.length; i++) {
-            const diff = savedDescriptor[i] - currentDescriptor[i];
-            sum += diff * diff;
+        // 2. Determine who we are matching against (Receiver-locked or fallback to Sender's BioSeal)
+        if (qrToken.bioseal_lock) {
+            // New BioSeal System (Receiver-locked or Sender-locked using BioSeal)
+            try {
+                const result = verifyBioSeal(currentDescriptorArray, qrToken.bioseal_lock);
+                isMatch = result.verified;
+                distanceOutput = result.distance;
+            } catch (err) {
+                console.error("BioSeal decryption error:", err);
+                return res.status(403).json({ success: false, message: "BioSeal integrity failed." });
+            }
+        } else {
+            return res.status(403).json({ success: false, message: "No BioSeal lock found for this QR code. Receiver ID is required for secure generation." });
         }
-        const distance = Math.sqrt(sum);
-        const isMatch = distance < 0.6; // Industry standard for face-api
+        const distance = distanceOutput;
 
         log(`Scan Guard Rail: ${isMatch ? "Unlocked" : "Blocked"} (dist: ${distance.toFixed(4)})`, req, qrToken.user_id);
 
@@ -77,7 +81,7 @@ router.post(
                 return;
             }
 
-            const {
+            let {
                 qr_type = "file",
                 duration = 60,
                 is_one_time = false,
@@ -89,7 +93,8 @@ router.post(
                 start_time,
                 style_color = "#000000",
                 style_bg = "#FFFFFF",
-                vcard_data
+                vcard_data,
+                receiver_unique_id
             } = req.body;
 
             // 1. Validate File IDs if type is file
@@ -124,6 +129,32 @@ router.post(
             const finalDuration = Math.min(Math.max(parseInt(duration as string, 10) || 60, 1), 525600); // Max 1yr
             const expiresAt = new Date(Date.now() + finalDuration * 60 * 1000);
 
+            // Handle Receiver Lock (Optional)
+            let receiverId = null;
+            let biosealLock = null;
+            let lockMethod = null;
+
+            if (receiver_unique_id) {
+                const receiver = await UserQueries.findByUniqueUserId(receiver_unique_id);
+                if (!receiver) {
+                    res.status(404).json({ error: "Receiver not found" });
+                    return;
+                }
+                if (!receiver.biometric_enrolled) {
+                    res.status(400).json({ error: "Receiver has not enrolled BioSeal. Cannot lock to them." });
+                    return;
+                }
+                const bioseal = await BioSealQueries.findByUserId(receiver.id);
+                if (!bioseal) {
+                    res.status(400).json({ error: "Receiver BioSeal not found in system." });
+                    return;
+                }
+                receiverId = receiver.id;
+                biosealLock = bioseal.sealed_template;
+                lockMethod = bioseal.method;
+                require_auth = true; // Implicitly require auth if locking to receiver
+            }
+
             // 4. Save to DB
             await QrTokenQueries.create(token, userId, fileIds, expiresAt, {
                 is_one_time: is_one_time === true || is_one_time === "true",
@@ -136,7 +167,10 @@ router.post(
                 qr_type: qr_type as any,
                 vcard_data: processedVCard || (qr_type === 'text' ? req.body.text_content : null),
                 style_color,
-                style_bg
+                style_bg,
+                receiver_user_id: receiverId,
+                bioseal_lock: biosealLock,
+                lock_method: lockMethod as any
             });
 
             // 5. Generate QR Image with Styling

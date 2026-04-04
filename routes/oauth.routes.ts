@@ -39,48 +39,10 @@ router.get(
     (req: Request, res: Response, next: NextFunction) => {
         console.log("🔄 Google OAuth callback received");
 
-        passport.authenticate("google", (err: any, user: any, info: any) => {
-            if (err) {
-                console.error("❌ Passport authentication error:", err);
-                return res.redirect("/login?error=passport_error");
-            }
-            if (!user) {
-                console.error("❌ No user returned from passport");
-                return res.redirect("/login?error=no_user");
-            }
-
-            (req as any).user = user;
-            (req as any).session.wasNewUser = user.isNewUser;
-            next();
-        })(req, res, next);
-    },
-    async (req: Request, res: Response) => {
-        const user = (req as any).user;
-        console.log("🔍 Authenticated user:", { id: user.id, email: user.email });
-
-        const { accessToken, refreshToken } = generateTokens({
-            userId: user.id,
-            username: user.username,
-            email: user.email,
-            firstName: user.first_name,
-            lastName: user.last_name
-        });
-
-        try {
-            const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-            await SessionQueries.create(user.id, refreshToken, expiresAt);
-        } catch (err) {
-            console.error("❌ Error storing OAuth session:", err);
-            return res.redirect("/login?error=session_failed");
-        }
-
-        const isRegistration = (req as any).session.isOAuthRegistration;
-        const wasNewUser = (req as any).session.wasNewUser;
-
+        // Calculate baseRedirectUrl
         const isDevelopment = process.env.NODE_ENV !== "production";
         const authSource: string = (req as any).session.authSource || "";
         const prodFrontendUrl = "https://bioqr-web-app.vercel.app";
-
         let baseRedirectUrl: string;
 
         if (authSource.includes("localhost") || authSource.includes("127.0.0.1")) {
@@ -97,13 +59,79 @@ router.get(
             baseRedirectUrl = isDevelopment ? "http://localhost:5173" : prodFrontendUrl;
         }
 
+        passport.authenticate("google", (err: any, user: any, info: any) => {
+            if (err) {
+                console.error("❌ Passport authentication error:", err);
+                return res.redirect(`${baseRedirectUrl}/login?error=passport_error`);
+            }
+            if (!user) {
+                if (info && info.message === "ACCOUNT_NOT_FOUND") {
+                    console.error("❌ Google account not found - redirecting to login");
+                    return res.redirect(`${baseRedirectUrl}/login?error=account_not_found`);
+                }
+                console.error("❌ No user returned from passport");
+                return res.redirect(`${baseRedirectUrl}/login?error=no_user`);
+            }
+
+            (req as any).user = user;
+            (req as any).session.wasNewUser = user.isNewUser;
+            next();
+        })(req, res, next);
+    },
+    async (req: Request, res: Response) => {
+        const user = (req as any).user;
+        console.log("🔍 Authenticated user:", { id: user.id, email: user.email });
+
+        const { accessToken, refreshToken } = generateTokens({
+            userId: user.id,
+            username: user.username,
+            email: user.email,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            userType: user.user_type,
+            uniqueUserId: user.unique_user_id || undefined,
+            orgUniqueId: user.org_unique_id || undefined,
+            teamUniqueId: user.team_unique_id || undefined
+        });
+
+        try {
+            const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+            await SessionQueries.create(user.id, refreshToken, expiresAt);
+        } catch (err) {
+            console.error("❌ Error storing OAuth session:", err);
+            return res.redirect("/login?error=session_failed");
+        }
+
+        const isRegistration = (req as any).session.isOAuthRegistration;
+        const wasNewUser = (req as any).session.wasNewUser;
+
+        const isDevelopmentVal = process.env.NODE_ENV !== "production";
+        const authSourceVal: string = (req as any).session.authSource || "";
+        const prodFrontendUrlVal = "https://bioqr-web-app.vercel.app";
+
+        let baseRedirectUrlVal: string;
+
+        if (authSourceVal.includes("localhost") || authSourceVal.includes("127.0.0.1")) {
+            baseRedirectUrlVal = authSourceVal.match(/(http:\/\/localhost:\d+)/)?.[1] || 
+                             authSourceVal.match(/(http:\/\/127\.0\.0\.1:\d+)/)?.[1] || 
+                             "http://localhost:5173";
+        } else if (authSourceVal.startsWith("http")) {
+            try {
+                baseRedirectUrlVal = new URL(authSourceVal).origin;
+            } catch (e) {
+                baseRedirectUrlVal = prodFrontendUrlVal;
+            }
+        } else {
+            baseRedirectUrlVal = isDevelopmentVal ? "http://localhost:5173" : prodFrontendUrlVal;
+        }
+
         let redirectUrl: string;
         if (isRegistration && wasNewUser) {
-            redirectUrl = `${baseRedirectUrl}/login?message=registration_success&provider=google`;
+            redirectUrl = `${baseRedirectUrlVal}/login?message=registration_success&provider=google`;
             console.log("✅ Google registration successful - redirecting to login");
             log(`User registered via Google: ${user.username}`, req, user.id);
         } else if (isRegistration && !wasNewUser) {
-            redirectUrl = `${baseRedirectUrl}/login?message=user_exists&provider=google`;
+            redirectUrl = `${baseRedirectUrlVal}/login?message=user_exists&provider=google`;
             console.log("ℹ️ Google user already exists - redirecting to login");
         } else {
 
@@ -114,17 +142,21 @@ router.get(
                     email: user.email,
                     first_name: user.first_name,
                     last_name: user.last_name,
+                    user_type: user.user_type,
+                    unique_user_id: user.unique_user_id,
+                    org_unique_id: user.org_unique_id,
+                    team_unique_id: user.team_unique_id,
                     avatar_url: user.avatar_url,
                 })
             );
 
             // SPECIAL REDIRECT FOR ANDROID
-            if (authSource === "android" || req.headers["x-client-type"] === "android") {
+            if (authSourceVal === "android" || req.headers["x-client-type"] === "android") {
                 redirectUrl = `bioqr://auth?token=${accessToken}&refresh=${refreshToken}&user=${userPayload}`;
                 console.log("📱 Redirecting to Android App:", redirectUrl);
             } else {
-                redirectUrl = `${baseRedirectUrl}/dashboard?token=${accessToken}&refresh=${refreshToken}&user=${userPayload}`;
-                console.log(`📡 Redirecting to frontend at: ${baseRedirectUrl}`);
+                redirectUrl = `${baseRedirectUrlVal}/dashboard?token=${accessToken}&refresh=${refreshToken}&user=${userPayload}`;
+                console.log(`📡 Redirecting to frontend at: ${baseRedirectUrlVal}`);
             }
             
             console.log("✅ Google login successful");
@@ -177,48 +209,10 @@ router.get(
     (req: Request, res: Response, next: NextFunction) => {
         console.log("🔄 GitHub OAuth callback received");
 
-        passport.authenticate("github", (err: any, user: any, info: any) => {
-            if (err) {
-                console.error("❌ Passport authentication error:", err);
-                return res.redirect("/login?error=passport_error");
-            }
-            if (!user) {
-                console.error("❌ No user returned from passport");
-                return res.redirect("/login?error=no_user");
-            }
-
-            (req as any).user = user;
-            (req as any).session.wasNewUser = user.isNewUser;
-            next();
-        })(req, res, next);
-    },
-    async (req: Request, res: Response) => {
-        const user = (req as any).user;
-        console.log("🔍 Authenticated user:", { id: user.id, email: user.email || user.username });
-
-        const { accessToken, refreshToken } = generateTokens({
-            userId: user.id,
-            username: user.username,
-            email: user.email,
-            firstName: user.first_name,
-            lastName: user.last_name
-        });
-
-        try {
-            const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-            await SessionQueries.create(user.id, refreshToken, expiresAt);
-        } catch (err) {
-            console.error("❌ Error storing OAuth session:", err);
-            return res.redirect("/login?error=session_failed");
-        }
-
-        const isRegistration = (req as any).session.isOAuthRegistration;
-        const wasNewUser = (req as any).session.wasNewUser;
-
+        // Calculate baseRedirectUrl
         const isDevelopment = process.env.NODE_ENV !== "production";
         const authSource: string = (req as any).session.authSource || "";
         const prodFrontendUrl = "https://bioqr-web-app.vercel.app";
-
         let baseRedirectUrl: string;
 
         if (authSource.includes("localhost") || authSource.includes("127.0.0.1")) {
@@ -235,13 +229,79 @@ router.get(
             baseRedirectUrl = isDevelopment ? "http://localhost:5173" : prodFrontendUrl;
         }
 
+        passport.authenticate("github", (err: any, user: any, info: any) => {
+            if (err) {
+                console.error("❌ Passport authentication error:", err);
+                return res.redirect(`${baseRedirectUrl}/login?error=passport_error`);
+            }
+            if (!user) {
+                if (info && info.message === "ACCOUNT_NOT_FOUND") {
+                    console.error("❌ GitHub account not found - redirecting to login");
+                    return res.redirect(`${baseRedirectUrl}/login?error=account_not_found`);
+                }
+                console.error("❌ No user returned from passport");
+                return res.redirect(`${baseRedirectUrl}/login?error=no_user`);
+            }
+
+            (req as any).user = user;
+            (req as any).session.wasNewUser = user.isNewUser;
+            next();
+        })(req, res, next);
+    },
+    async (req: Request, res: Response) => {
+        const user = (req as any).user;
+        console.log("🔍 Authenticated user:", { id: user.id, email: user.email || user.username });
+
+        const { accessToken, refreshToken } = generateTokens({
+            userId: user.id,
+            username: user.username,
+            email: user.email,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            userType: user.user_type,
+            uniqueUserId: user.unique_user_id || undefined,
+            orgUniqueId: user.org_unique_id || undefined,
+            teamUniqueId: user.team_unique_id || undefined
+        });
+
+        try {
+            const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+            await SessionQueries.create(user.id, refreshToken, expiresAt);
+        } catch (err) {
+            console.error("❌ Error storing OAuth session:", err);
+            return res.redirect("/login?error=session_failed");
+        }
+
+        const isRegistration = (req as any).session.isOAuthRegistration;
+        const wasNewUser = (req as any).session.wasNewUser;
+
+        const isDevelopmentVal = process.env.NODE_ENV !== "production";
+        const authSourceVal: string = (req as any).session.authSource || "";
+        const prodFrontendUrlVal = "https://bioqr-web-app.vercel.app";
+
+        let baseRedirectUrlVal: string;
+
+        if (authSourceVal.includes("localhost") || authSourceVal.includes("127.0.0.1")) {
+            baseRedirectUrlVal = authSourceVal.match(/(http:\/\/localhost:\d+)/)?.[1] || 
+                             authSourceVal.match(/(http:\/\/127\.0\.0\.1:\d+)/)?.[1] || 
+                             "http://localhost:5173";
+        } else if (authSourceVal.startsWith("http")) {
+            try {
+                baseRedirectUrlVal = new URL(authSourceVal).origin;
+            } catch (e) {
+                baseRedirectUrlVal = prodFrontendUrlVal;
+            }
+        } else {
+            baseRedirectUrlVal = isDevelopmentVal ? "http://localhost:5173" : prodFrontendUrlVal;
+        }
+
         let redirectUrl: string;
         if (isRegistration && wasNewUser) {
-            redirectUrl = `${baseRedirectUrl}/login?message=registration_success&provider=github`;
+            redirectUrl = `${baseRedirectUrlVal}/login?message=registration_success&provider=github`;
             console.log("✅ GitHub registration successful - redirecting to login");
             log(`User registered via GitHub: ${user.username}`, req, user.id);
         } else if (isRegistration && !wasNewUser) {
-            redirectUrl = `${baseRedirectUrl}/login?message=user_exists&provider=github`;
+            redirectUrl = `${baseRedirectUrlVal}/login?message=user_exists&provider=github`;
             console.log("ℹ️ GitHub user already exists - redirecting to login");
         } else {
 
@@ -252,17 +312,21 @@ router.get(
                     email: user.email,
                     first_name: user.first_name,
                     last_name: user.last_name,
+                    user_type: user.user_type,
+                    unique_user_id: user.unique_user_id,
+                    org_unique_id: user.org_unique_id,
+                    team_unique_id: user.team_unique_id,
                     avatar_url: user.avatar_url,
                 })
             );
 
             // SPECIAL REDIRECT FOR ANDROID
-            if (authSource === "android" || req.headers["x-client-type"] === "android") {
+            if (authSourceVal === "android" || req.headers["x-client-type"] === "android") {
                 redirectUrl = `bioqr://auth?token=${accessToken}&refresh=${refreshToken}&user=${userPayload}`;
                 console.log("📱 Redirecting to Android App:", redirectUrl);
             } else {
-                redirectUrl = `${baseRedirectUrl}/dashboard?token=${accessToken}&refresh=${refreshToken}&user=${userPayload}`;
-                console.log(`📡 Redirecting to frontend at: ${baseRedirectUrl}`);
+                redirectUrl = `${baseRedirectUrlVal}/dashboard?token=${accessToken}&refresh=${refreshToken}&user=${userPayload}`;
+                console.log(`📡 Redirecting to frontend at: ${baseRedirectUrlVal}`);
             }
 
             console.log("✅ GitHub login successful");

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Mail, Lock, Eye, EyeOff, Loader2, CheckCircle2, XCircle, ArrowRight, KeyRound, MailCheck, ArrowLeft } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Loader2, CheckCircle2, XCircle, ArrowRight, KeyRound, MailCheck, ArrowLeft, X } from "lucide-react";
 import axios from "axios";
 import "../styles/register.css";
 import SEO from "../components/SEO";
@@ -169,15 +169,21 @@ const ForgotPassword: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center' }}>
               
               {error && (
-                <div style={{ marginBottom: '1rem', padding: '1rem', borderRadius: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                  <XCircle style={{ color: '#f87171', width: '1.25rem', height: '1.25rem', flexShrink: 0 }} />
-                  <p style={{ color: '#f87171', fontSize: '0.875rem', fontWeight: 600 }}>{error}</p>
+                <div className="premium-alert premium-alert-error">
+                  <XCircle className="premium-alert-icon" />
+                  <div className="premium-alert-content">{error}</div>
+                  <button onClick={() => setError("")} className="premium-alert-close">
+                    <X size={16} />
+                  </button>
                 </div>
               )}
               {success && step !== 'email' && (
-                <div style={{ marginBottom: '1rem', padding: '1rem', borderRadius: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                  <CheckCircle2 style={{ color: '#34d399', width: '1.25rem', height: '1.25rem', flexShrink: 0 }} />
-                  <p style={{ color: '#34d399', fontSize: '0.875rem', fontWeight: 600 }}>{success}</p>
+                <div className="premium-alert premium-alert-success">
+                  <CheckCircle2 className="premium-alert-icon" />
+                  <div className="premium-alert-content">{success}</div>
+                  <button onClick={() => setSuccess("")} className="premium-alert-close">
+                    <X size={16} />
+                  </button>
                 </div>
               )}
 
@@ -198,7 +204,7 @@ const ForgotPassword: React.FC = () => {
                       <input 
                         type="email" 
                         placeholder="john@example.com" 
-                        className="premium-input" 
+                        className="premium-input"
                         value={email}
                         onChange={(e) => { setEmail(e.target.value); setError(""); }}
                       />

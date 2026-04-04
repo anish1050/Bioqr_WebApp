@@ -13,7 +13,7 @@ declare global {
 
 /**
  * JWT authentication middleware.
- * Verifies the Bearer token from the Authorization header.
+ * Verifies the Bearer token from the Authorization header or cookie.
  */
 export const authenticateToken = (
     req: Request,
@@ -21,7 +21,12 @@ export const authenticateToken = (
     next: NextFunction
 ): void => {
     const authHeader = req.headers["authorization"];
-    const token = authHeader && authHeader.split(" ")[1]; // Bearer TOKEN
+    let token = authHeader && authHeader.split(" ")[1]; // Bearer TOKEN
+
+    // Fallback to cookie if header is missing
+    if (!token && req.cookies && req.cookies.accessToken) {
+        token = req.cookies.accessToken;
+    }
 
     if (!token) {
         res.status(401).json({ success: false, message: "Access token required" });

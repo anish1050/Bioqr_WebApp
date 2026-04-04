@@ -4,6 +4,8 @@ import db from "./db.js";
 // Shared Types
 // ============================================================
 
+export type UserType = 'individual' | 'org_super_admin' | 'org_admin' | 'org_member' | 'team_lead' | 'team_member' | 'community_lead' | 'community_member';
+
 export interface User {
     id: number;
     first_name: string;
@@ -14,6 +16,13 @@ export interface User {
     oauth_provider: string | null;
     oauth_id: string | null;
     avatar_url: string | null;
+    user_type: UserType;
+    unique_user_id: string | null;
+    org_id: number | null;
+    org_unique_id?: string | null;
+    team_id: number | null;
+    team_unique_id?: string | null;
+    biometric_enrolled: boolean;
     mobile_number?: string;
     email_verified?: boolean;
     mobile_number_verified?: boolean;
@@ -49,16 +58,20 @@ export interface QrToken {
     is_one_time: boolean;
     is_unshareable: boolean;
     is_used: boolean;
+    receiver_user_id: number | null;
+    bioseal_lock: string | null;
+    lock_method: 'face' | 'fingerprint' | null;
     created_at: Date;
     expires_at: Date;
     
-    // New V2 fields
+    // V2 fields
     require_auth?: boolean;
     latitude?: number | null;
     longitude?: number | null;
     radius?: number | null;
     start_time?: Date | null;
     qr_type?: 'file' | 'vcard' | 'text' | 'wifi';
+    text_content?: string | null;
     vcard_data?: string | null;
     status?: 'active' | 'revoked' | 'expired';
     style_color?: string;
@@ -89,7 +102,7 @@ function query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
     });
 }
 
-function execute(sql: string, params: any[] = []): Promise<any> {
+export function execute(sql: string, params: any[] = []): Promise<any> {
     return new Promise((resolve, reject) => {
         db.query(sql, params, (err, result) => {
             if (err) return reject(err);
@@ -105,47 +118,76 @@ function execute(sql: string, params: any[] = []): Promise<any> {
 export const UserQueries = {
     /** Find a user by their ID */
     findById: (id: number): Promise<User | undefined> =>
-        query<User>("SELECT * FROM users WHERE id = ?", [id]).then((r) => r[0]),
+        query<User>(
+            `SELECT u.*, o.org_unique_id, t.team_unique_id 
+             FROM users u 
+             LEFT JOIN organisations o ON u.org_id = o.id 
+             LEFT JOIN teams t ON u.team_id = t.id 
+             WHERE u.id = ?`, 
+            [id]
+        ).then((r) => r[0]),
 
     /** Find a user by email */
     findByEmail: (email: string): Promise<User | undefined> =>
-        query<User>("SELECT * FROM users WHERE email = ?", [email]).then((r) => r[0]),
+        query<User>(
+            `SELECT u.*, o.org_unique_id, t.team_unique_id 
+             FROM users u 
+             LEFT JOIN organisations o ON u.org_id = o.id 
+             LEFT JOIN teams t ON u.team_id = t.id 
+             WHERE u.email = ?`, 
+            [email]
+        ).then((r) => r[0]),
 
     /** Find a user by username */
     findByUsername: (username: string): Promise<User | undefined> =>
-        query<User>("SELECT * FROM users WHERE username = ?", [username]).then((r) => r[0]),
+        query<User>(
+            `SELECT u.*, o.org_unique_id, t.team_unique_id 
+             FROM users u 
+             LEFT JOIN organisations o ON u.org_id = o.id 
+             LEFT JOIN teams t ON u.team_id = t.id 
+             WHERE u.username = ?`, 
+            [username]
+        ).then((r) => r[0]),
+
 
     /** Find a user by email OR username (for login) */
     findByEmailOrUsername: (loginField: string): Promise<User | undefined> => {
         const isEmail = loginField.includes("@");
-        const sql = isEmail
-             ? "SELECT * FROM users WHERE email = ?"
-            : "SELECT * FROM users WHERE username = ?";
+        const sql = `
+            SELECT u.*, o.org_unique_id, t.team_unique_id 
+            FROM users u 
+            LEFT JOIN organisations o ON u.org_id = o.id 
+            LEFT JOIN teams t ON u.team_id = t.id 
+            WHERE u.${isEmail ? 'email' : 'username'} = ?
+        `;
         return query<User>(sql, [loginField]).then((r) => r[0]);
     },
 
     /** Check if email or username already exists (for registration) */
     findDuplicates: (email: string, username: string): Promise<User[]> =>
         query<User>(
-            "SELECT email, username FROM users WHERE email = ? OR username = ?",
+            "SELECT id, email, username, biometric_enrolled FROM users WHERE email = ? OR username = ?",
             [email, username]
         ),
 
     /** Find a user by OAuth provider + OAuth ID */
     findByOAuth: (provider: string, oauthId: string): Promise<User | undefined> =>
         query<User>(
-            "SELECT * FROM users WHERE oauth_provider = ? AND oauth_id = ?",
+            `SELECT u.*, o.org_unique_id, t.team_unique_id 
+             FROM users u 
+             LEFT JOIN organisations o ON u.org_id = o.id 
+             LEFT JOIN teams t ON u.team_id = t.id 
+             WHERE u.oauth_provider = ? AND u.oauth_id = ?`, 
             [provider, oauthId]
         ).then((r) => r[0]),
 
     /** Get user profile (safe fields only) */
     getProfile: (id: number): Promise<User | undefined> =>
         query<User>(
-            "SELECT id, username, email, first_name, last_name FROM users WHERE id = ?",
+            "SELECT id, username, email, first_name, last_name, email_verified, biometric_enrolled FROM users WHERE id = ?",
             [id]
         ).then((r) => r[0]),
 
-    /** Insert a new user (standard registration) */
     create: async (data: {
         first_name: string;
         last_name: string;
@@ -155,9 +197,15 @@ export const UserQueries = {
         mobile_number?: string;
         email_verified?: boolean;
         mobile_number_verified?: boolean;
+        user_type?: UserType;
+        unique_user_id?: string;
+        org_id?: number | null;
+        team_id?: number | null;
     }): Promise<number> => {
         const result = await execute(
-            "INSERT INTO users (first_name, last_name, username, email, password, mobile_number, email_verified, mobile_number_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            `INSERT INTO users (first_name, last_name, username, email, password, mobile_number, 
+             email_verified, mobile_number_verified, user_type, unique_user_id, org_id, team_id) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 data.first_name,
                 data.last_name,
@@ -165,8 +213,12 @@ export const UserQueries = {
                 data.email,
                 data.password,
                 data.mobile_number || null,
-                data.email_verified || false,
-                data.mobile_number_verified || false
+                data.email_verified ? 1 : 0,
+                data.mobile_number_verified ? 1 : 0,
+                data.user_type || 'individual',
+                data.unique_user_id || null,
+                data.org_id || null,
+                data.team_id || null
             ]
         );
         return result.insertId;
@@ -215,6 +267,53 @@ export const UserQueries = {
             "UPDATE users SET password = ? WHERE id = ?",
             [hashedPassword, userId]
         ),
+
+    /** Find a user by their unique BQ-XXXXXXXX ID */
+    findByUniqueUserId: (uniqueUserId: string): Promise<User | undefined> =>
+        query<User>("SELECT * FROM users WHERE unique_user_id = ?", [uniqueUserId]).then((r) => r[0]),
+
+    /** Find all users belonging to an organisation */
+    findByOrgId: (orgId: number): Promise<User[]> =>
+        query<User>("SELECT id, first_name, last_name, username, email, user_type, unique_user_id, biometric_enrolled, team_id FROM users WHERE org_id = ?", [orgId]),
+
+    /** Find all users belonging to a team */
+    findByTeamId: (teamId: number): Promise<User[]> =>
+        query<User>("SELECT id, first_name, last_name, username, email, user_type, unique_user_id, biometric_enrolled FROM users WHERE team_id = ?", [teamId]),
+
+    /** Update biometric enrollment status */
+    updateBiometricStatus: (userId: number, enrolled: boolean): Promise<any> =>
+        execute("UPDATE users SET biometric_enrolled = ? WHERE id = ?", [enrolled, userId]),
+
+    /** Set unique_user_id for a user */
+    setUniqueUserId: (userId: number, uniqueUserId: string): Promise<any> =>
+        execute("UPDATE users SET unique_user_id = ? WHERE id = ?", [uniqueUserId, userId]),
+
+    /** Set org_id for a user */
+    setOrgId: (userId: number, orgId: number): Promise<any> =>
+        execute("UPDATE users SET org_id = ? WHERE id = ?", [orgId, userId]),
+
+    /** Set team_id for a user */
+    setTeamId: (userId: number, teamId: number): Promise<any> =>
+        execute("UPDATE users SET team_id = ? WHERE id = ?", [teamId, userId]),
+
+    /** Verify email status */
+    verifyEmail: (userId: number, verified: boolean = true): Promise<any> =>
+        execute("UPDATE users SET email_verified = ? WHERE id = ?", [verified ? 1 : 0, userId]),
+
+    /** Verify mobile status */
+    verifyMobile: (userId: number, verified: boolean = true): Promise<any> =>
+        execute("UPDATE users SET mobile_number_verified = ? WHERE id = ?", [verified ? 1 : 0, userId]),
+
+    /** Update user type */
+    setUserType: (userId: number, userType: UserType): Promise<any> =>
+        execute("UPDATE users SET user_type = ? WHERE id = ?", [userType, userId]),
+
+    /** Lookup user by unique ID — public safe fields only */
+    lookupByUniqueId: (uniqueUserId: string): Promise<{ id: number; first_name: string; last_name: string; biometric_enrolled: boolean; user_type: UserType } | undefined> =>
+        query<any>(
+            "SELECT id, first_name, last_name, biometric_enrolled, user_type FROM users WHERE unique_user_id = ?",
+            [uniqueUserId]
+        ).then((r) => r[0]),
 };
 
 // ============================================================
@@ -325,7 +424,7 @@ export const FileQueries = {
 // ============================================================
 
 export const QrTokenQueries = {
-    /** Create a new QR access token with V2 features */
+    /** Create a new QR access token with V2 + BioSeal features */
     create: async (
         token: string,
         userId: number,
@@ -342,9 +441,13 @@ export const QrTokenQueries = {
             radius = null,
             start_time = null,
             qr_type = 'file',
+            text_content = null,
             vcard_data = null,
             style_color = '#000000',
-            style_bg = '#FFFFFF'
+            style_bg = '#FFFFFF',
+            receiver_user_id = null,
+            bioseal_lock = null,
+            lock_method = null
         } = data;
 
         const finalFileId = (fileIds && fileIds.length > 0) ? fileIds[0] : 0;
@@ -352,13 +455,15 @@ export const QrTokenQueries = {
         const result = await execute(
             `INSERT INTO qr_tokens (
                 token, user_id, file_id, expires_at, is_one_time, is_unshareable, 
-                require_auth, latitude, longitude, radius, start_time, qr_type, 
-                vcard_data, style_color, style_bg
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                latitude, longitude, radius, qr_type, text_content,
+                vcard_data, style_color, style_bg,
+                receiver_user_id, bioseal_lock, lock_method
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 token, userId, finalFileId, expiresAt, 
-                is_one_time, is_unshareable, require_auth, latitude, longitude, radius, 
-                start_time, qr_type, vcard_data, style_color, style_bg
+                is_one_time, is_unshareable, latitude, longitude, radius, 
+                qr_type, text_content, vcard_data, style_color, style_bg,
+                receiver_user_id, bioseal_lock, lock_method
             ]
         );
         const qrTokenId = result.insertId;
@@ -600,4 +705,254 @@ export const OtpQueries = {
     async cleanup() {
         return execute('DELETE FROM otp_verifications WHERE expires_at < NOW() OR attempts >= 3');
     }
+};
+
+// ============================================================
+// Bio-Seal Queries
+// ============================================================
+
+export interface BioSealRecord {
+    id: number;
+    user_id: number;
+    method: 'face' | 'fingerprint';
+    sealed_template: string;   // JSON BioSeal package
+    template_hash: string;     // SHA-256 of raw template
+    created_at: Date;
+    updated_at: Date;
+}
+
+export const BioSealQueries = {
+    /** Create or update a Bio-Seal for a user */
+    upsert: async (userId: number, method: 'face' | 'fingerprint', sealedTemplate: string, templateHash: string): Promise<any> => {
+        const existing = await query('SELECT id FROM bio_seals WHERE user_id = ?', [userId]);
+        if (existing.length > 0) {
+            return execute(
+                'UPDATE bio_seals SET method = ?, sealed_template = ?, template_hash = ?, updated_at = NOW() WHERE user_id = ?',
+                [method, sealedTemplate, templateHash, userId]
+            );
+        } else {
+            return execute(
+                'INSERT INTO bio_seals (user_id, method, sealed_template, template_hash) VALUES (?, ?, ?, ?)',
+                [userId, method, sealedTemplate, templateHash]
+            );
+        }
+    },
+
+    /** Find Bio-Seal for a user */
+    findByUserId: (userId: number): Promise<BioSealRecord | undefined> =>
+        query<BioSealRecord>('SELECT * FROM bio_seals WHERE user_id = ?', [userId]).then((r) => r[0]),
+
+    /** Delete Bio-Seal for a user */
+    deleteByUserId: (userId: number): Promise<any> =>
+        execute('DELETE FROM bio_seals WHERE user_id = ?', [userId]),
+
+    /** Check if a user has a Bio-Seal enrolled */
+    isEnrolled: async (userId: number): Promise<boolean> => {
+        const rows = await query<any>('SELECT 1 FROM bio_seals WHERE user_id = ? LIMIT 1', [userId]);
+        return rows.length > 0;
+    },
+
+    /** Get the method (face/fingerprint) for a user */
+    getMethod: async (userId: number): Promise<'face' | 'fingerprint' | null> => {
+        const rows = await query<any>('SELECT method FROM bio_seals WHERE user_id = ?', [userId]);
+        return rows[0]?.method || null;
+    },
+};
+
+// ============================================================
+// Organisation Queries
+// ============================================================
+
+export interface Organisation {
+    id: number;
+    org_unique_id: string;
+    name: string;
+    description: string | null;
+    industry: string | null;
+    website: string | null;
+    created_by: number;
+    created_at: Date;
+    updated_at: Date;
+}
+
+export const OrganisationQueries = {
+    /** Create a new organisation */
+    create: async (data: {
+        org_unique_id: string;
+        name: string;
+        description?: string;
+        industry?: string;
+        website?: string;
+        created_by: number;
+    }): Promise<number> => {
+        const result = await execute(
+            'INSERT INTO organisations (org_unique_id, name, description, industry, website, created_by) VALUES (?, ?, ?, ?, ?, ?)',
+            [data.org_unique_id, data.name, data.description || null, data.industry || null, data.website || null, data.created_by]
+        );
+        return result.insertId;
+    },
+
+    /** Find by internal ID */
+    findById: (id: number): Promise<Organisation | undefined> =>
+        query<Organisation>('SELECT * FROM organisations WHERE id = ?', [id]).then((r) => r[0]),
+
+    /** Find by org unique ID (ORG-XXXXXXXX) */
+    findByOrgUniqueId: (orgUniqueId: string): Promise<Organisation | undefined> =>
+        query<Organisation>('SELECT * FROM organisations WHERE org_unique_id = ?', [orgUniqueId]).then((r) => r[0]),
+
+    /** Get all members of an organisation */
+    getMembers: (orgId: number): Promise<User[]> =>
+        query<User>(
+            `SELECT id, first_name, last_name, username, email, user_type, unique_user_id, biometric_enrolled, team_id 
+             FROM users WHERE org_id = ? ORDER BY user_type, first_name`,
+            [orgId]
+        ),
+
+    /** Get all teams in an organisation */
+    getTeams: (orgId: number): Promise<any[]> =>
+        query('SELECT * FROM teams WHERE org_id = ? ORDER BY name', [orgId]),
+
+    /** Get member count */
+    getMemberCount: async (orgId: number): Promise<number> => {
+        const rows = await query<any>('SELECT COUNT(*) as count FROM users WHERE org_id = ?', [orgId]);
+        return rows[0]?.count || 0;
+    },
+
+    /** Delete an organisation */
+    delete: (id: number): Promise<any> =>
+        execute('DELETE FROM organisations WHERE id = ?', [id]),
+};
+
+// ============================================================
+// Team Queries
+// ============================================================
+
+export interface Team {
+    id: number;
+    team_unique_id: string;
+    name: string;
+    description: string | null;
+    org_id: number | null;
+    created_by: number;
+    created_at: Date;
+    updated_at: Date;
+}
+
+export const TeamQueries = {
+    /** Create a new team */
+    create: async (data: {
+        team_unique_id: string;
+        name: string;
+        description?: string;
+        org_id?: number | null;
+        created_by: number;
+    }): Promise<number> => {
+        const result = await execute(
+            'INSERT INTO teams (team_unique_id, name, description, org_id, created_by) VALUES (?, ?, ?, ?, ?)',
+            [data.team_unique_id, data.name, data.description || null, data.org_id || null, data.created_by]
+        );
+        return result.insertId;
+    },
+
+    /** Find by internal ID */
+    findById: (id: number): Promise<Team | undefined> =>
+        query<Team>('SELECT * FROM teams WHERE id = ?', [id]).then((r) => r[0]),
+
+    /** Find by team unique ID (TM-XXXXXXXX) */
+    findByTeamUniqueId: (teamUniqueId: string): Promise<Team | undefined> =>
+        query<Team>('SELECT * FROM teams WHERE team_unique_id = ?', [teamUniqueId]).then((r) => r[0]),
+
+    /** Get all members of a team */
+    getMembers: (teamId: number): Promise<User[]> =>
+        query<User>(
+            `SELECT id, first_name, last_name, username, email, user_type, unique_user_id, biometric_enrolled 
+             FROM users WHERE team_id = ? ORDER BY user_type, first_name`,
+            [teamId]
+        ),
+
+    /** Get member count */
+    getMemberCount: async (teamId: number): Promise<number> => {
+        const rows = await query<any>('SELECT COUNT(*) as count FROM users WHERE team_id = ?', [teamId]);
+        return rows[0]?.count || 0;
+    },
+
+    /** Delete a team */
+    delete: (id: number): Promise<any> =>
+        execute('DELETE FROM teams WHERE id = ?', [id]),
+};
+
+// ============================================================
+// QR Permission Queries (Cross-Team QR Generation Access)
+// ============================================================
+
+export interface QrPermission {
+    id: number;
+    granter_id: number;
+    member_id: number;
+    target_member_id: number;
+    org_id: number;
+    created_at: Date;
+    // Joined fields
+    target_first_name?: string;
+    target_last_name?: string;
+    target_username?: string;
+    target_unique_user_id?: string;
+    member_first_name?: string;
+    member_last_name?: string;
+    member_username?: string;
+}
+
+export const QrPermissionQueries = {
+    /** Grant cross-team QR permission */
+    grant: async (granterId: number, memberId: number, targetMemberId: number, orgId: number): Promise<number> => {
+        const result = await execute(
+            'INSERT INTO qr_permissions (granter_id, member_id, target_member_id, org_id) VALUES (?, ?, ?, ?)',
+            [granterId, memberId, targetMemberId, orgId]
+        );
+        return result.insertId;
+    },
+
+    /** Revoke a specific permission */
+    revoke: (id: number): Promise<any> =>
+        execute('DELETE FROM qr_permissions WHERE id = ?', [id]),
+
+    /** Revoke by member + target pair */
+    revokeByPair: (memberId: number, targetMemberId: number): Promise<any> =>
+        execute('DELETE FROM qr_permissions WHERE member_id = ? AND target_member_id = ?', [memberId, targetMemberId]),
+
+    /** Check if a member can generate QR for a target */
+    canGenerateFor: async (memberId: number, targetMemberId: number): Promise<boolean> => {
+        const rows = await query<any>(
+            'SELECT 1 FROM qr_permissions WHERE member_id = ? AND target_member_id = ? LIMIT 1',
+            [memberId, targetMemberId]
+        );
+        return rows.length > 0;
+    },
+
+    /** Get all granted targets for a member (with target user info) */
+    getGrantedTargets: (memberId: number): Promise<QrPermission[]> =>
+        query<QrPermission>(
+            `SELECT qp.*, u.first_name as target_first_name, u.last_name as target_last_name, 
+                    u.username as target_username, u.unique_user_id as target_unique_user_id
+             FROM qr_permissions qp
+             JOIN users u ON qp.target_member_id = u.id
+             WHERE qp.member_id = ?
+             ORDER BY qp.created_at DESC`,
+            [memberId]
+        ),
+
+    /** Get all permissions for an org (admin view) */
+    getByOrgId: (orgId: number): Promise<QrPermission[]> =>
+        query<QrPermission>(
+            `SELECT qp.*, 
+                    m.first_name as member_first_name, m.last_name as member_last_name, m.username as member_username,
+                    t.first_name as target_first_name, t.last_name as target_last_name, t.username as target_username,
+                    t.unique_user_id as target_unique_user_id
+             FROM qr_permissions qp
+             JOIN users m ON qp.member_id = m.id
+             JOIN users t ON qp.target_member_id = t.id
+             WHERE qp.org_id = ?
+             ORDER BY qp.created_at DESC`,
+            [orgId]
+        ),
 };

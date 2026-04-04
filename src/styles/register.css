@@ -392,6 +392,139 @@ body {
     border-radius: 0.75rem;
 }
 
+.role-selection-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 1.25rem;
+  margin-top: 1rem;
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .role-selection-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.role-card {
+  position: relative;
+  padding: 1.5rem;
+  background: rgba(15, 23, 42, 0.6) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-radius: 1.25rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  z-index: 1;
+  width: 100%;
+  min-height: 190px;
+  justify-content: space-between;
+}
+
+.role-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at top right, var(--role-glow), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: -1;
+}
+
+.role-card:hover {
+  transform: translateY(-8px);
+  border-color: var(--role-color) !important;
+  box-shadow: 0 20px 40px -15px var(--role-glow);
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+
+.role-card:hover::before {
+  opacity: 0.5;
+}
+
+.role-icon-box {
+  width: 3.25rem;
+  height: 3.25rem;
+  background: var(--role-glow);
+  border: 1px solid var(--role-border);
+  border-radius: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--role-color);
+  transition: all 0.4s ease;
+  box-shadow: inset 0 0 10px rgba(255,255,255,0.05);
+}
+
+.role-card:hover .role-icon-box {
+  transform: scale(1.1) rotate(-5deg);
+  background: var(--role-color);
+  color: white;
+  box-shadow: 0 0 20px var(--role-color);
+}
+
+.role-content h4 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: white !important;
+  margin-bottom: 0.35rem;
+  letter-spacing: -0.01em;
+}
+
+.role-content p {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.role-arrow {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  color: #64748b;
+  opacity: 0.5;
+  transition: all 0.3s ease;
+}
+
+.role-card:hover .role-arrow {
+  opacity: 1;
+  transform: translateX(5px);
+  color: var(--role-color);
+}
+
+/* Role Variations - Linked to Core App Theme */
+.role-individual {
+  --role-color: #2563eb; /* Primary Blue */
+  --role-glow: rgba(37, 99, 235, 0.2);
+  --role-border: rgba(37, 99, 235, 0.3);
+}
+
+.role-org-create {
+  --role-color: #10b981; /* Primary Emerald */
+  --role-glow: rgba(16, 185, 129, 0.2);
+  --role-border: rgba(16, 185, 129, 0.3);
+}
+
+.role-org-join {
+  --role-color: #8b5cf6; /* Primary Violet */
+  --role-glow: rgba(139, 92, 246, 0.2);
+  --role-border: rgba(139, 92, 246, 0.3);
+}
+
+.role-community {
+  --role-color: #f59e0b; /* Primary Amber */
+  --role-glow: rgba(245, 158, 11, 0.2);
+  --role-border: rgba(245, 158, 11, 0.3);
+}
+
 /* 
    ============================================================
    PREMIUM REGISTRATION LAYOUT STYLES (NO TAILWIND)
@@ -472,8 +605,11 @@ body {
 
 .right-panel {
     flex: 1;
-    padding: 2rem;
-    background: rgba(15, 23, 42, 0.2);
+    padding: 3rem;
+    background: #020617; /* Deep Navy to enable true glassmorphism */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .form-grid {
@@ -554,10 +690,14 @@ body {
     background: rgba(30, 41, 59, 0.4);
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 0.75rem;
-    padding: 0.5rem 3rem 0.5rem 3rem;
+    padding: 0.75rem 3rem 0.75rem 3.25rem !important;
     color: white;
     outline: none;
     transition: all 0.2s ease;
+}
+
+.premium-input.pl-icon {
+    padding-left: 3.25rem !important;
 }
 
 .premium-input:focus {
@@ -903,6 +1043,92 @@ body {
 .p-1 { padding: 0.25rem; }
 .transition-colors { transition-property: color, background-color, border-color, text-decoration-color, fill, stroke; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 150ms; }
 .hover\:text-slate-300:hover { color: #cbd5e1; }
+
+/* 
+   ============================================================
+   PREMIUM ALERT SYSTEM (GLASSMORPHISM)
+   ============================================================
+*/
+
+.premium-alert {
+    position: relative;
+    width: 100%;
+    margin-bottom: 1.5rem;
+    padding: 1.15rem 1.25rem;
+    border-radius: 1.15rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08); /* Sophisticated thin border */
+    box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.5);
+    z-index: 50;
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    animation: alertSlideDown 0.5s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+@keyframes alertSlideDown {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.premium-alert-icon {
+    flex-shrink: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    filter: drop-shadow(0 0 8px currentColor); /* Icon Glow */
+}
+
+.premium-alert-content {
+    flex: 1;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+}
+
+.premium-alert-close {
+    flex-shrink: 0;
+    padding: 0.35rem;
+    border-radius: 0.65rem;
+    color: currentColor;
+    opacity: 0.4;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    outline: none;
+}
+
+.premium-alert-close:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.1);
+}
+
+/* Success Alert Variation */
+.premium-alert-success {
+    background: rgba(16, 185, 129, 0.08) !important;
+    border-color: rgba(16, 185, 129, 0.25) !important;
+    color: #34d399; /* Vibrant Emerald text */
+}
+
+/* Error Alert Variation */
+.premium-alert-error {
+    background: rgba(239, 68, 68, 0.08) !important;
+    border-color: rgba(239, 68, 68, 0.25) !important;
+    color: #f87171; /* Vibrant Rose text */
+}
+
+/* Info Alert Variation */
+.premium-alert-info {
+    background: rgba(37, 99, 235, 0.08) !important;
+    border-color: rgba(37, 99, 235, 0.25) !important;
+    color: #60a5fa; /* Vibrant Blue text */
+}
 
 /* Hide Browser Native Password Reveal Icon so it doesn't overlap with custom icon */
 .hide-ms-reveal::-ms-reveal,

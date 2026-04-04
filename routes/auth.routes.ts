@@ -6,9 +6,13 @@ import { generateTokens, JWT_REFRESH_SECRET } from "../helpers/tokens.js";
 import { authenticateToken } from "../helpers/auth.js";
 import { authLimiter } from "../helpers/rateLimiters.js";
 import { optionalDoubleCsrfProtection } from "../helpers/csrf.js";
-import { UserQueries, SessionQueries, OtpQueries } from "../helpers/queries.js";
+import { UserQueries, SessionQueries, OtpQueries, BioSealQueries, OrganisationQueries, TeamQueries, execute } from "../helpers/queries.js";
+import type { UserType } from "../helpers/queries.js";
 import { log } from "../helpers/logger.js";
 import { sendVerificationOtp } from "../helpers/email.js";
+import { createBioSeal, generateTemplateHash } from "../helpers/bioseal.js";
+import { generateUniqueUserId, generateOrgId, generateTeamId, generateCommunityId, isValidOrgId, isValidTeamId, isValidCommunityId } from "../helpers/uniqueId.js";
+import { extractFaceDescriptorFromBase64 } from "../helpers/faceRecognition.js";
 import crypto from "crypto";
 
 const router = Router();
@@ -21,11 +25,50 @@ router.post(
     "/users/register/send-email-otp",
     authLimiter,
     async (req: Request, res: Response): Promise<void> => {
-        const { first_name, last_name, username, email, mobile_number, password } = req.body;
+        const { first_name, last_name, username, email, mobile_number, password,
+                user_type, org_unique_id, team_unique_id, org_name, org_description, org_industry, team_name, team_description } = req.body;
 
         if (!first_name || !last_name || !username || !email || !password) {
             res.status(400).json({ success: false, message: "Missing required fields" });
             return;
+        }
+
+        // Validate user_type
+        const validTypes: UserType[] = ['individual', 'org_super_admin', 'org_admin', 'org_member', 'team_lead', 'team_member', 'community_lead', 'community_member'];
+        const finalUserType: UserType = validTypes.includes(user_type) ? user_type : 'individual';
+
+        // Validate org/team IDs if joining existing
+        if ((finalUserType === 'org_admin' || finalUserType === 'org_member') && !org_unique_id) {
+            res.status(400).json({ success: false, message: 'Organisation ID is required to join an organisation' });
+            return;
+        }
+        if (finalUserType === 'community_member' && !team_unique_id) {
+            res.status(400).json({ success: false, message: 'Community ID is required to join a community' });
+            return;
+        }
+        if (finalUserType === 'org_super_admin' && (!org_name || org_name.trim().length < 2)) {
+            res.status(400).json({ success: false, message: 'Organisation name is required (min 2 characters)' });
+            return;
+        }
+        if (finalUserType === 'community_lead' && (!team_name || team_name.trim().length < 2)) {
+            res.status(400).json({ success: false, message: 'Community name is required (min 2 characters)' });
+            return;
+        }
+
+        // Validate that the org/team exists if joining
+        if (org_unique_id) {
+            const org = await OrganisationQueries.findByOrgUniqueId(org_unique_id);
+            if (!org) {
+                res.status(400).json({ success: false, message: 'Organisation not found. Please check the Organisation ID.' });
+                return;
+            }
+        }
+        if (team_unique_id) {
+            const team = await TeamQueries.findByTeamUniqueId(team_unique_id);
+            if (!team) {
+                res.status(400).json({ success: false, message: 'Team not found. Please check the Team ID.' });
+                return;
+            }
         }
 
         try {
@@ -39,12 +82,17 @@ router.post(
             // Check for existing users
             const duplicates = await UserQueries.findDuplicates(email, username);
             if (duplicates.length > 0) {
-                const existing = duplicates[0];
-                if (existing.email === email) {
-                    res.json({ success: false, message: "Email already registered" });
-                    return;
-                }
-                if (existing.username === username) {
+                const existing = duplicates.find(d => d.email === email);
+                const existingUsername = duplicates.find(d => d.username === username);
+
+                if (existing) {
+                    if (existing.biometric_enrolled) {
+                        res.json({ success: false, message: "Email already registered" });
+                        return;
+                    }
+                    // If not enrolled, allow sending OTP to resume
+                    console.log(`Resuming registration for ${email} (BioSeal pending)`);
+                } else if (existingUsername) {
                     res.json({ success: false, message: "Username already taken" });
                     return;
                 }
@@ -67,8 +115,14 @@ router.post(
                     email, 
                     password: hashedPassword, 
                     mobile_number: mobile_number || null,
-                    mobile_verified: false,
-                    email_verified: false 
+                    user_type: finalUserType,
+                    org_unique_id: org_unique_id || null,
+                    team_unique_id: team_unique_id || null,
+                    org_name: org_name || null,
+                    org_description: org_description || null,
+                    org_industry: org_industry || null,
+                    team_name: team_name || null,
+                    team_description: team_description || null
                 }
             });
 
@@ -129,25 +183,127 @@ router.post(
                 return;
             }
 
-            // Extract data and create user
-            const userData = JSON.parse(record.user_data);
-            
-            // Mark email as verified for the final user row
-            const userId = await UserQueries.create({
-                ...userData,
-                email_verified: true,
-                mobile_number_verified: false
-            });
+            // Handle both new registration and resumption
+            const reqUserData = JSON.parse(record.user_data);
+            let userId: number;
+            let userData: any;
+            let uniqueUserId: string;
+
+            const existingUser = await UserQueries.findByEmail(email);
+
+            if (existingUser) {
+                userId = existingUser.id;
+                userData = existingUser;
+                uniqueUserId = existingUser.unique_user_id || `BQ-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+                
+                // Update unique ID if missing
+                if (!existingUser.unique_user_id) {
+                    await execute("UPDATE users SET unique_user_id = ? WHERE id = ?", [uniqueUserId, userId]);
+                }
+                console.log(`Resuming account setup for user ID: ${userId}`);
+            } else {
+                userId = await UserQueries.create({
+                    first_name: reqUserData.first_name,
+                    last_name: reqUserData.last_name,
+                    username: reqUserData.username,
+                    email: reqUserData.email,
+                    password: reqUserData.password,
+                    mobile_number: reqUserData.mobile_number,
+                    user_type: reqUserData.user_type,
+                    unique_user_id: `BQ-${crypto.randomBytes(4).toString('hex').toUpperCase()}`
+                });
+
+                const createdUser = await UserQueries.findById(userId);
+                if (!createdUser) throw new Error("Failed to retrieve created user");
+                userData = createdUser;
+                uniqueUserId = createdUser.unique_user_id!;
+            }
+
+            // Handle org/team creation or joining
+            let orgUniqueId = null;
+            let teamUniqueId = null;
+
+            if (userData.user_type === 'org_super_admin' && reqUserData.org_name) {
+                // Create organisation
+                const newOrgUniqueId = generateOrgId();
+                const orgId = await OrganisationQueries.create({
+                    org_unique_id: newOrgUniqueId,
+                    name: reqUserData.org_name,
+                    description: reqUserData.org_description || undefined,
+                    industry: reqUserData.org_industry || undefined,
+                    created_by: userId
+                });
+                await UserQueries.setOrgId(userId, orgId);
+                orgUniqueId = newOrgUniqueId;
+                console.log(`🏢 Organisation created: ${reqUserData.org_name} (${newOrgUniqueId})`);
+            } else if ((userData.user_type === 'org_admin' || userData.user_type === 'org_member') && reqUserData.org_unique_id) {
+                // Join existing organisation
+                const org = await OrganisationQueries.findByOrgUniqueId(reqUserData.org_unique_id);
+                if (org) {
+                    await UserQueries.setOrgId(userId, org.id);
+                    orgUniqueId = org.org_unique_id;
+                }
+            }
+
+            if (userData.user_type === 'community_lead' && reqUserData.team_name) {
+                // Create standalone community
+                const newTeamUniqueId = generateCommunityId();
+                const teamId = await TeamQueries.create({
+                    team_unique_id: newTeamUniqueId,
+                    name: reqUserData.team_name,
+                    description: reqUserData.team_description || undefined,
+                    created_by: userId
+                });
+                await UserQueries.setTeamId(userId, teamId);
+                teamUniqueId = newTeamUniqueId;
+                console.log(`💚 Community created: ${reqUserData.team_name} (${newTeamUniqueId})`);
+            } else if (userData.user_type === 'community_member' && reqUserData.team_unique_id) {
+                // Join existing team
+                const team = await TeamQueries.findByTeamUniqueId(reqUserData.team_unique_id);
+                if (team) {
+                    await UserQueries.setTeamId(userId, team.id);
+                    teamUniqueId = team.team_unique_id;
+                }
+            }
 
             await OtpQueries.delete(record.id);
+            await UserQueries.verifyEmail(userId, true);
+
+            const { accessToken, refreshToken } = generateTokens({
+                userId: userId,
+                username: userData.username,
+                email: userData.email,
+                firstName: userData.first_name,
+                lastName: userData.last_name,
+                userType: userData.user_type,
+                uniqueUserId: uniqueUserId || undefined,
+                orgUniqueId: orgUniqueId || undefined,
+                teamUniqueId: teamUniqueId || undefined
+            });
+            const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+            await SessionQueries.create(userId, refreshToken, expiresAt);
 
             (req as any).user = userData;
-            await log(`User registered: ${userData.username}`, req, userId);
+            await log(`User registered: ${userData.username} (${uniqueUserId}) as ${userData.user_type || 'individual'}`, req, userId);
+
+            const expiresInSec = 365 * 24 * 60 * 60; // 1 year
+            res.cookie("accessToken", accessToken, {
+                maxAge: expiresInSec * 1000,
+                httpOnly: false, // Set to false since user mentioned "application storage like deviceId"
+                secure: process.env.NODE_ENV === "production",
+                sameSite: "lax",
+                path: "/",
+            });
 
             res.json({ 
                 success: true, 
-                message: "Email verified! Account created successfully.",
-                user_id: userId
+                message: "Email verified! Account created. Please enroll your biometric to complete setup.",
+                user_id: userId,
+                unique_user_id: uniqueUserId,
+                orgUniqueId: orgUniqueId || undefined,
+                teamUniqueId: teamUniqueId || undefined,
+                user_type: reqUserData.user_type || 'individual',
+                tokens: { accessToken, refreshToken, expiresIn: expiresInSec }
             });
         } catch (error) {
             console.error("❌ Final Verification Error:", error);
@@ -344,7 +500,11 @@ router.post(
                 username: user.username,
                 email: user.email,
                 firstName: user.first_name,
-                lastName: user.last_name
+                lastName: user.last_name,
+                userType: user.user_type,
+                uniqueUserId: user.unique_user_id || undefined,
+                orgUniqueId: user.org_unique_id || undefined,
+                teamUniqueId: user.team_unique_id || undefined
             });
             const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
@@ -354,6 +514,21 @@ router.post(
             // Attach user to req so the logger can extract firstName, LastName, etc.
             (req as any).user = user;
             await log(`User logged in: ${user.username}`, req, user.id);
+            const expiresInSec = 365 * 24 * 60 * 60; // 1 year
+            res.cookie("accessToken", accessToken, {
+                maxAge: expiresInSec * 1000,
+                httpOnly: false,
+                secure: process.env.NODE_ENV === "production",
+                sameSite: "lax",
+                path: "/",
+            });
+
+            // Ensure unique_user_id exists for legacy users
+            if (!user.unique_user_id) {
+                user.unique_user_id = generateUniqueUserId();
+                await UserQueries.setUniqueUserId(user.id, user.unique_user_id);
+            }
+
             res.json({
                 success: true,
                 message: "Login successful",
@@ -363,9 +538,14 @@ router.post(
                     email: user.email,
                     first_name: user.first_name,
                     last_name: user.last_name,
+                    user_type: user.user_type,
+                    unique_user_id: user.unique_user_id,
+                    biometric_enrolled: user.biometric_enrolled,
                     avatar_url: user.avatar_url,
+                    org_unique_id: user.org_unique_id,
+                    team_unique_id: user.team_unique_id
                 },
-                tokens: { accessToken, refreshToken, expiresIn: 900 },
+                tokens: { accessToken, refreshToken, expiresIn: expiresInSec },
             });
         } catch (error: any) {
             console.error("❌ Login error:", error);
@@ -418,15 +598,28 @@ router.post(
                 username: user.username,
                 email: user.email,
                 firstName: user.first_name,
-                lastName: user.last_name
+                lastName: user.last_name,
+                userType: user.user_type,
+                uniqueUserId: user.unique_user_id || undefined,
+                orgUniqueId: user.org_unique_id || undefined,
+                teamUniqueId: user.team_unique_id || undefined
             });
             const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
             await SessionQueries.rotateToken(refreshToken, newRefreshToken, newExpiresAt);
 
+            const expiresInSec = 365 * 24 * 60 * 60; // 1 year
+            res.cookie("accessToken", accessToken, {
+                maxAge: expiresInSec * 1000,
+                httpOnly: false,
+                secure: process.env.NODE_ENV === "production",
+                sameSite: "lax",
+                path: "/",
+            });
+
             res.json({
                 success: true,
-                tokens: { accessToken, refreshToken: newRefreshToken, expiresIn: 900 },
+                tokens: { accessToken, refreshToken: newRefreshToken, expiresIn: expiresInSec },
             });
         } catch (error) {
             console.error("❌ Token refresh error:", error);
@@ -455,6 +648,7 @@ router.post(
                 await SessionQueries.invalidateAll(userId);
                 console.log("✅ All sessions invalidated for user:", userId);
             }
+            res.clearCookie("accessToken", { path: "/" });
             log("User logged out", req, userId);
         } catch (error) {
             console.error("❌ Logout error:", error);
@@ -477,17 +671,136 @@ router.get(
                 res.status(401).json({ success: false, message: "Unauthorized" });
                 return;
             }
-            const user = await UserQueries.getProfile(userId);
+            const user = await UserQueries.findById(userId);
 
             if (!user) {
                 res.status(404).json({ success: false, message: "User not found" });
                 return;
             }
 
-            res.json({ success: true, user });
+            res.json({ 
+                success: true, 
+                user: {
+                    id: user.id,
+                    username: user.username,
+                    email: user.email,
+                    first_name: user.first_name,
+                    last_name: user.last_name,
+                    user_type: user.user_type,
+                    unique_user_id: user.unique_user_id,
+                    biometric_enrolled: user.biometric_enrolled,
+                    email_verified: user.email_verified,
+                    org_id: user.org_id,
+                    team_id: user.team_id
+                } 
+            });
         } catch (error) {
             console.error("❌ Get profile error:", error);
             res.status(500).json({ success: false, message: "Database error" });
+        }
+    }
+);
+
+// ============================================================
+// Bio-Seal Enrollment (Post-Registration)
+// ============================================================
+router.post(
+    "/users/enroll-bioseal",
+    authenticateToken,
+    async (req: Request, res: Response): Promise<void> => {
+        try {
+            const userId = (req as any).user.userId;
+            const { descriptorBase64, method = 'face' } = req.body;
+
+            if (!descriptorBase64) {
+                 res.status(400).json({ success: false, message: "Biometric descriptor data is required" });
+                 return;
+            }
+            if (method !== 'face') {
+                res.status(400).json({ success: false, message: "Currently only 'face' biometrics are supported for BioSeal enrollment" });
+                return;
+            }
+
+            const user = await UserQueries.findById(userId);
+            if (!user) {
+                 res.status(404).json({ success: false, message: "User not found" });
+                 return;
+            }
+            if (!user.unique_user_id) {
+                 res.status(400).json({ success: false, message: "User does not have a unique ID assigned yet" });
+                 return;
+            }
+
+            // Extract the descriptor array from Base64
+            const descriptorArray = await extractFaceDescriptorFromBase64(descriptorBase64);
+            
+            if (!descriptorArray) {
+                res.status(400).json({ success: false, message: "No face detected in the provided biometric scan. Please try again." });
+                return;
+            }
+
+            const rawDescriptor = Array.from(descriptorArray);
+
+            // Generate hashes
+            const templateHash = generateTemplateHash(rawDescriptor);
+            
+            // Create Bio-Seal
+            const sealedTemplate = createBioSeal(rawDescriptor, 'face', user.unique_user_id);
+
+            // Upsert in DB
+            await BioSealQueries.upsert(userId, 'face', sealedTemplate, templateHash);
+            
+            // Update user status
+            await UserQueries.updateBiometricStatus(userId, true);
+
+            console.log(`🔐 Bio-Seal enrolled successfully for user ${userId} (${user.unique_user_id})`);
+
+            res.json({ 
+                success: true, 
+                message: "Biometric enrollment successful! Your device is now secured with Bio-Seal." 
+            });
+        } catch (error: any) {
+            console.error("❌ Bio-Seal Enrollment Error:", error);
+            res.status(500).json({ success: false, message: error.message || "Failed to enroll biometric" });
+        }
+    }
+);
+
+// ============================================================
+// Lookup User by Unique ID (Used for assigning receiver to QR)
+// ============================================================
+router.post(
+    "/users/lookup",
+    authenticateToken,
+    async (req: Request, res: Response): Promise<void> => {
+        const { unique_user_id } = req.body;
+
+        if (!unique_user_id) {
+            res.status(400).json({ success: false, message: "Unique ID is required" });
+            return;
+        }
+
+        try {
+            const user = await UserQueries.lookupByUniqueId(unique_user_id);
+            
+            if (!user) {
+                res.status(404).json({ success: false, message: "User not found with that ID" });
+                return;
+            }
+
+            res.json({
+                success: true,
+                user: {
+                    id: user.id,
+                    first_name: user.first_name,
+                    last_name: user.last_name,
+                    user_type: user.user_type,
+                    biometric_enrolled: user.biometric_enrolled
+                }
+            });
+        } catch (error) {
+            console.error("❌ User lookup error:", error);
+            res.status(500).json({ success: false, message: "Failed to look up user" });
         }
     }
 );

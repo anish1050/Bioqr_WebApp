@@ -28,14 +28,15 @@ passport.use(
             clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
             callbackURL: `${process.env.SERVER_URL || 'http://localhost:3000'}/auth/google/callback`,
             proxy: true,
+            passReqToCallback: true,
         },
-        async (_accessToken, _refreshToken, profile: GoogleProfile, done) => {
+        async (req: any, _accessToken: string, _refreshToken: string, profile: GoogleProfile, done: any) => {
             try {
                 const existingUser = await UserQueries.findByOAuth("google", profile.id);
 
                 if (existingUser) {
                     existingUser.isNewUser = false;
-                    return (done as Function)(null, existingUser);
+                    return done(null, existingUser);
                 }
 
                 const email = profile.emails![0].value;
@@ -51,7 +52,14 @@ passport.use(
                         );
                     }
                     existingEmailUser.isNewUser = false;
-                    return (done as Function)(null, existingEmailUser);
+                    return done(null, existingEmailUser);
+                }
+
+                // CHECK IF REGISTRATION IS ALLOWED
+                const isRegistration = (req as any).session.isOAuthRegistration;
+                if (!isRegistration) {
+                    console.log(`❌ Login attempt for non-existent Google account: ${email}`);
+                    return done(null, false, { message: "ACCOUNT_NOT_FOUND" });
                 }
 
                 // Create new user
@@ -65,18 +73,13 @@ passport.use(
                     avatar_url: profile.photos?.[0]?.value || null,
                 });
 
-                const newUser: any = {
-                    id: newUserId,
-                    first_name: profile.name?.givenName || "",
-                    last_name: profile.name?.familyName || "",
-                    username: profile.emails![0].value.split("@")[0] + "_google_" + Date.now(),
-                    email: profile.emails![0].value,
-                    avatar_url: profile.photos?.[0]?.value || null,
-                    isNewUser: true,
-                };
-
-                console.log(`✅ New Google user created: ${newUser.email}`);
-                return done(null, newUser);
+                const newUser = await UserQueries.findById(newUserId);
+                if (newUser) {
+                    (newUser as any).isNewUser = true;
+                    console.log(`✅ New Google user created: ${newUser.email}`);
+                    return done(null, newUser);
+                }
+                return done(new Error("Failed to fetch newly created user"));
             } catch (error) {
                 return done(error as Error);
             }
@@ -92,8 +95,9 @@ passport.use(
             clientSecret: process.env.GITHUB_CLIENT_SECRET!,
             callbackURL: `${process.env.SERVER_URL || 'http://localhost:3000'}/auth/github/callback`,
             proxy: true,
+            passReqToCallback: true,
         },
-        async (_accessToken: string, _refreshToken: string, profile: any, done: any) => {
+        async (req: any, _accessToken: string, _refreshToken: string, profile: any, done: any) => {
             try {
                 const existingUser = await UserQueries.findByOAuth("github", profile.id);
 
@@ -118,6 +122,13 @@ passport.use(
                     return done(null, existingEmailUser);
                 }
 
+                // CHECK IF REGISTRATION IS ALLOWED
+                const isRegistration = (req as any).session.isOAuthRegistration;
+                if (!isRegistration) {
+                    console.log(`❌ Login attempt for non-existent GitHub account: ${profile.username}`);
+                    return done(null, false, { message: "ACCOUNT_NOT_FOUND" });
+                }
+
                 // Create new user
                 const newUserId = await UserQueries.createOAuth({
                     first_name: profile.displayName?.split(" ")[0] || profile.username || "",
@@ -129,18 +140,13 @@ passport.use(
                     avatar_url: profile.photos?.[0]?.value || null,
                 });
 
-                const newUser: any = {
-                    id: newUserId,
-                    first_name: profile.displayName?.split(" ")[0] || profile.username || "",
-                    last_name: profile.displayName?.split(" ").slice(1).join(" ") || "",
-                    username: profile.username + "_github_" + Date.now(),
-                    email: profile.emails?.[0]?.value || `${profile.username}@github.local`,
-                    avatar_url: profile.photos?.[0]?.value || null,
-                    isNewUser: true,
-                };
-
-                console.log(`✅ New GitHub user created: ${newUser.username}`);
-                return done(null, newUser);
+                const newUser = await UserQueries.findById(newUserId);
+                if (newUser) {
+                    (newUser as any).isNewUser = true;
+                    console.log(`✅ New GitHub user created: ${newUser.username}`);
+                    return done(null, newUser);
+                }
+                return done(new Error("Failed to fetch newly created user"));
             } catch (error) {
                 return done(error as Error);
             }

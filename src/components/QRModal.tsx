@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
   X,
-  Loader,
   XCircle,
   Download,
   QrCode,
@@ -14,8 +13,6 @@ import {
   Type,
   Info
 } from "lucide-react";
-import { useBiometricVerification } from "./BiometricVerifier";
-import FaceScanner from "./FaceScanner";
 import "./QRModal.css";
 
 const API_BASE = "";
@@ -44,21 +41,16 @@ const QRModal: React.FC<QRModalProps> = ({
   filename,
   accessToken,
 }) => {
-  const [step, setStep] = useState<"form" | "verifying" | "generated">("form");
+  const [step, setStep] = useState<"form" | "generated">("form");
   const [qrType, setQrType] = useState<"file" | "vcard" | "text">("file");
   const [duration, setDuration] = useState(1);
   const [isOneTime, setIsOneTime] = useState(false);
   const [isUnshareable, setIsUnshareable] = useState(false);
-  const [requireAuth, setRequireAuth] = useState(false);
   const [qrImage, setQrImage] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [faceEnrolled, setFaceEnrolled] = useState(false);
-  const [passkeyEnrolled, setPasskeyEnrolled] = useState(false);
-  const [selectedMethod, setSelectedMethod] = useState<"face" | "passkey">("face");
-  const [isStatusLoading, setIsStatusLoading] = useState(true);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
   const [isCrossHighlighted, setIsCrossHighlighted] = useState(false);
@@ -106,8 +98,7 @@ const QRModal: React.FC<QRModalProps> = ({
   const [styleBg, setStyleBg] = useState("#FFFFFF");
   const [vcard, setVcard] = useState({ firstName: "", lastName: "", tel: "", email: "", org: "" });
   const [textContent, setTextContent] = useState("");
-
-  const { verify, reset: resetBiometric } = useBiometricVerification();
+  const [receiverUniqueId, setReceiverUniqueId] = useState("");
 
   useEffect(() => {
     if (!isOpen) {
@@ -116,76 +107,17 @@ const QRModal: React.FC<QRModalProps> = ({
       setToken(null);
       setError(null);
       setCopied(false);
-      setFaceEnrolled(false);
-      setPasskeyEnrolled(false);
-      setIsStatusLoading(true);
-      resetBiometric();
-    } else {
-      const checkStatus = async () => {
-        setIsStatusLoading(true);
-        try {
-          const [faceRes, webRes] = await Promise.all([
-            fetch(`${API_BASE}/bioqr/auth/face/status`, { headers: { "Authorization": `Bearer ${accessToken}` } }),
-            fetch(`${API_BASE}/bioqr/auth/webauthn/credentials`, { headers: { "Authorization": `Bearer ${accessToken}` } })
-          ]);
-          const faceData = await faceRes.json();
-          const webData = await webRes.json();
-
-          const face = !!faceData.enrolled;
-          const pass = !!(webData.credentials && webData.credentials.length > 0);
-
-          setFaceEnrolled(face);
-          setPasskeyEnrolled(pass);
-          
-          if (face) {
-            setSelectedMethod("face");
-          } else if (pass) {
-            setSelectedMethod("passkey");
-          }
-        } catch (err) { 
-          console.error("Error checking biometric status:", err); 
-        } finally {
-          setIsStatusLoading(false);
-        }
-      };
-      checkStatus();
+      setReceiverUniqueId("");
     }
-  }, [isOpen, resetBiometric, accessToken]);
+  }, [isOpen]);
 
   const handleGenerateQR = async () => {
-    if (isStatusLoading) return; // Prevent race conditions
-    setError(null);
-
-    if (!faceEnrolled && !passkeyEnrolled) {
-      setError("No biometric credentials enrolled. Please visit Security settings.");
-      return;
-    }
-
-    if (selectedMethod === "passkey") {
-      setStep("verifying");
-      try {
-        await verify();
-        await completeQRGeneration();
-      } catch (err: any) {
-        setError(err.message || "An error occurred");
-        setStep("form");
-      }
-    } else {
-      setStep("verifying");
-    }
-  };
-
-  const handleFaceCapture = async (base64Image: string) => {
     setError(null);
     try {
-      const response = await fetch(`${API_BASE}/bioqr/auth/face/verify`, {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ base64Image }),
-      });
-      if (!response.ok) throw new Error("Face verification failed.");
       await completeQRGeneration();
-    } catch (err: any) { setError(err.message || "Face recognition failed"); throw err; }
+    } catch (err: any) {
+      setError(err.message || "An error occurred");
+    }
   };
 
   const completeQRGeneration = async () => {
@@ -194,7 +126,6 @@ const QRModal: React.FC<QRModalProps> = ({
       duration,
       is_one_time: isOneTime,
       is_unshareable: isUnshareable,
-      require_auth: requireAuth,
       style_color: styleColor,
       style_bg: styleBg,
     };
@@ -207,6 +138,10 @@ const QRModal: React.FC<QRModalProps> = ({
       payload.latitude = lat;
       payload.longitude = lng;
       payload.radius = radius;
+    }
+
+    if (receiverUniqueId) {
+      payload.receiver_unique_id = receiverUniqueId;
     }
 
     const response = await fetch(`${API_BASE}/bioqr/generate-qr`, {
@@ -343,14 +278,24 @@ const QRModal: React.FC<QRModalProps> = ({
                         <span className="tooltip-text">Enables Spotlight mode (hides most of the screen) and adds a dynamic watermark of the viewer's IP/Location.</span>
                     </div>
                 </div>
+              </div>
 
-                <div className="checkbox-item-container">
-                    <label className="checkbox-label"><input type="checkbox" checked={requireAuth} onChange={(e) => setRequireAuth(e.target.checked)} /> 🧬 Biometric Lock on Scan</label>
-                    <div className="info-tooltip-container">
-                        <Info size={14} className="info-icon" />
-                        <span className="tooltip-text">The person scanning must verify their face against YOUR profile before the file is revealed.</span>
-                    </div>
+              <div className="form-group" style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(56, 189, 248, 0.05)', borderRadius: '12px', border: '1px solid rgba(56, 189, 248, 0.1)' }}>
+                <div className="label-with-info">
+                  <label style={{ color: '#38bdf8' }}>🧬 Receiver Biometric Lock (BioSeal)</label>
+                  <div className="info-tooltip-container">
+                    <Info size={14} className="info-icon" style={{ color: '#38bdf8' }} />
+                    <span className="tooltip-text">Enter the Receiver's BioQR ID (e.g., BQ-XXXXXXXX) to encrypt the payload with their biometric lock. Only they can unlock it.</span>
+                  </div>
                 </div>
+                <input 
+                  type="text" 
+                  value={receiverUniqueId} 
+                  onChange={(e) => setReceiverUniqueId(e.target.value.trim().toUpperCase())}
+                  placeholder="e.g. BQ-ABC12345"
+                  className="qr-textarea"
+                  style={{ height: 'auto', padding: '10px' }}
+                />
               </div>
 
               <button className="settings-toggle" onClick={() => setAdvancedOpen(!advancedOpen)}>
@@ -380,50 +325,15 @@ const QRModal: React.FC<QRModalProps> = ({
                 </div>
               )}
 
-              {faceEnrolled && passkeyEnrolled && (
-                <div className="form-group biometric-selector">
-                  <label>Verification Method</label>
-                  <div className="method-tabs">
-                    <button 
-                      className={`method-tab ${selectedMethod === 'face' ? 'active' : ''}`}
-                      onClick={() => setSelectedMethod('face')}
-                    >
-                      Webcam Face ID
-                    </button>
-                    <button 
-                      className={`method-tab ${selectedMethod === 'passkey' ? 'active' : ''}`}
-                      onClick={() => setSelectedMethod('passkey')}
-                    >
-                      Native Passkey
-                    </button>
-                  </div>
-                </div>
-              )}
-
               {error && <div className="error-message"><XCircle size={18} /><span>{error}</span></div>}
               <button 
                 className="generate-btn" 
                 onClick={handleGenerateQR}
-                disabled={isStatusLoading}
               >
-                {isStatusLoading ? <Loader className="spinner" size={18} /> : <QrCode size={18} />}
-                {isStatusLoading ? "Syncing Security..." : "Authorize & Generate"}
+                <QrCode size={18} />
+                Generate Secure QR
               </button>
             </>
-          )}
-
-          {step === "verifying" && (
-            <div className="verifying-state">
-              {selectedMethod === "face" ? (
-                <FaceScanner onCapture={handleFaceCapture} statusText="Identity verification required" />
-              ) : (
-                <div className="verifying-loading">
-                  <Loader className="spinner large" size={48} />
-                  <p>Check your device for biometric prompt...</p>
-                </div>
-              )}
-              <button className="cancel-btn" onClick={() => setStep("form")}>Cancel</button>
-            </div>
           )}
 
           {step === "generated" && qrImage && (

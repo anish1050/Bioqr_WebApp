@@ -25,6 +25,8 @@ import filesRoutes from "./routes/files.routes.js";
 import qrRoutes from "./routes/qr.routes.js";
 import webauthnRoutes from "./routes/webauthn.routes.js";
 import faceRoutes from "./routes/face.routes.js";
+import orgRoutes from "./routes/org.routes.js";
+import teamRoutes from "./routes/team.routes.js";
 
 dotenv.config();
 
@@ -174,6 +176,8 @@ app.use("/bioqr/files", filesRoutes);
 app.use("/auth", oauthRoutes);         
 
 // General prefixes
+app.use("/bioqr/orgs", orgRoutes);
+app.use("/bioqr/teams", teamRoutes);
 app.use("/bioqr", authRoutes);        
 app.use("/bioqr", qrRoutes);           
 app.use("", qrRoutes);                 

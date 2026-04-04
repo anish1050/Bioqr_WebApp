@@ -22,6 +22,10 @@ export interface UserJwtPayload {
     email?: string;
     firstName?: string;
     lastName?: string;
+    userType?: string;
+    uniqueUserId?: string;
+    orgUniqueId?: string;
+    teamUniqueId?: string;
 }
 
 /**
@@ -33,12 +37,16 @@ export function generateTokens(user: UserJwtPayload): TokenPair {
         username: user.username,
         email: user.email,
         firstName: user.firstName,
-        lastName: user.lastName
+        lastName: user.lastName,
+        userType: user.userType,
+        uniqueUserId: user.uniqueUserId,
+        orgUniqueId: user.orgUniqueId,
+        teamUniqueId: user.teamUniqueId
     };
     
-    const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: "15m" });
+    const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: "365d" });
     const refreshToken = jwt.sign({ userId: user.userId }, JWT_REFRESH_SECRET, {
-        expiresIn: "7d",
+        expiresIn: "400d",
     });
     return { accessToken, refreshToken };
 }
