@@ -21,21 +21,66 @@ const Contact: React.FC = () => {
     newsletter: false,
   });
 
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  
+  // YOUR actual Google Apps Script Web App URL
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbzflKRHWiGgMtFcvgMUJM5PZ8qjn3ohq_qs-i1Nq3v-zh2iwEUZCLQntyIvM71JNrrc/exec';
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const target = e.target as HTMLInputElement;
-    const value = target.type === 'checkbox' ? target.checked : target.value;
+    const { name, value, type } = e.target;
+    const finalValue = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
     
-    setFormData({
-      ...formData,
-      [target.name]: value
-    });
+    setFormData(prev => ({
+      ...prev,
+      [name]: finalValue
+    }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Normal form submission handled by action URL, or you can implement fetch call here
-    const form = e.target as HTMLFormElement;
-    form.submit();
+    
+    if (!GAS_URL || GAS_URL.includes('YOUR_GOOGLE_APPS_SCRIPT')) {
+      console.warn('GAS URL not configured. Please deploy your Google Apps Script and update the URL in Contact.tsx.');
+      setSubmitStatus('error');
+      return;
+    }
+
+    setSubmitStatus('submitting');
+    
+    try {
+      await fetch(GAS_URL, {
+        method: 'POST',
+        mode: 'no-cors', // Google Apps Script requires no-cors for simple POST
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      // Since we use no-cors, we won't get a proper JSON response back in browser-land easily, 
+      // but we can assume success if no error is thrown. 
+      // For GAS specifically, a successful execution returns opaque response.
+      setSubmitStatus('success');
+      setFormData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        company: "",
+        subject: "",
+        priority: "low",
+        message: "",
+        newsletter: false,
+      });
+
+      // Reset status after 5 seconds
+      setTimeout(() => setSubmitStatus('idle'), 5000);
+      
+    } catch (error) {
+      console.error('Submission error:', error);
+      setSubmitStatus('error');
+      setTimeout(() => setSubmitStatus('idle'), 5000);
+    }
   };
 
   return (
@@ -49,10 +94,10 @@ const Contact: React.FC = () => {
               <Headset className="badge-icon" />
               <span>24/7 Support</span>
             </div>
-            <h1 className="hero-title" style={{ textAlign: 'left', margin: 0 }}>GET IN TOUCH</h1>
+            <h1 className="hero-title" style={{ margin: 0 }}>GET IN TOUCH</h1>
           </div>
           <div className="contact-hero-right">
-            <p className="hero-subtitle" style={{ textAlign: 'left', margin: 0 }}>
+            <p className="hero-subtitle" style={{ margin: 0 }}>
               Have questions about BioQR? Need technical support
               or want to discuss enterprise solutions? We're here to
               help you secure your future.
@@ -124,7 +169,35 @@ const Contact: React.FC = () => {
                   <p>Fill out the form below and we'll get back to you within 24 hours.</p>
                 </div>
                 
-                <form className="contact-form" id="contactForm" action="https://formspree.io/f/mpwpkpne" method="post" onSubmit={handleSubmit}>
+                
+                <form className="contact-form" id="contactForm" onSubmit={handleSubmit}>
+                  {submitStatus === 'success' && (
+                    <div className="status-message success-message" style={{ 
+                      padding: '1rem', 
+                      background: 'rgba(16, 185, 129, 0.1)', 
+                      border: '1px solid #10b981', 
+                      borderRadius: '0.5rem',
+                      color: '#10b981',
+                      marginBottom: '1.5rem',
+                      textAlign: 'center'
+                    }}>
+                      Message sent successfully! We'll get back to you soon.
+                    </div>
+                  )}
+
+                  {submitStatus === 'error' && (
+                    <div className="status-message error-message" style={{ 
+                      padding: '1rem', 
+                      background: 'rgba(239, 68, 68, 0.1)', 
+                      border: '1px solid #ef4444', 
+                      borderRadius: '0.5rem',
+                      color: '#ef4444',
+                      marginBottom: '1.5rem',
+                      textAlign: 'center'
+                    }}>
+                      Something went wrong. Please check your configuration or try again later.
+                    </div>
+                  )}
                   <div className="form-row grid grid-cols-2">
                     <div className="form-group">
                       <label htmlFor="firstName" className="form-label">First Name</label>
@@ -214,9 +287,14 @@ const Contact: React.FC = () => {
                     </label>
                   </div>
                   
-                  <button type="submit" className="btn btn-primary btn-lg" id="submitBtn">
+                  <button 
+                    type="submit" 
+                    className={`btn btn-primary btn-lg ${submitStatus === 'submitting' ? 'loading' : ''}`} 
+                    id="submitBtn"
+                    disabled={submitStatus === 'submitting'}
+                  >
                     <Send size={18} style={{ marginRight: '0.5rem' }} />
-                    Send Message
+                    {submitStatus === 'submitting' ? 'Sending...' : 'Send Message'}
                   </button>
                 </form>
               </div>
