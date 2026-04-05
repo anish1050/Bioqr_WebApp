@@ -45,6 +45,7 @@ db.connect((err) => {
           unique_user_id VARCHAR(12) UNIQUE DEFAULT NULL,
           org_id INT DEFAULT NULL,
           team_id INT DEFAULT NULL,
+          community_id INT DEFAULT NULL,
           biometric_enrolled BOOLEAN DEFAULT FALSE,
           email_verified BOOLEAN DEFAULT FALSE,
           mobile_number_verified BOOLEAN DEFAULT FALSE,
@@ -55,7 +56,8 @@ db.connect((err) => {
           INDEX idx_unique_user_id (unique_user_id),
           INDEX idx_user_type (user_type),
           INDEX idx_org_id (org_id),
-          INDEX idx_team_id (team_id)
+          INDEX idx_team_id (team_id),
+          INDEX idx_community_id (community_id)
         )
       `
         },
@@ -223,6 +225,22 @@ db.connect((err) => {
       `
         },
         {
+            name: "communities",
+            query: `
+        CREATE TABLE IF NOT EXISTS communities (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          community_unique_id VARCHAR(12) UNIQUE NOT NULL,
+          name VARCHAR(200) NOT NULL,
+          description TEXT,
+          created_by INT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
+          INDEX idx_community_unique_id (community_unique_id)
+        )
+      `
+        },
+        {
             name: "qr_permissions",
             query: `
         CREATE TABLE IF NOT EXISTS qr_permissions (
@@ -246,12 +264,29 @@ db.connect((err) => {
     // Create tables sequentially to respect foreign key dependencies
     let completedTables = 0;
 
+    // Helper to run ALTER TABLE commands for existing databases
+    const runMigrations = () => {
+        const migrations = [
+            'ALTER TABLE users ADD COLUMN IF NOT EXISTS community_id INT DEFAULT NULL AFTER team_id',
+            'ALTER TABLE users ADD INDEX IF NOT EXISTS idx_community_id (community_id)'
+        ];
+
+        migrations.forEach(m => {
+            db.query(m, (err) => {
+                if (err) console.log(`ℹ️ Migration note: ${err.message}`);
+            });
+        });
+    };
+
     tables.forEach((table) => {
         db.query(table.query, (err: Error | null) => {
             if (err) {
                 console.error(`❌ Error creating ${table.name} table:`, err.message);
             } else {
                 console.log(`✅ ${table.name} table ready`);
+                if (table.name === 'users') {
+                    runMigrations();
+                }
             }
 
             completedTables++;

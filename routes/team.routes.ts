@@ -1,13 +1,13 @@
 /**
- * Community Routes — BioSeal Architecture
+ * Team Routes — BioSeal Architecture
  * 
- * Handles standalone community CRUD and member management
+ * Handles organization-specific team CRUD and member management
  */
 
 import { Router, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import { UserQueries, TeamQueries } from '../helpers/queries.js';
-import { generateTeamId, generateCommunityId } from '../helpers/uniqueId.js';
+import { UserQueries, TeamQueries, OrganisationQueries } from '../helpers/queries.js';
+import { generateTeamId } from '../helpers/uniqueId.js';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'bioqr-secret';
@@ -28,98 +28,91 @@ function authenticateToken(req: Request, res: Response, next: Function) {
     }
 }
 
-// ─── Create Standalone Team ───────────────────────────────────
+// ─── Create Org Team ──────────────────────────────────────────
 
 router.post('/create', authenticateToken, async (req: Request, res: Response) => {
     try {
         const userId = (req as any).userId;
-        const { name, description } = req.body;
+        const { name, description, orgId } = req.body;
 
-        if (!name || name.trim().length < 2) {
-            return res.status(400).json({ success: false, message: 'Community name is required (min 2 characters)' });
+        if (!name || !orgId) {
+            return res.status(400).json({ success: false, message: 'Team name and Organization ID are required' });
         }
 
         const user = await UserQueries.findById(userId);
-        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-
-        if (user.team_id) {
-            return res.status(400).json({ success: false, message: 'You already belong to a community' });
+        if (!user || (user.org_id !== orgId && user.user_type !== 'org_super_admin')) {
+            return res.status(403).json({ success: false, message: 'Unauthorized to create teams in this organization' });
         }
 
-        const communityUniqueId = generateCommunityId();
-        const communityId = await TeamQueries.create({
-            team_unique_id: communityUniqueId,
+        const teamUniqueId = generateTeamId();
+        const teamId = await TeamQueries.create({
+            team_unique_id: teamUniqueId,
             name: name.trim(),
             description: description?.trim() || undefined,
-            org_id: null,
+            org_id: orgId,
             created_by: userId
         });
 
-        // Update user as Community Lead
-        await UserQueries.setTeamId(userId, communityId);
-        await UserQueries.setUserType(userId, 'community_lead');
-
-        console.log(`💚 Community created: ${name} (${communityUniqueId}) by user ${userId}`);
+        console.log(`🔷 Team created: ${name} (${teamUniqueId}) in Org ${orgId}`);
 
         res.json({
             success: true,
-            message: 'Community created successfully',
-            community: {
-                id: communityId,
-                community_unique_id: communityUniqueId,
+            message: 'Team created successfully',
+            team: {
+                id: teamId,
+                team_unique_id: teamUniqueId,
                 name: name.trim()
             }
         });
     } catch (err: any) {
-        console.error('Error creating community:', err);
-        res.status(500).json({ success: false, message: 'Failed to create community' });
+        console.error('Error creating team:', err);
+        res.status(500).json({ success: false, message: 'Failed to create team' });
     }
 });
 
 // ─── Get Team Info ────────────────────────────────────────────
 
-router.get('/:communityUniqueId', authenticateToken, async (req: Request, res: Response) => {
+router.get('/:teamUniqueId', authenticateToken, async (req: Request, res: Response) => {
     try {
-        const community = await TeamQueries.findByTeamUniqueId(req.params.communityUniqueId as string);
-        if (!community) return res.status(404).json({ success: false, message: 'Community not found' });
+        const team = await TeamQueries.findByTeamUniqueId(req.params.teamUniqueId as string);
+        if (!team) return res.status(404).json({ success: false, message: 'Team not found' });
 
-        const memberCount = await TeamQueries.getMemberCount(community.id);
+        const memberCount = await TeamQueries.getMemberCount(team.id);
 
         res.json({
             success: true,
-            community: {
-                ...community,
+            team: {
+                ...team,
                 member_count: memberCount
             }
         });
     } catch (err: any) {
-        console.error('Error fetching community:', err);
-        res.status(500).json({ success: false, message: 'Failed to fetch community' });
+        console.error('Error fetching team:', err);
+        res.status(500).json({ success: false, message: 'Failed to fetch team' });
     }
 });
 
 // ─── Get Team Members ─────────────────────────────────────────
 
-router.get('/:communityUniqueId/members', authenticateToken, async (req: Request, res: Response) => {
+router.get('/:teamUniqueId/members', authenticateToken, async (req: Request, res: Response) => {
     try {
         const userId = (req as any).userId;
-        const community = await TeamQueries.findByTeamUniqueId(req.params.communityUniqueId as string);
-        if (!community) return res.status(404).json({ success: false, message: 'Community not found' });
+        const team = await TeamQueries.findByTeamUniqueId(req.params.teamUniqueId as string);
+        if (!team) return res.status(404).json({ success: false, message: 'Team not found' });
 
         const user = await UserQueries.findById(userId);
-        // Security: user should belong to the community OR be an org super admin
-        if (!user || (user.team_id !== community.id && user.user_type !== 'org_super_admin')) {
-            return res.status(403).json({ success: false, message: 'You do not belong to this community' });
+        if (!user || (user.org_id !== team.org_id && user.user_type !== 'org_super_admin')) {
+            return res.status(403).json({ success: false, message: 'Unauthorized access to team members' });
         }
 
-        const members = await TeamQueries.getMembers(community.id);
+        const members = await TeamQueries.getMembers(team.id);
 
         res.json({
             success: true,
-            community: {
-                id: community.id,
-                community_unique_id: community.team_unique_id,
-                name: community.name
+            team: {
+                id: team.id,
+                team_unique_id: team.team_unique_id,
+                name: team.name
             },
             members: members.map(m => ({
                 id: m.id,
@@ -133,75 +126,27 @@ router.get('/:communityUniqueId/members', authenticateToken, async (req: Request
             }))
         });
     } catch (err: any) {
-        console.error('Error fetching community members:', err);
+        console.error('Error fetching team members:', err);
         res.status(500).json({ success: false, message: 'Failed to fetch members' });
     }
 });
 
-// ─── Get QR Targets for Community ──────────────────────────────
-// Returns all other members of the community as potential QR targets
-router.get('/:communityUniqueId/qr-targets', authenticateToken, async (req: Request, res: Response) => {
+// ─── Assign Member to Team ────────────────────────────────────
+
+router.post('/:teamUniqueId/assign', authenticateToken, async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).userId;
-        const community = await TeamQueries.findByTeamUniqueId(req.params.communityUniqueId as string);
-        if (!community) return res.status(404).json({ success: false, message: 'Community not found' });
+        const { userId: targetUserId } = req.body;
+        const team = await TeamQueries.findByTeamUniqueId(req.params.teamUniqueId as string);
+        
+        if (!team) return res.status(404).json({ success: false, message: 'Team not found' });
 
-        const user = await UserQueries.findById(userId);
-        if (!user || user.team_id !== community.id) {
-            return res.status(403).json({ success: false, message: 'You do not belong to this community' });
-        }
+        // Logic check: perform by Admin or Super Admin
+        await UserQueries.setTeamId(targetUserId, team.id);
 
-        const members = await TeamQueries.getMembers(community.id);
-
-        res.json({
-            success: true,
-            targets: members
-                .filter(m => m.id !== userId)
-                .map(m => ({
-                    id: m.id,
-                    name: `${m.first_name} ${m.last_name}`.trim() || m.username,
-                    unique_id: m.unique_user_id
-                }))
-        });
+        res.json({ success: true, message: 'User assigned to team' });
     } catch (err: any) {
-        console.error('Error fetching community QR targets:', err);
-        res.status(500).json({ success: false, message: 'Failed to fetch targets' });
-    }
-});
-
-// ─── Remove Member From Team ──────────────────────────────────
-
-router.delete('/:communityUniqueId/members/:memberId', authenticateToken, async (req: Request, res: Response) => {
-    try {
-        const userId = (req as any).userId;
-        const memberId = parseInt(req.params.memberId as string, 10);
-
-        const community = await TeamQueries.findByTeamUniqueId(req.params.communityUniqueId as string);
-        if (!community) return res.status(404).json({ success: false, message: 'Community not found' });
-
-        // Only community lead can remove members
-        const user = await UserQueries.findById(userId);
-        if (!user || user.team_id !== community.id || !['community_lead', 'team_lead'].includes(user.user_type)) {
-            return res.status(403).json({ success: false, message: 'Only Community Lead can remove members' });
-        }
-
-        if (memberId === userId) {
-            return res.status(400).json({ success: false, message: 'Cannot remove yourself from the community' });
-        }
-
-        const member = await UserQueries.findById(memberId);
-        if (!member || member.team_id !== community.id) {
-            return res.status(404).json({ success: false, message: 'Member not found in this community' });
-        }
-
-        // Remove association
-        await UserQueries.setTeamId(memberId, 0 as any);
-        await UserQueries.setUserType(memberId, 'individual');
-
-        res.json({ success: true, message: 'Member removed from community' });
-    } catch (err: any) {
-        console.error('Error removing member:', err);
-        res.status(500).json({ success: false, message: 'Failed to remove member' });
+        console.error('Error assigning member:', err);
+        res.status(500).json({ success: false, message: 'Failed to assign member' });
     }
 });
 

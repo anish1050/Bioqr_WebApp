@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FileBox, HardDrive, UploadCloud, Search, CheckCircle,
-  XCircle, Eye, Trash2, Loader, Info, QrCode, Shield, AlertCircle, Scan, Send, Copy
+  XCircle, Eye, Trash2, Loader, Info, QrCode, Shield, AlertCircle, Send, Copy
 } from 'lucide-react';
 import '../styles/dashboard.css';
 import SEO from '../components/SEO';
@@ -78,6 +78,7 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     if (location.hash === '#files') {
       setActiveTab('files');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
     } else {
       setActiveTab('dashboard');
     }
@@ -94,10 +95,10 @@ const Dashboard: React.FC = () => {
         // Smart Routing: Redirect to specialized dashboard if needed
         const userType = parsedUser.user_type || 'individual';
         if (['org_super_admin', 'org_admin', 'org_member'].includes(userType)) {
-          navigate('/dashboard/org');
+          navigate({ pathname: '/dashboard/org', hash: location.hash });
           return;
-        } else if (['team_lead', 'team_member'].includes(userType)) {
-          navigate('/dashboard/team');
+        } else if (['team_lead', 'team_member', 'community_lead', 'community_member'].includes(userType)) {
+          navigate({ pathname: '/dashboard/team', hash: location.hash });
           return;
         }
 
@@ -337,12 +338,14 @@ const Dashboard: React.FC = () => {
       <SEO title="User Dashboard" description="Manage your secure files, storage, and account settings." />
       <section className={`content-section ${activeTab === 'dashboard' ? 'active' : ''}`} style={{ display: activeTab === 'dashboard' ? 'block' : 'none' }}>
         <div className="welcome-banner">
-          <div className="welcome-content">
-            <h2>Welcome back, <span>{getUserDisplayName()}</span>!</h2>
-            <p>Manage your secure files.</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem' }}>
+            <div>
+              <h2>Welcome, {getUserDisplayName()}</h2>
+              <p>Manage your secure files and BioSeal-protected QR codes from one central hub.</p>
+            </div>
             
             {user?.unique_user_id && (
-              <div className="user-id-wrapper">
+              <div className="user-id-wrapper" style={{ margin: 0 }}>
                 <div className="user-id-badge">
                   <span className="user-id-label">Your ID:</span>
                   <span>{user.unique_user_id}</span>
@@ -360,7 +363,7 @@ const Dashboard: React.FC = () => {
         </div>
 
         <div className="quick-stats">
-          <div className="stat-card">
+          <div className="stat-card no-click">
             <div className="stat-icon"><FileBox size={24} /></div>
             <div className="stat-content">
               <h3>{files.length} <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>/ 5</span></h3>
@@ -377,7 +380,7 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="stat-card">
+          <div className="stat-card no-click">
             <div className="stat-icon"><HardDrive size={24} /></div>
             <div className="stat-content">
               <h3>{formatFileSize(totalSize)}</h3>
@@ -402,25 +405,15 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="dashboard-cta" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+        <div className="dashboard-cta" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
             <button 
               className="cta-btn primary-blue" 
               onClick={scrollToFiles}
               style={{ display: 'flex', flexDirection: 'column', padding: '2rem', gap: '1rem', height: '100%' }}
             >
               <Send size={48} color="white" />
-              <span style={{ color: 'white', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 'bold' }}>Send a File</span>
-              <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', textTransform: 'none', letterSpacing: 'normal', margin: 0 }}>Upload a file and create a BioQR locked to the receiver's ID.</p>
-            </button>
-
-            <button 
-              className="cta-btn primary-indigo" 
-              onClick={() => alert("To receive a file, use your mobile device or web scanner to scan a sender's BioQR code. You will need to verify your biometrics to unlock it.")}
-              style={{ display: 'flex', flexDirection: 'column', padding: '2rem', gap: '1rem', background: 'linear-gradient(135deg, #6366f1, #4f46e5)', border: 'none', borderRadius: '12px', cursor: 'pointer', height: '100%' }}
-            >
-              <Scan size={48} color="white" />
-              <span style={{ color: 'white', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 'bold' }}>Receive a File</span>
-              <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', textTransform: 'none', letterSpacing: 'normal', margin: 0 }}>Scan & unlock a sender's BioQR.</p>
+              <span style={{ color: 'white', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 'bold' }}>Manage Files</span>
+              <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', textTransform: 'none', letterSpacing: 'normal', margin: 0 }}>Upload secure files and generate identity-locked BioQR codes for receivers.</p>
             </button>
         </div>
 

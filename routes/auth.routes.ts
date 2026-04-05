@@ -6,12 +6,12 @@ import { generateTokens, JWT_REFRESH_SECRET } from "../helpers/tokens.js";
 import { authenticateToken } from "../helpers/auth.js";
 import { authLimiter } from "../helpers/rateLimiters.js";
 import { optionalDoubleCsrfProtection } from "../helpers/csrf.js";
-import { UserQueries, SessionQueries, OtpQueries, BioSealQueries, OrganisationQueries, TeamQueries, execute } from "../helpers/queries.js";
+import { UserQueries, SessionQueries, OtpQueries, BioSealQueries, OrganisationQueries, TeamQueries, CommunityQueries, execute } from "../helpers/queries.js";
 import type { UserType } from "../helpers/queries.js";
 import { log } from "../helpers/logger.js";
 import { sendVerificationOtp } from "../helpers/email.js";
 import { createBioSeal, generateTemplateHash } from "../helpers/bioseal.js";
-import { generateUniqueUserId, generateOrgId, generateTeamId, generateCommunityId, isValidOrgId, isValidTeamId, isValidCommunityId } from "../helpers/uniqueId.js";
+import { generateUniqueUserId, generateOrgId, generateTeamId, generateCommunityId } from "../helpers/uniqueId.js";
 import { extractFaceDescriptorFromBase64 } from "../helpers/faceRecognition.js";
 import crypto from "crypto";
 
@@ -26,7 +26,8 @@ router.post(
     authLimiter,
     async (req: Request, res: Response): Promise<void> => {
         const { first_name, last_name, username, email, mobile_number, password,
-                user_type, org_unique_id, team_unique_id, org_name, org_description, org_industry, team_name, team_description } = req.body;
+                user_type, org_unique_id, team_unique_id, community_unique_id,
+                org_name, org_description, org_industry, team_name, team_description, community_name, community_description } = req.body;
 
         if (!first_name || !last_name || !username || !email || !password) {
             res.status(400).json({ success: false, message: "Missing required fields" });
@@ -42,7 +43,7 @@ router.post(
             res.status(400).json({ success: false, message: 'Organisation ID is required to join an organisation' });
             return;
         }
-        if (finalUserType === 'community_member' && !team_unique_id) {
+        if (finalUserType === 'community_member' && !community_unique_id && !team_unique_id) {
             res.status(400).json({ success: false, message: 'Community ID is required to join a community' });
             return;
         }
@@ -50,7 +51,7 @@ router.post(
             res.status(400).json({ success: false, message: 'Organisation name is required (min 2 characters)' });
             return;
         }
-        if (finalUserType === 'community_lead' && (!team_name || team_name.trim().length < 2)) {
+        if (finalUserType === 'community_lead' && (!community_name && !team_name)) {
             res.status(400).json({ success: false, message: 'Community name is required (min 2 characters)' });
             return;
         }
@@ -63,10 +64,13 @@ router.post(
                 return;
             }
         }
-        if (team_unique_id) {
-            const team = await TeamQueries.findByTeamUniqueId(team_unique_id);
-            if (!team) {
-                res.status(400).json({ success: false, message: 'Team not found. Please check the Team ID.' });
+        if (team_unique_id || community_unique_id) {
+            const targetId = community_unique_id || team_unique_id;
+            // Check both tables for community (legacy vs new)
+            const community = await CommunityQueries.findByCommunityUniqueId(targetId);
+            const team = await TeamQueries.findByTeamUniqueId(targetId);
+            if (!community && !team) {
+                res.status(400).json({ success: false, message: 'Community not found. Please check the ID.' });
                 return;
             }
         }
@@ -117,12 +121,12 @@ router.post(
                     mobile_number: mobile_number || null,
                     user_type: finalUserType,
                     org_unique_id: org_unique_id || null,
-                    team_unique_id: team_unique_id || null,
+                    team_unique_id: team_unique_id || community_unique_id || null,
                     org_name: org_name || null,
                     org_description: org_description || null,
                     org_industry: org_industry || null,
-                    team_name: team_name || null,
-                    team_description: team_description || null
+                    team_name: community_name || team_name || null,
+                    team_description: community_description || team_description || null
                 }
             });
 
@@ -247,22 +251,29 @@ router.post(
 
             if (userData.user_type === 'community_lead' && reqUserData.team_name) {
                 // Create standalone community
-                const newTeamUniqueId = generateCommunityId();
-                const teamId = await TeamQueries.create({
-                    team_unique_id: newTeamUniqueId,
-                    name: reqUserData.team_name,
+                const newCommunityUniqueId = generateCommunityId();
+                const communityId = await CommunityQueries.create({
+                    community_unique_id: newCommunityUniqueId,
+                    name: reqUserData.team_name, // Mapping community_name logic from above
                     description: reqUserData.team_description || undefined,
                     created_by: userId
                 });
-                await UserQueries.setTeamId(userId, teamId);
-                teamUniqueId = newTeamUniqueId;
-                console.log(`💚 Community created: ${reqUserData.team_name} (${newTeamUniqueId})`);
+                await UserQueries.setCommunityId(userId, communityId);
+                teamUniqueId = newCommunityUniqueId;
+                console.log(`💚 Community created: ${reqUserData.team_name} (${newCommunityUniqueId})`);
             } else if (userData.user_type === 'community_member' && reqUserData.team_unique_id) {
-                // Join existing team
-                const team = await TeamQueries.findByTeamUniqueId(reqUserData.team_unique_id);
-                if (team) {
-                    await UserQueries.setTeamId(userId, team.id);
-                    teamUniqueId = team.team_unique_id;
+                // Join existing community
+                const community = await CommunityQueries.findByCommunityUniqueId(reqUserData.team_unique_id);
+                if (community) {
+                    await UserQueries.setCommunityId(userId, community.id);
+                    teamUniqueId = community.community_unique_id;
+                } else {
+                    // Fallback to legacy team table check (rare but possible during transition)
+                    const team = await TeamQueries.findByTeamUniqueId(reqUserData.team_unique_id);
+                    if (team) {
+                        await UserQueries.setCommunityId(userId, team.id);
+                        teamUniqueId = team.team_unique_id;
+                    }
                 }
             }
 
@@ -506,7 +517,7 @@ router.post(
                 userType: user.user_type,
                 uniqueUserId: user.unique_user_id || undefined,
                 orgUniqueId: user.org_unique_id || undefined,
-                teamUniqueId: user.team_unique_id || undefined
+                teamUniqueId: user.community_unique_id || user.team_unique_id || undefined
             });
             const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
@@ -547,7 +558,9 @@ router.post(
                     org_id: user.org_id,
                     org_unique_id: user.org_unique_id,
                     team_id: user.team_id,
-                    team_unique_id: user.team_unique_id
+                    team_unique_id: user.team_unique_id,
+                    community_id: user.community_id,
+                    community_unique_id: user.community_unique_id
                 },
                 tokens: { accessToken, refreshToken, expiresIn: expiresInSec },
             });
@@ -558,6 +571,50 @@ router.post(
                 message: "Internal server error during login",
                 error: process.env.NODE_ENV !== "production" ? error.message : undefined 
             });
+        }
+    }
+);
+
+// ============================================================
+// Get current user profile (sync state)
+// ============================================================
+router.get(
+    "/users/me",
+    authLimiter,
+    authenticateToken,
+    async (req: Request, res: Response): Promise<void> => {
+        try {
+            const userId = (req as any).user.userId;
+            const user = await UserQueries.findById(userId);
+
+            if (!user) {
+                res.status(404).json({ success: false, message: "User not found" });
+                return;
+            }
+
+            res.json({
+                success: true,
+                user: {
+                    id: user.id,
+                    username: user.username,
+                    email: user.email,
+                    first_name: user.first_name,
+                    last_name: user.last_name,
+                    user_type: user.user_type,
+                    unique_user_id: user.unique_user_id,
+                    biometric_enrolled: user.biometric_enrolled,
+                    avatar_url: user.avatar_url,
+                    org_id: user.org_id,
+                    org_unique_id: user.org_unique_id,
+                    team_id: user.team_id,
+                    team_unique_id: user.team_unique_id,
+                    community_id: user.community_id,
+                    community_unique_id: user.community_unique_id
+                }
+            });
+        } catch (error: any) {
+            console.error("❌ Profile fetch error:", error);
+            res.status(500).json({ success: false, message: "Server error" });
         }
     }
 );
@@ -606,7 +663,7 @@ router.post(
                 userType: user.user_type,
                 uniqueUserId: user.unique_user_id || undefined,
                 orgUniqueId: user.org_unique_id || undefined,
-                teamUniqueId: user.team_unique_id || undefined
+                teamUniqueId: user.community_unique_id || user.team_unique_id || undefined
             });
             const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
@@ -695,6 +752,7 @@ router.get(
                     biometric_enrolled: user.biometric_enrolled,
                     email_verified: user.email_verified,
                     org_id: user.org_id,
+                    community_id: user.community_id,
                     team_id: user.team_id
                 } 
             });

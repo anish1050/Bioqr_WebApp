@@ -104,7 +104,14 @@ const DashboardNavbar: React.FC<DashboardNavbarProps> = ({ onMobileMenuToggle })
         <nav className={`main-nav ${location.pathname === '/' ? "nav-open" : ""}`}>
           <ul>
             <li>
-              <Link to="/dashboard" className={location.pathname === '/dashboard' ? 'active' : ''}>
+              <Link 
+                to={user?.user_type && ['org_super_admin', 'org_admin', 'org_member'].includes(user.user_type) 
+                  ? "/dashboard/org#files" 
+                  : (user?.user_type && ['team_lead', 'team_member', 'community_lead', 'community_member'].includes(user.user_type)
+                    ? "/dashboard/team#files"
+                    : "/dashboard#files")} 
+                className={(location.pathname.includes('/dashboard')) && location.hash === '#files' ? 'active' : ''}
+              >
                 Files
               </Link>
             </li>
@@ -115,10 +122,10 @@ const DashboardNavbar: React.FC<DashboardNavbarProps> = ({ onMobileMenuToggle })
                 </Link>
               </li>
             )}
-            {user && ['team_lead', 'team_member'].includes(user.user_type || '') && (
+            {user && ['team_lead', 'team_member', 'community_lead', 'community_member'].includes(user.user_type || '') && (
               <li>
                 <Link to="/dashboard/team" className={location.pathname.startsWith('/dashboard/team') ? 'active' : ''}>
-                  Team Space
+                Community
                 </Link>
               </li>
             )}

@@ -22,6 +22,8 @@ export interface User {
     org_unique_id?: string | null;
     team_id: number | null;
     team_unique_id?: string | null;
+    community_id: number | null;
+    community_unique_id?: string | null;
     biometric_enrolled: boolean;
     mobile_number?: string;
     email_verified?: boolean;
@@ -121,10 +123,11 @@ export const UserQueries = {
     /** Find a user by their ID */
     findById: (id: number): Promise<User | undefined> =>
         query<User>(
-            `SELECT u.*, o.org_unique_id, t.team_unique_id 
+            `SELECT u.*, o.org_unique_id, t.team_unique_id, c.community_unique_id 
              FROM users u 
              LEFT JOIN organisations o ON u.org_id = o.id 
              LEFT JOIN teams t ON u.team_id = t.id 
+             LEFT JOIN communities c ON u.community_id = c.id 
              WHERE u.id = ?`, 
             [id]
         ).then((r) => r[0]),
@@ -132,10 +135,11 @@ export const UserQueries = {
     /** Find a user by email */
     findByEmail: (email: string): Promise<User | undefined> =>
         query<User>(
-            `SELECT u.*, o.org_unique_id, t.team_unique_id 
+            `SELECT u.*, o.org_unique_id, t.team_unique_id, c.community_unique_id 
              FROM users u 
              LEFT JOIN organisations o ON u.org_id = o.id 
              LEFT JOIN teams t ON u.team_id = t.id 
+             LEFT JOIN communities c ON u.community_id = c.id 
              WHERE u.email = ?`, 
             [email]
         ).then((r) => r[0]),
@@ -143,10 +147,11 @@ export const UserQueries = {
     /** Find a user by username */
     findByUsername: (username: string): Promise<User | undefined> =>
         query<User>(
-            `SELECT u.*, o.org_unique_id, t.team_unique_id 
+            `SELECT u.*, o.org_unique_id, t.team_unique_id, c.community_unique_id 
              FROM users u 
              LEFT JOIN organisations o ON u.org_id = o.id 
              LEFT JOIN teams t ON u.team_id = t.id 
+             LEFT JOIN communities c ON u.community_id = c.id 
              WHERE u.username = ?`, 
             [username]
         ).then((r) => r[0]),
@@ -156,10 +161,11 @@ export const UserQueries = {
     findByEmailOrUsername: (loginField: string): Promise<User | undefined> => {
         const isEmail = loginField.includes("@");
         const sql = `
-            SELECT u.*, o.org_unique_id, t.team_unique_id 
+            SELECT u.*, o.org_unique_id, t.team_unique_id, c.community_unique_id 
             FROM users u 
             LEFT JOIN organisations o ON u.org_id = o.id 
             LEFT JOIN teams t ON u.team_id = t.id 
+            LEFT JOIN communities c ON u.community_id = c.id 
             WHERE u.${isEmail ? 'email' : 'username'} = ?
         `;
         return query<User>(sql, [loginField]).then((r) => r[0]);
@@ -175,10 +181,11 @@ export const UserQueries = {
     /** Find a user by OAuth provider + OAuth ID */
     findByOAuth: (provider: string, oauthId: string): Promise<User | undefined> =>
         query<User>(
-            `SELECT u.*, o.org_unique_id, t.team_unique_id 
+            `SELECT u.*, o.org_unique_id, t.team_unique_id, c.community_unique_id 
              FROM users u 
              LEFT JOIN organisations o ON u.org_id = o.id 
              LEFT JOIN teams t ON u.team_id = t.id 
+             LEFT JOIN communities c ON u.community_id = c.id 
              WHERE u.oauth_provider = ? AND u.oauth_id = ?`, 
             [provider, oauthId]
         ).then((r) => r[0]),
@@ -203,11 +210,12 @@ export const UserQueries = {
         unique_user_id?: string;
         org_id?: number | null;
         team_id?: number | null;
+        community_id?: number | null;
     }): Promise<number> => {
         const result = await execute(
             `INSERT INTO users (first_name, last_name, username, email, password, mobile_number, 
-             email_verified, mobile_number_verified, user_type, unique_user_id, org_id, team_id) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             email_verified, mobile_number_verified, user_type, unique_user_id, org_id, team_id, community_id) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 data.first_name,
                 data.last_name,
@@ -220,7 +228,8 @@ export const UserQueries = {
                 data.user_type || 'individual',
                 data.unique_user_id || null,
                 data.org_id || null,
-                data.team_id || null
+                data.team_id || null,
+                data.community_id || null
             ]
         );
         return result.insertId;
@@ -295,8 +304,12 @@ export const UserQueries = {
         execute("UPDATE users SET org_id = ? WHERE id = ?", [orgId, userId]),
 
     /** Set team_id for a user */
-    setTeamId: (userId: number, teamId: number): Promise<any> =>
+    setTeamId: (userId: number, teamId: number | null): Promise<any> =>
         execute("UPDATE users SET team_id = ? WHERE id = ?", [teamId, userId]),
+
+    /** Set community_id for a user */
+    setCommunityId: (userId: number, communityId: number | null): Promise<any> =>
+        execute("UPDATE users SET community_id = ? WHERE id = ?", [communityId, userId]),
 
     /** Verify email status */
     verifyEmail: (userId: number, verified: boolean = true): Promise<any> =>
@@ -812,17 +825,31 @@ export const OrganisationQueries = {
     findByOrgUniqueId: (orgUniqueId: string): Promise<Organisation | undefined> =>
         query<Organisation>('SELECT * FROM organisations WHERE org_unique_id = ?', [orgUniqueId]).then((r) => r[0]),
 
-    /** Get all members of an organisation */
-    getMembers: (orgId: number): Promise<User[]> =>
-        query<User>(
-            `SELECT id, first_name, last_name, username, email, user_type, unique_user_id, biometric_enrolled, team_id 
-             FROM users WHERE org_id = ? ORDER BY user_type, first_name`,
-            [orgId]
-        ),
+    /** Get all members of an organisation (with optional team names) */
+    getMembers: (orgId: number): Promise<any[]> =>
+        query(`
+            SELECT u.id, u.first_name, u.last_name, u.username, u.email, u.user_type, 
+                   u.unique_user_id, u.biometric_enrolled, u.team_id, t.name as team_name
+            FROM users u
+            LEFT JOIN teams t ON u.team_id = t.id
+            WHERE u.org_id = ?
+            ORDER BY u.user_type, u.first_name
+        `, [orgId]),
 
     /** Get all teams in an organisation */
     getTeams: (orgId: number): Promise<any[]> =>
         query('SELECT * FROM teams WHERE org_id = ? ORDER BY name', [orgId]),
+
+    /** Get all members including their team names */
+    getMembersWithTeams: (orgId: number): Promise<any[]> =>
+        query(`
+            SELECT u.id, u.first_name, u.last_name, u.username, u.email, u.user_type, 
+                   u.unique_user_id, u.biometric_enrolled, u.team_id, t.name as team_name
+            FROM users u
+            LEFT JOIN teams t ON u.team_id = t.id
+            WHERE u.org_id = ?
+            ORDER BY u.user_type, u.first_name
+        `, [orgId]),
 
     /** Get member count */
     getMemberCount: async (orgId: number): Promise<number> => {
@@ -891,6 +918,62 @@ export const TeamQueries = {
     /** Delete a team */
     delete: (id: number): Promise<any> =>
         execute('DELETE FROM teams WHERE id = ?', [id]),
+};
+
+// ============================================================
+// Community Queries
+// ============================================================
+
+export interface Community {
+    id: number;
+    community_unique_id: string;
+    name: string;
+    description: string | null;
+    created_by: number;
+    created_at: Date;
+    updated_at: Date;
+}
+
+export const CommunityQueries = {
+    /** Create a new community */
+    create: async (data: {
+        community_unique_id: string;
+        name: string;
+        description?: string;
+        created_by: number;
+    }): Promise<number> => {
+        const result = await execute(
+            'INSERT INTO communities (community_unique_id, name, description, created_by) VALUES (?, ?, ?, ?)',
+            [data.community_unique_id, data.name, data.description || null, data.created_by]
+        );
+        return result.insertId;
+    },
+
+    /** Find by internal ID */
+    findById: (id: number): Promise<Community | undefined> =>
+        query<Community>('SELECT * FROM communities WHERE id = ?', [id]).then((r) => r[0]),
+
+    /** Find by community unique ID (CM-XXXXXXXX) */
+    findByCommunityUniqueId: (communityUniqueId: string): Promise<Community | undefined> =>
+        query<Community>('SELECT * FROM communities WHERE community_unique_id = ?', [communityUniqueId]).then((r) => r[0]),
+
+    /** Get all members of a community */
+    getMembers: (communityId: number): Promise<User[]> =>
+        query<User>(
+            `SELECT id, first_name, last_name, username, email, user_type, unique_user_id, biometric_enrolled 
+             FROM users WHERE community_id = ? ORDER BY user_type, first_name`,
+            [communityId]
+        ),
+
+    /** Get member count */
+    getMemberCount: async (communityId: number): Promise<number> => {
+        const rows = await query<any>('SELECT COUNT(*) as count FROM users WHERE community_id = ?', [communityId]);
+        return rows[0]?.count || 0;
+    },
+
+    /** Delete a community */
+    delete: (id: number): Promise<any> =>
+        execute('DELETE FROM communities WHERE id = ?', [id]),
 };
 
 // ============================================================

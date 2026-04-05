@@ -150,6 +150,7 @@ router.get('/:orgUniqueId/teams', authenticateToken, async (req: Request, res: R
         // Enrich with member counts
         const enrichedTeams = await Promise.all(teams.map(async (team: any) => ({
             ...team,
+            team_name: team.name, // For compatibility with Android app
             member_count: await TeamQueries.getMemberCount(team.id)
         })));
 

@@ -2,6 +2,13 @@
   padding: 2rem;
   max-width: 1200px;
   margin: 0 auto;
+  width: 100%;
+  transition: max-width 0.3s ease-in-out, padding 0.3s ease-in-out;
+}
+
+.dashboard-wrapper.full-width {
+  max-width: 100%;
+  padding: 2rem 4rem;
 }
 
 .welcome-banner {

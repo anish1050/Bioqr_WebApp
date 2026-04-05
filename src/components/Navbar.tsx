@@ -24,13 +24,21 @@ const Navbar: React.FC = () => {
         <nav className={`main-nav ${isMenuOpen ? "nav-open" : ""}`}>
           <ul>
             <li>
-              <Link to="/#features" onClick={closeMenu}>Features</Link>
-            </li>
-            <li>
-              <Link to="/#security" onClick={closeMenu}>Security</Link>
-            </li>
-            <li>
-              <Link to="/#download" onClick={closeMenu}>Download</Link>
+              <Link 
+                to="/#download" 
+                onClick={(e) => {
+                  if (location.pathname === '/') {
+                    e.preventDefault();
+                    const element = document.getElementById('download');
+                    if (element) {
+                      element.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }
+                  closeMenu();
+                }}
+              >
+                Download
+              </Link>
             </li>
             <li>
               <Link to="/about" className={isActive("/about") ? "active" : ""} onClick={closeMenu}>About</Link>

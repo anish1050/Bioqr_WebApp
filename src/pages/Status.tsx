@@ -19,12 +19,14 @@ const Status: React.FC = () => {
     <div className="status-page">
       {/* Hero Section */}
       <section className="hero">
-        <div className="status-badge" id="overallStatus">
-          <CheckCircle className="badge-icon" />
-          <span>All Systems Operational</span>
+        <div className="hero-content">
+          <div className="status-badge" id="overallStatus">
+            <CheckCircle className="badge-icon" />
+            <span>All Systems Operational</span>
+          </div>
+          <h1 className="hero-title">SYSTEM STATUS</h1>
+          <p className="hero-subtitle">Real-time monitoring of BioQR services and infrastructure. Last updated: <span id="lastUpdated">{new Date().toLocaleTimeString()}</span></p>
         </div>
-        <h1 className="hero-title">System Status</h1>
-        <p className="hero-subtitle">Real-time monitoring of BioQR services and infrastructure. Last updated: <span id="lastUpdated">{new Date().toLocaleTimeString()}</span></p>
       </section>
 
       {/* Current Status */}

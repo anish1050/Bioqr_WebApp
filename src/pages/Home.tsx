@@ -90,13 +90,13 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Section 01: Biometric Mastery */}
+      {/* Section 01: Biometric Technology */}
       <section id="features" className="features-section">
         <div className="container">
           <div className="section-header-asymmetric">
             <div className="section-marker">01</div>
             <div className="section-title-container">
-              <h2 className="section-headline">BIOMETRIC MASTERY</h2>
+              <h2 className="section-headline">BIOMETRIC TECH</h2>
               <p>ADVANCED FINGERPRINT AND FACIAL RECOGNITION FOR INDUSTRY-LEADING SECURITY.</p>
             </div>
           </div>
@@ -144,7 +144,7 @@ const Home: React.FC = () => {
             </div>
 
             <div className="app-download-content">
-              <div className="section-marker">03</div>
+              <div className="section-marker">02</div>
               <h2 className="section-headline download-headline">
                 DOWNLOAD OUR<br />
                 ANDROID APP

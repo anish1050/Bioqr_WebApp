@@ -27,6 +27,7 @@ import webauthnRoutes from "./routes/webauthn.routes.js";
 import faceRoutes from "./routes/face.routes.js";
 import orgRoutes from "./routes/org.routes.js";
 import teamRoutes from "./routes/team.routes.js";
+import communityRoutes from "./routes/community.routes.js";
 
 dotenv.config();
 
@@ -177,7 +178,8 @@ app.use("/auth", oauthRoutes);
 
 // General prefixes
 app.use("/bioqr/orgs", orgRoutes);
-app.use("/bioqr/communities", teamRoutes);
+app.use("/bioqr/communities", communityRoutes);
+app.use("/bioqr/teams", teamRoutes);
 app.use("/bioqr", authRoutes);        
 app.use("/bioqr", qrRoutes);           
 app.use("", qrRoutes);                 
