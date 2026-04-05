@@ -333,7 +333,14 @@ const QRModal: React.FC<QRModalProps> = ({
 
               <div className="checkbox-group">
                 <div className="checkbox-item-container">
-                    <label className="checkbox-label"><input type="checkbox" checked={isOneTime} onChange={(e) => setIsOneTime(e.target.checked)} /> One-time use</label>
+                    <label className={`checkbox-label ${isOneTime ? 'checked' : ''}`}>
+                        <input 
+                            type="checkbox" 
+                            checked={isOneTime} 
+                            onChange={(e) => setIsOneTime(e.target.checked)} 
+                        /> 
+                        One-time use
+                    </label>
                     <div className="info-tooltip-container">
                         <Info size={14} className="info-icon" />
                         <span className="tooltip-text">QR code becomes invalid immediately after the first successful scan.</span>
@@ -341,7 +348,14 @@ const QRModal: React.FC<QRModalProps> = ({
                 </div>
 
                 <div className="checkbox-item-container">
-                    <label className="checkbox-label"><input type="checkbox" checked={isUnshareable} onChange={(e) => setIsUnshareable(e.target.checked)} /> Unshareable (Protected View)</label>
+                    <label className={`checkbox-label ${isUnshareable ? 'checked' : ''}`}>
+                        <input 
+                            type="checkbox" 
+                            checked={isUnshareable} 
+                            onChange={(e) => setIsUnshareable(e.target.checked)} 
+                        /> 
+                        Unshareable (Protected View)
+                    </label>
                     <div className="info-tooltip-container">
                         <Info size={14} className="info-icon" />
                         <span className="tooltip-text">Enables Spotlight mode (hides most of the screen) and adds a dynamic watermark of the viewer's IP/Location.</span>

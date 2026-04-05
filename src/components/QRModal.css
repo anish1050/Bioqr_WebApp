@@ -237,38 +237,93 @@
 }
 
 .checkbox-group {
-  margin: 1rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 1.5rem 0;
+}
+
+.checkbox-item-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
 }
 
 .checkbox-label {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  align-items: center;
+  gap: 12px;
   cursor: pointer;
-  padding: 0.5rem 0;
-  color: #d0d0d0;
-  font-size: 0.9rem;
+  padding: 0.85rem 1.15rem;
+  color: #fff;
+  font-size: 0.95rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex: 1;
+  position: relative;
+  user-select: none;
+}
+
+.checkbox-label:hover {
+  background: rgba(124, 58, 237, 0.1);
+  border-color: rgba(124, 58, 237, 0.4);
+  transform: translateY(-1px);
+}
+
+.checkbox-label.checked {
+  background: rgba(124, 58, 237, 0.15);
+  border-color: #7c3aed;
+  box-shadow: 0 0 15px rgba(124, 58, 237, 0.2);
 }
 
 .checkbox-label input[type="checkbox"] {
-  margin-top: 3px;
-  accent-color: #7c3aed;
-  width: 16px;
-  height: 16px;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 2px solid #475569;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  margin: 0;
+  display: grid;
+  place-content: center;
+}
+
+.checkbox-label input[type="checkbox"]:checked {
+  background: #7c3aed;
+  border-color: #7c3aed;
+  box-shadow: 0 0 12px rgba(124, 58, 237, 0.5);
+}
+
+.checkbox-label input[type="checkbox"]::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  transform: scale(0);
+  transition: 120ms transform ease-in-out;
+  box-shadow: inset 1em 1em white;
+  background-color: CanvasText;
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  transform-origin: center;
+}
+
+.checkbox-label input[type="checkbox"]:checked::before {
+  transform: scale(1);
 }
 
 .checkbox-label input:disabled {
   cursor: not-allowed;
+  opacity: 0.5;
 }
 
 /* Tooltip Styles */
-.checkbox-item-container {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-}
-
 .info-tooltip-container {
     position: relative;
     display: flex;

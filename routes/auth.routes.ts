@@ -781,8 +781,8 @@ router.post(
                  res.status(400).json({ success: false, message: "Biometric descriptor data is required" });
                  return;
             }
-            if (method !== 'face') {
-                res.status(400).json({ success: false, message: "Currently only 'face' biometrics are supported for BioSeal enrollment" });
+            if (method !== 'face' && method !== 'fingerprint') {
+                res.status(400).json({ success: false, message: "Only 'face' and 'fingerprint' biometrics are currently supported" });
                 return;
             }
 
@@ -796,24 +796,35 @@ router.post(
                  return;
             }
 
-            // Extract the descriptor array from Base64
-            const descriptorArray = await extractFaceDescriptorFromBase64(descriptorBase64);
-            
-            if (!descriptorArray) {
-                res.status(400).json({ success: false, message: "No face detected in the provided biometric scan. Please try again." });
-                return;
+            let rawDescriptor: number[];
+            let templateHash: string;
+
+            if (method === 'face') {
+                // Extract the descriptor array from Base64
+                const descriptorArray = await extractFaceDescriptorFromBase64(descriptorBase64);
+                
+                if (!descriptorArray) {
+                    res.status(400).json({ success: false, message: "No face detected in the provided biometric scan. Please try again." });
+                    return;
+                }
+
+                rawDescriptor = Array.from(descriptorArray);
+                templateHash = generateTemplateHash(rawDescriptor);
+            } else {
+                // For fingerprint, the descriptorBase64 IS the template hash or specific token
+                // We convert it to a dummy number array to satisfy the bioseal engine's current interface
+                // or we use it directly as the hash.
+                // Since bioseal.ts uses number[], we'll store the bytes as numbers.
+                const buffer = Buffer.from(descriptorBase64, 'base64');
+                rawDescriptor = Array.from(new Uint8Array(buffer));
+                templateHash = crypto.createHash('sha256').update(buffer).digest('hex');
             }
-
-            const rawDescriptor = Array.from(descriptorArray);
-
-            // Generate hashes
-            const templateHash = generateTemplateHash(rawDescriptor);
             
             // Create Bio-Seal
-            const sealedTemplate = createBioSeal(rawDescriptor, 'face', user.unique_user_id);
+            const sealedTemplate = createBioSeal(rawDescriptor, method as any, user.unique_user_id);
 
             // Upsert in DB
-            await BioSealQueries.upsert(userId, 'face', sealedTemplate, templateHash);
+            await BioSealQueries.upsert(userId, method as any, sealedTemplate, templateHash);
             
             // Update user status
             await UserQueries.updateBiometricStatus(userId, true);
