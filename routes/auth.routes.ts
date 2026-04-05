@@ -9,7 +9,7 @@ import { optionalDoubleCsrfProtection } from "../helpers/csrf.js";
 import { UserQueries, SessionQueries, OtpQueries, BioSealQueries, OrganisationQueries, TeamQueries, CommunityQueries, execute } from "../helpers/queries.js";
 import type { UserType } from "../helpers/queries.js";
 import { log } from "../helpers/logger.js";
-import { sendVerificationOtp } from "../helpers/email.js";
+import { sendVerificationOtp, sendPasswordResetOtp } from "../helpers/email.js";
 import { createBioSeal, generateTemplateHash } from "../helpers/bioseal.js";
 import { generateUniqueUserId, generateOrgId, generateTeamId, generateCommunityId } from "../helpers/uniqueId.js";
 import { extractFaceDescriptorFromBase64 } from "../helpers/faceRecognition.js";
@@ -374,10 +374,13 @@ router.post(
             });
 
             // Send reset email
-            const { sendPasswordResetOtp } = await import("../helpers/email.js");
-            await sendPasswordResetOtp(email, otpCode, user.first_name);
+            const emailSent = await sendPasswordResetOtp(email, otpCode, user.first_name);
 
-            res.json({ success: true, message: "If an account with that email exists, a reset code has been sent." });
+            if (emailSent) {
+                res.json({ success: true, message: "If an account with that email exists, a reset code has been sent." });
+            } else {
+                res.status(500).json({ success: false, message: "Failed to send reset email. Please try again later." });
+            }
         } catch (error) {
             console.error("❌ Forgot Password Error:", error);
             res.status(500).json({ success: false, message: "Server error. Please try again." });
