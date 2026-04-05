@@ -27,15 +27,19 @@ const transporter = nodemailer.createTransport({
         user: process.env.GMAIL_USER,
         pass: process.env.GMAIL_PASS,
     },
-    // Force direct connection and relax TLS for cloud compatibility
+    // 🛡️ CRITICAL FIX: Explicitly force IPv4 at the socket level
+    // This bypasses the ENETUNREACH error seen on Render's IPv6 routes.
+    lookup: (hostname: string, options: any, callback: (err: NodeJS.ErrnoException | null, address: string, family: number) => void) => {
+        dns.lookup(hostname, { family: 4 }, callback);
+    },
     tls: {
         rejectUnauthorized: false,
         servername: "smtp.gmail.com"
     },
-    connectionTimeout: 20000, // 20 second timeout for cloud handshakes
+    connectionTimeout: 20000, 
     greetingTimeout: 20000,
     socketTimeout: 20000,
-});
+} as any);
 
 // Verify connection on startup to log issues early
 transporter.verify((error) => {
