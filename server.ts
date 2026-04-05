@@ -37,7 +37,8 @@ initFaceRecognitionModels();
 const app = express();
 
 // Trust proxy for Vercel/Render to correctly get IP and geolocation headers
-app.set("trust proxy", true);
+// Using '1' specifically for Render/Vercel (single proxy) to satisfy express-rate-limit
+app.set("trust proxy", 1);
 
 
 // 💡 TOP-LEVEL DEBUG LOGGER

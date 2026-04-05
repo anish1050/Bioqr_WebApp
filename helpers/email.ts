@@ -20,25 +20,30 @@ if (dns.setDefaultResultOrder) {
  */
 const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
-    port: 587,
-    secure: false, // Use STARTTLS
+    port: 465,
+    secure: true, // Use Implicit SSL
     pool: true,   // Use a pool of connections
     auth: {
         user: process.env.GMAIL_USER,
         pass: process.env.GMAIL_PASS,
     },
-    connectionTimeout: 10000, 
-    greetingTimeout: 10000,
-    socketTimeout: 10000,
+    // Force direct connection and relax TLS for cloud compatibility
+    tls: {
+        rejectUnauthorized: false,
+        servername: "smtp.gmail.com"
+    },
+    connectionTimeout: 20000, // 20 second timeout for cloud handshakes
+    greetingTimeout: 20000,
+    socketTimeout: 20000,
 });
 
 // Verify connection on startup to log issues early
 transporter.verify((error) => {
     if (error) {
         console.error("❌ SMTP Transporter Verification Failed:", error.message);
-        console.error("   Make sure GMAIL_USER and GMAIL_PASS (App Password) are correct in Render!");
+        console.error("   Note: Render IPs are sometimes blocked by Gmail. Check for 'App Password' validity.");
     } else {
-        console.log("✅ SMTP Transporter is ready (IPv4).");
+        console.log("✅ SMTP Transporter is ready (IPv4/SSL).");
     }
 });
 
