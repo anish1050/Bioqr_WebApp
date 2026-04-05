@@ -325,10 +325,13 @@ router.get(
                                 video.srcObject = stream;
                                 
                                 video.onloadedmetadata = () => {
-                                    status.innerText = "Hold steady... scanning";
-                                    beam.style.display = 'block';
-                                    progress.style.display = 'block';
-                                    autoCapture();
+                                    status.innerText = "Adjust your face...";
+                                    setTimeout(() => {
+                                        status.innerText = "Hold steady... scanning";
+                                        beam.style.display = 'block';
+                                        progress.style.display = 'block';
+                                        autoCapture();
+                                    }, 2000); // 2-second buffer for the user
                                 };
                             } catch (err) {
                                 status.innerText = "❌ ACCESS ERROR: Camera Required";
@@ -350,7 +353,7 @@ router.get(
                         }
 
                         async function performVerify() {
-                            status.innerText = "🔐 Verifying Identity Map...";
+                            status.innerText = "Verifying Identity Map...";
                             
                             // 📸 Freeze Camera and Hide Beam for visual confirmation
                             beam.style.display = 'none';
@@ -375,10 +378,13 @@ router.get(
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ base64Image })
                                 });
-                                const data = await verifyRes.json();
                                 if (data.success) {
                                     status.style.color = '#10b981';
                                     status.innerText = "✅ IDENTITY MATCHED";
+                                    // Stop tracks only on success
+                                    if (video.srcObject) {
+                                        video.srcObject.getTracks().forEach(track => track.stop());
+                                    }
                                     setTimeout(() => {
                                         const params = new URLSearchParams(window.location.search);
                                         params.set('verified', 'true');
@@ -388,11 +394,17 @@ router.get(
                                     throw new Error(data.message);
                                 }
                             } catch (err) {
-                                status.innerText = "❌ ACCESS DENIED: Identity Mismatch";
+                                if (err.message.includes("No face detected")) {
+                                    alert("No face detected! Please ensure your face is clearly visible within the circle.");
+                                }
+                                status.innerText = "❌ ACCESS DENIED: " + err.message;
                                 setTimeout(() => {
                                     fill.style.width = '0%';
+                                    status.innerText = "Retrying Scan...";
+                                    video.play(); // Restart the freeze frame
+                                    beam.style.display = 'block';
                                     autoCapture();
-                                }, 2000);
+                                }, 3000);
                             }
                         }
                     </script>
