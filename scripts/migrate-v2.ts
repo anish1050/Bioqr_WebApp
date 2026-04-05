@@ -36,17 +36,8 @@ const alterQueries = [
     "ALTER TABLE qr_tokens ADD COLUMN IF NOT EXISTS style_color VARCHAR(7) DEFAULT '#000000'",
     "ALTER TABLE qr_tokens ADD COLUMN IF NOT EXISTS style_bg VARCHAR(7) DEFAULT '#FFFFFF'",
     
-    // 5. Scan Analytics tracking (New table)
-    `CREATE TABLE IF NOT EXISTS qr_scans (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        qr_token_id INT NOT NULL,
-        ip_address VARCHAR(45),
-        user_agent TEXT,
-        country VARCHAR(100),
-        city VARCHAR(100),
-        scanned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (qr_token_id) REFERENCES qr_tokens(id) ON DELETE CASCADE
-    )`
+    // 5. Scan Analytics tracking (MIGRATED TO MONGODB)
+    "DROP TABLE IF EXISTS qr_scans"
 ];
 
 async function migrate() {

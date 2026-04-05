@@ -57,7 +57,30 @@ const TeamDashboard: React.FC = () => {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [qrTargets, setQrTargets] = useState<QrTarget[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [userInfo, setUserInfo] = useState<any>(null);
+  const [userInfo, setUserInfo] = useState<any>(() => {
+    // 1. Check URL for OAuth data first (handle initial redirect)
+    const searchParams = new URLSearchParams(window.location.search);
+    const urlUser = searchParams.get('user');
+    if (urlUser) {
+      try {
+        return JSON.parse(decodeURIComponent(urlUser));
+      } catch (e) {
+        console.error('Failed to parse user from URL', e);
+      }
+    }
+
+    // 2. Fallback to localStorage
+    const userStr = localStorage.getItem('userInfo');
+    if (userStr) {
+      try {
+        return JSON.parse(userStr);
+      } catch (e) {
+        console.error('Failed to parse user info', e);
+      }
+    }
+    return null;
+  });
+
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' | 'warning' | '' }>({ message: '', type: '' });
 
   // File management state
@@ -76,29 +99,31 @@ const TeamDashboard: React.FC = () => {
   const [qrFilename, setQrFilename] = useState<string | null>(null);
 
   useEffect(() => {
-    const userStr = localStorage.getItem('userInfo');
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      setUserInfo(user);
-      
+    if (userInfo) {
       // Refresh user info from server to ensure IDs are up-to-date
       refreshUserInfo();
 
       // Org members also use this dashboard for team functionality
-      const isTeamUser = ['team_lead', 'team_member', 'org_member', 'community_lead', 'community_member'].includes(user.user_type);
+      const isTeamUser = ['team_lead', 'team_member', 'org_member', 'community_lead', 'community_member'].includes(userInfo.user_type);
       if (!isTeamUser) {
         navigate('/dashboard');
       } else {
-        if (user.team_id || user.group_id) {
-          fetchMembers(user.team_id || user.group_id);
+        if (userInfo.team_id || userInfo.group_id) {
+          fetchMembers(userInfo.team_id || userInfo.group_id);
         }
-        if (user.org_unique_id) {
-          fetchQrTargets(user.org_unique_id);
+        if (userInfo.org_unique_id) {
+          fetchQrTargets(userInfo.org_unique_id);
         }
-        fetchFiles(user.id);
+        fetchFiles(userInfo.id);
       }
     } else {
-      navigate('/login');
+      // Final check of localStorage
+      const userStr = localStorage.getItem('userInfo');
+      if (userStr) {
+        setUserInfo(JSON.parse(userStr));
+      } else {
+        navigate('/login');
+      }
     }
   }, [navigate]);
 

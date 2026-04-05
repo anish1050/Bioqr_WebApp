@@ -422,10 +422,13 @@
 
 /* Quick Stats Cards */
 .quick-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: var(--space-6);
-  margin-bottom: var(--space-8);
+  display: flex !important;
+  justify-content: center !important;
+  align-items: stretch;
+  gap: 2rem;
+  margin: 0 auto var(--space-8) auto;
+  max-width: 1000px;
+  flex-wrap: wrap;
 }
 
 .dashboard-cta {
@@ -520,6 +523,8 @@
 
 
 .stat-card {
+  flex: 0 1 280px;
+  min-width: 250px;
   background: var(--bg-card);
   backdrop-filter: blur(10px);
   border: 1px solid var(--gray-200);
@@ -1574,7 +1579,7 @@
 /* Responsive Design */
 @media (max-width: 1024px) {
   .quick-stats {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
   }
 }
 
@@ -1631,7 +1636,8 @@
   }
 
   .quick-stats {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: center;
   }
 
   .search-box input {
@@ -1800,6 +1806,70 @@
 
 .copy-id-btn:active {
     transform: scale(0.9);
+}
+
+.copy-id-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* 
+   ============================================================
+   USER ID BADGE & COPY BUTTON (GLASSMORPHISM)
+   ============================================================
+*/
+
+.ids-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1.5rem; /* Increased for breathing room below welcome text */
+    justify-content: center;
+}
+
+.user-id-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.user-id-badge {
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.4rem 0.85rem;
+    border-radius: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.user-id-label {
+    opacity: 0.7;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.copy-id-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    padding: 0.4rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.copy-id-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
 }
 
 .copy-id-btn svg {

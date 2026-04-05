@@ -24,6 +24,8 @@ interface QRModalProps {
   filename?: string | null;
   accessToken: string;
   lockedReceiverId?: string | null; // e.g. "BQ-XXXXXX"
+  orgUniqueId?: string | null;
+  communityUniqueId?: string | null;
   orgId?: number | null;
   teamId?: number | null;
 }
@@ -44,6 +46,8 @@ const QRModal: React.FC<QRModalProps> = ({
   filename,
   accessToken,
   lockedReceiverId,
+  orgUniqueId,
+  communityUniqueId,
   orgId,
   teamId,
 }) => {
@@ -62,6 +66,9 @@ const QRModal: React.FC<QRModalProps> = ({
   const [isCrossHighlighted, setIsCrossHighlighted] = useState(false);
   const [showCustomDuration, setShowCustomDuration] = useState(false);
   const [showReceiverError, setShowReceiverError] = useState(false);
+  const [targets, setTargets] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showTargetDropdown, setShowTargetDropdown] = useState(false);
 
   // Windows-style Alert Sound (Synthesized)
   const playWindowsAlert = () => {
@@ -115,8 +122,43 @@ const QRModal: React.FC<QRModalProps> = ({
       setError(null);
       setCopied(false);
       setReceiverUniqueId(lockedReceiverId || "");
+      setSearchTerm("");
+      setShowTargetDropdown(false);
     }
   }, [isOpen, lockedReceiverId]);
+
+  // Fetch targets (members) if in Org/Community mode
+  useEffect(() => {
+    const fetchTargets = async () => {
+      if (!isOpen || (!orgUniqueId && !communityUniqueId)) return;
+      
+      try {
+        let url = "";
+        if (orgUniqueId) url = `${API_BASE}/bioqr/org/${orgUniqueId}/qr-targets`;
+        else if (communityUniqueId) url = `${API_BASE}/bioqr/community/${communityUniqueId}/qr-targets`;
+
+        const res = await fetch(url, {
+          headers: { "Authorization": `Bearer ${accessToken}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+          // Normalize targets: Ensure they have name and unique_id
+          const normalized = (data.targets || []).map((t: any) => ({
+            id: t.id,
+            name: t.name || `${t.first_name} ${t.last_name}`.trim() || t.username,
+            unique_id: t.unique_id || t.unique_user_id,
+            source: t.source || 'member'
+          }));
+          setTargets(normalized);
+        }
+      } catch (err) {
+        console.error("Failed to fetch targets:", err);
+      } finally {
+      }
+    };
+
+    fetchTargets();
+  }, [isOpen, orgUniqueId, communityUniqueId, accessToken]);
 
   const handleGenerateQR = async () => {
     setError(null);
@@ -307,7 +349,7 @@ const QRModal: React.FC<QRModalProps> = ({
                 </div>
               </div>
 
-              <div className={`form-group ${showReceiverError ? 'error-ring' : ''}`} style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(56, 189, 248, 0.05)', borderRadius: '12px', border: showReceiverError ? '1px solid var(--error)' : '1px solid rgba(56, 189, 248, 0.1)' }}>
+              <div className={`form-group ${showReceiverError ? 'error-ring' : ''}`} style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(56, 189, 248, 0.05)', borderRadius: '12px', border: showReceiverError ? '1px solid var(--error)' : '1px solid rgba(56, 189, 248, 0.1)', position: 'relative' }}>
                 <div className="label-with-info">
                   <label style={{ color: showReceiverError ? 'var(--error)' : '#38bdf8', fontWeight: 'bold' }}>
                     🧬 Receiver Biometric Lock <span style={{fontSize: '10px', verticalAlign: 'middle'}}>(MANDATORY)</span>
@@ -317,22 +359,81 @@ const QRModal: React.FC<QRModalProps> = ({
                     <span className="tooltip-text">Universal Security Rule: You MUST enter the Receiver's BioQR ID (e.g., BQ-XXXXXXXX) to encrypt the payload with their biometric lock.</span>
                   </div>
                 </div>
-                <input 
-                  type="text" 
-                  value={receiverUniqueId} 
-                  onChange={(e) => {
-                    setReceiverUniqueId(e.target.value.trim().toUpperCase());
-                    if (e.target.value.trim()) setShowReceiverError(false);
-                  }}
-                  placeholder="e.g. BQ-ABC12345"
-                  className={`qr-textarea ${showReceiverError ? 'input-error' : ''}`}
-                  style={{ 
-                    height: 'auto', 
-                    padding: '10px',
-                    borderColor: showReceiverError ? 'var(--error)' : ''
-                  }}
-                  disabled={!!lockedReceiverId}
-                />
+
+                <div className="receiver-input-wrapper" style={{ position: 'relative' }}>
+                  <input 
+                    type="text" 
+                    value={receiverUniqueId} 
+                    onChange={(e) => {
+                      setReceiverUniqueId(e.target.value.trim().toUpperCase());
+                      if (e.target.value.trim()) setShowReceiverError(false);
+                      setSearchTerm(e.target.value);
+                      setShowTargetDropdown(true);
+                    }}
+                    onFocus={() => setShowTargetDropdown(true)}
+                    placeholder="e.g. BQ-ABC12345"
+                    className={`qr-textarea ${showReceiverError ? 'input-error' : ''}`}
+                    style={{ 
+                      height: 'auto', 
+                      padding: '10px',
+                      borderColor: showReceiverError ? 'var(--error)' : '',
+                      marginBottom: 0
+                    }}
+                    disabled={!!lockedReceiverId}
+                  />
+                  
+                  {showTargetDropdown && targets.length > 0 && !lockedReceiverId && (
+                    <div className="target-dropdown" style={{ 
+                      position: 'absolute', 
+                      top: '100%', 
+                      left: 0, 
+                      right: 0, 
+                      zIndex: 100, 
+                      background: 'var(--surface-overlay)', 
+                      border: '1px solid var(--border)',
+                      borderRadius: '8px',
+                      maxHeight: '150px',
+                      overflowY: 'auto',
+                      marginTop: '4px',
+                      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                    }}>
+                      {targets
+                        .filter(t => t.name.toLowerCase().includes(searchTerm.toLowerCase()) || t.unique_id.toLowerCase().includes(searchTerm.toLowerCase()))
+                        .map(target => (
+                          <div 
+                            key={target.unique_id} 
+                            onClick={() => {
+                              setReceiverUniqueId(target.unique_id);
+                              setSearchTerm(target.name);
+                              setShowTargetDropdown(false);
+                              setShowReceiverError(false);
+                            }}
+                            style={{ 
+                              padding: '8px 12px', 
+                              cursor: 'pointer', 
+                              borderBottom: '1px solid var(--border-light)',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center'
+                            }}
+                            className="target-dropdown-item"
+                          >
+                            <div>
+                              <div style={{ fontWeight: '600', fontSize: '13px' }}>{target.name}</div>
+                              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{target.unique_id}</div>
+                            </div>
+                            <span style={{ fontSize: '10px', background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8', padding: '2px 6px', borderRadius: '4px' }}>
+                              {target.source}
+                            </span>
+                          </div>
+                        ))
+                      }
+                      {targets.filter(t => t.name.toLowerCase().includes(searchTerm.toLowerCase()) || t.unique_id.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && (
+                        <div style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)' }}>No matches found. Enter ID manually.</div>
+                      )}
+                    </div>
+                  )}
+                </div>
                 {showReceiverError && <p style={{ color: 'var(--error)', fontSize: '11px', marginTop: '5px' }}>Identity locking is required for individual, org, and community shares.</p>}
               </div>
 

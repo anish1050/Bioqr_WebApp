@@ -521,30 +521,10 @@ export const QrTokenQueries = {
             [token]
         ),
 
-    /** Log a scan event */
-    logScan: (tokenId: number, details: { ip?: string, ua?: string, country?: string, city?: string, scannerUserId?: number | null }): Promise<any> =>
-        execute(
-            `INSERT INTO qr_scans (qr_token_id, ip_address, user_agent, country, city, scanner_user_id)
-             VALUES (?, ?, ?, ?, ?, ?)`,
-            [tokenId, details.ip, details.ua, details.country, details.city, details.scannerUserId || null]
-        ),
-
-    /** Get scan statistics for a user's QR codes */
-    getScanStatsByUserId: (userId: number): Promise<any[]> =>
-        query(
-            `SELECT 
-                qt.token, 
-                qt.qr_type, 
-                qs.ip_address, 
-                qs.country, 
-                qs.city, 
-                qs.scanned_at,
-                COALESCE(CONCAT(u.first_name, ' ', u.last_name), u.username, 'Guest') as scanner_name
-             FROM qr_tokens qt
-             JOIN qr_scans qs ON qt.id = qs.qr_token_id
-             LEFT JOIN users u ON qs.scanner_user_id = u.id
-             WHERE qt.user_id = ?
-             ORDER BY qs.scanned_at DESC`,
+    /** Find all active (non-expired) QR tokens for a user */
+    findActiveByUserId: (userId: number): Promise<QrToken[]> =>
+        query<QrToken>(
+            "SELECT * FROM qr_tokens WHERE user_id = ? AND expires_at > NOW() ORDER BY created_at DESC",
             [userId]
         ),
 
@@ -683,7 +663,6 @@ export const SystemQueries = {
     resetActivity: async (): Promise<any> => {
         // Protect 'anish' data during blanket resets
         const anishExclusion = "NOT IN (SELECT id FROM users WHERE username = 'anish')";
-        await execute(`DELETE FROM qr_scans WHERE qr_token_id IN (SELECT id FROM qr_tokens WHERE user_id ${anishExclusion})`);
         await execute(`DELETE FROM qr_token_files WHERE qr_token_id IN (SELECT id FROM qr_tokens WHERE user_id ${anishExclusion})`);
         await execute(`DELETE FROM qr_tokens WHERE user_id ${anishExclusion}`);
         await execute(`DELETE FROM user_sessions WHERE user_id ${anishExclusion}`);

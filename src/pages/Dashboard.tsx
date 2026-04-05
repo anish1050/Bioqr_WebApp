@@ -34,6 +34,7 @@ interface FileData {
   url?: string;
 }
 
+
 const formatFileSize = (bytes: number) => {
   if (bytes === 0) return '0 Bytes';
   const k = 1024;
@@ -54,7 +55,29 @@ const Dashboard: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'files'>('dashboard');
-  const [user, setUser] = useState<UserInfo | null>(null);
+  const [user, setUser] = useState<UserInfo | null>(() => {
+    // 1. Check URL for OAuth data first (handle initial redirect)
+    const searchParams = new URLSearchParams(window.location.search);
+    const urlUser = searchParams.get('user');
+    if (urlUser) {
+      try {
+        return JSON.parse(decodeURIComponent(urlUser));
+      } catch (e) {
+        console.error('Failed to parse user from URL', e);
+      }
+    }
+
+    // 2. Fallback to localStorage
+    const userInfoStr = localStorage.getItem('userInfo');
+    if (userInfoStr) {
+      try {
+        return JSON.parse(userInfoStr);
+      } catch (e) {
+        console.error('Failed to parse user info', e);
+      }
+    }
+    return null;
+  });
 
   const [files, setFiles] = useState<FileData[]>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
@@ -67,6 +90,7 @@ const Dashboard: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState('');
   
   const [searchQuery, setSearchQuery] = useState('');
+  
   const [toastMessage, setToastMessage] = useState({ text: '', type: 'info', visible: false });
 
   const scrollToFiles = () => {
@@ -84,16 +108,15 @@ const Dashboard: React.FC = () => {
     }
   }, [location.hash]);
 
-  // Load User Info & fetch files
+  // Handle Redirection & Fetch Data
   useEffect(() => {
-    const userInfoStr = localStorage.getItem('userInfo');
-    if (userInfoStr) {
-      try {
-        const parsedUser = JSON.parse(userInfoStr);
-        setUser(parsedUser);
-        
-        // Smart Routing: Redirect to specialized dashboard if needed
-        const userType = parsedUser.user_type || 'individual';
+    if (user) {
+      // Smart Routing: Redirect to specialized dashboard ONLY if not explicitly requesting personal mode
+      const searchParams = new URL(window.location.href).searchParams;
+      const isPersonalMode = searchParams.get('mode') === 'personal';
+      
+      if (!isPersonalMode) {
+        const userType = user.user_type || 'individual';
         if (['org_super_admin', 'org_admin', 'org_member'].includes(userType)) {
           navigate({ pathname: '/dashboard/org', hash: location.hash });
           return;
@@ -101,14 +124,21 @@ const Dashboard: React.FC = () => {
           navigate({ pathname: '/dashboard/team', hash: location.hash });
           return;
         }
+      }
 
-        fetchFiles(parsedUser.id);
-        checkBiometricEnrollment();
-      } catch (e) {
-        console.error('Failed to parse user info', e);
+      fetchFiles(user.id);
+      checkBiometricEnrollment();
+    } else {
+      // If no user, double check localStorage
+      const userInfoStr = localStorage.getItem('userInfo');
+      if (userInfoStr) {
+        setUser(JSON.parse(userInfoStr));
+      } else {
+        navigate('/login');
       }
     }
   }, [navigate]);
+
 
   const checkBiometricEnrollment = async () => {
     try {
@@ -337,15 +367,13 @@ const Dashboard: React.FC = () => {
     <>
       <SEO title="User Dashboard" description="Manage your secure files, storage, and account settings." />
       <section className={`content-section ${activeTab === 'dashboard' ? 'active' : ''}`} style={{ display: activeTab === 'dashboard' ? 'block' : 'none' }}>
-        <div className="welcome-banner">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem' }}>
-            <div>
-              <h2>Welcome, {getUserDisplayName()}</h2>
-              <p>Manage your secure files and BioSeal-protected QR codes from one central hub.</p>
-            </div>
-            
+        <div className="welcome-banner" style={{ textAlign: 'center' }}>
+          <h2>Welcome, {getUserDisplayName()}</h2>
+          <p>Manage your secure files and BioSeal-protected QR codes from one central hub.</p>
+          
+          <div className="ids-container">
             {user?.unique_user_id && (
-              <div className="user-id-wrapper" style={{ margin: 0 }}>
+              <div className="user-id-wrapper">
                 <div className="user-id-badge">
                   <span className="user-id-label">Your ID:</span>
                   <span>{user.unique_user_id}</span>
@@ -405,16 +433,16 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="dashboard-cta" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
-            <button 
-              className="cta-btn primary-blue" 
-              onClick={scrollToFiles}
-              style={{ display: 'flex', flexDirection: 'column', padding: '2rem', gap: '1rem', height: '100%' }}
-            >
-              <Send size={48} color="white" />
-              <span style={{ color: 'white', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 'bold' }}>Manage Files</span>
-              <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', textTransform: 'none', letterSpacing: 'normal', margin: 0 }}>Upload secure files and generate identity-locked BioQR codes for receivers.</p>
-            </button>
+        <div className="dashboard-cta" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem', marginBottom: '2rem', marginTop: '2rem' }}>
+          <button 
+            className="cta-btn primary-blue" 
+            onClick={scrollToFiles}
+            style={{ display: 'flex', flexDirection: 'column', padding: '2rem', gap: '1rem', height: '100%', background: 'rgba(0, 102, 255, 0.1)', border: '1px solid rgba(0, 102, 255, 0.2)', borderRadius: '12px', cursor: 'pointer', textAlign: 'left' }}
+          >
+            <Send size={48} color="#0066ff" />
+            <span style={{ color: 'white', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 'bold' }}>Files Management</span>
+            <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', textTransform: 'none', letterSpacing: 'normal', margin: 0 }}>Access your secure files and manage identity-locked BioQR code generation.</p>
+          </button>
         </div>
 
 

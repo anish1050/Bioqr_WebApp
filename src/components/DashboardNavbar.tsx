@@ -26,18 +26,46 @@ interface DashboardNavbarProps {
 const DashboardNavbar: React.FC<DashboardNavbarProps> = ({ onMobileMenuToggle }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [user, setUser] = useState<UserInfo | null>(null);
-  const [imgError, setImgError] = useState(false);
+  const [user, setUser] = useState<UserInfo | null>(() => {
+    // 1. Check URL for OAuth data first (handle initial redirect)
+    const searchParams = new URLSearchParams(window.location.search);
+    const urlUser = searchParams.get('user');
+    if (urlUser) {
+      try {
+        return JSON.parse(decodeURIComponent(urlUser));
+      } catch (e) {
+        console.error('Failed to parse user from URL', e);
+      }
+    }
 
-  useEffect(() => {
+    // 2. Fallback to localStorage
     const userInfo = localStorage.getItem('userInfo');
     if (userInfo) {
       try {
-        setUser(JSON.parse(userInfo));
+        return JSON.parse(userInfo);
       } catch (e) {
         console.error('Failed to parse user info', e);
       }
     }
+    return null;
+  });
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    // Keep sync with localStorage in case it changes
+    const handleStorageChange = () => {
+      const userInfo = localStorage.getItem('userInfo');
+      if (userInfo) {
+        try {
+          setUser(JSON.parse(userInfo));
+        } catch (e) {
+          console.error('Failed to parse user info', e);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const handleLogout = () => {
@@ -113,6 +141,11 @@ const DashboardNavbar: React.FC<DashboardNavbarProps> = ({ onMobileMenuToggle })
                 className={(location.pathname.includes('/dashboard')) && location.hash === '#files' ? 'active' : ''}
               >
                 Files
+              </Link>
+            </li>
+            <li>
+              <Link to="/dashboard?mode=personal" className={location.pathname === '/dashboard' && !location.hash ? 'active' : ''}>
+                Individual
               </Link>
             </li>
             {user && ['org_super_admin', 'org_admin', 'org_member'].includes(user.user_type || '') && (

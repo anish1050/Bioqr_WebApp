@@ -280,6 +280,24 @@ const Login: React.FC = () => {
                     </button>
                   </div>
 
+                  {/* Security Note for Social Login */}
+                  <div style={{ 
+                    padding: '0.75rem', 
+                    background: 'rgba(59, 130, 246, 0.05)', 
+                    border: '1px solid rgba(59, 130, 246, 0.1)', 
+                    borderRadius: '0.75rem', 
+                    marginTop: '1.25rem',
+                    marginBottom: '0.5rem', 
+                    display: 'flex', 
+                    gap: '0.75rem', 
+                    alignItems: 'center' 
+                  }}>
+                    <ShieldCheck className="h-5 w-5 text-blue-400 shrink-0" />
+                    <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: 0, textAlign: 'left', lineHeight: 1.4 }}>
+                      <strong style={{ color: 'white' }}>Security Note:</strong> For your protection, please <Link to="/register" style={{ color: '#60a5fa', fontWeight: 600 }}>Sign Up</Link> first to enroll your biometric profile before using Google or GitHub login.
+                    </p>
+                  </div>
+
                   {/* Divider */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: '0.5rem 0' }}>
                     <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />

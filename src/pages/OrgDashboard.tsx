@@ -77,7 +77,30 @@ const OrgDashboard: React.FC = () => {
   const [members, setMembers] = useState<OrgMember[]>([]);
   const [permissions, setPermissions] = useState<QrPermission[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [userInfo, setUserInfo] = useState<any>(null);
+  const [userInfo, setUserInfo] = useState<any>(() => {
+    // 1. Check URL for OAuth data first (handle initial redirect)
+    const searchParams = new URLSearchParams(window.location.search);
+    const urlUser = searchParams.get('user');
+    if (urlUser) {
+      try {
+        return JSON.parse(decodeURIComponent(urlUser));
+      } catch (e) {
+        console.error('Failed to parse user from URL', e);
+      }
+    }
+
+    // 2. Fallback to localStorage
+    const userStr = localStorage.getItem('userInfo');
+    if (userStr) {
+      try {
+        return JSON.parse(userStr);
+      } catch (e) {
+        console.error('Failed to parse user info', e);
+      }
+    }
+    return null;
+  });
+
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' | 'warning' | '' }>({ message: '', type: '' });
   
   // File management state
@@ -117,19 +140,22 @@ const OrgDashboard: React.FC = () => {
   const isAdmin = isSuperAdmin || userInfo?.user_type === 'org_admin';
 
   useEffect(() => {
-    const userStr = localStorage.getItem('userInfo');
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      setUserInfo(user);
-      const isOrgUser = ['org_super_admin', 'org_admin', 'org_member'].includes(user.user_type);
+    if (userInfo) {
+      const isOrgUser = ['org_super_admin', 'org_admin', 'org_member'].includes(userInfo.user_type);
       if (!isOrgUser) {
         navigate('/dashboard');
       } else {
-        loadDashboardData(user.org_unique_id);
-        fetchFiles(user.id);
+        loadDashboardData(userInfo.org_unique_id);
+        fetchFiles(userInfo.id);
       }
     } else {
-      navigate('/login');
+      // Final check of localStorage
+      const userStr = localStorage.getItem('userInfo');
+      if (userStr) {
+        setUserInfo(JSON.parse(userStr));
+      } else {
+        navigate('/login');
+      }
     }
   }, [navigate]);
 

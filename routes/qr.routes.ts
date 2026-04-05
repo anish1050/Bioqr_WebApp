@@ -220,12 +220,8 @@ router.get(
                 return;
             }
 
-            // Log Scan Event (Analytics)
-            const scannerUserId = (req as any).user?.userId || (req as any).session?.user?.id || null;
-            const scanDetails = await getScanDetails(req);
-            await QrTokenQueries.logScan(qrToken.id, { ...scanDetails, scannerUserId });
-            
             // Rich logging to MongoDB
+            const scannerUserId = (req as any).user?.userId || (req as any).session?.user?.id || null;
             log(`QR Scanned: ${(qrToken.qr_type || 'Unknown').toUpperCase()} [Token: ${token.slice(0,8)}...]`, req, qrToken.user_id);
 
             // Check Time Restriction (Start Time)
@@ -256,10 +252,8 @@ router.get(
             const sessionIsVerified = (req as any).session?.verifiedTokens?.[token] === true;
             const isVerified = req.query.verified === "true" && sessionIsVerified;
 
-            // If BioSeal matches (Receiver-locked), we attribute the scan to the receiver
             if (isVerified && qrToken.receiver_user_id) {
-                const scanDetails = await getScanDetails(req);
-                await QrTokenQueries.logScan(qrToken.id, { ...scanDetails, scannerUserId: qrToken.receiver_user_id });
+                log(`Identity Verified for Token: ${token.slice(0,8)}`, req, qrToken.user_id);
             }
 
             const needsLocation = qrToken.latitude !== null && qrToken.longitude !== null;
@@ -655,7 +649,10 @@ const base64Data = Buffer.from(buffer).toString("base64");
                     </div>
 
                     <div id="watermark">
-                        ${Array(16).fill(`<div class="wm-item">${scanDetails.ip} | ${new Date().toISOString().split('T')[0]}</div>`).join('')}
+                        ${(() => {
+                            const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'Unknown IP';
+                            return Array(16).fill(`<div class="wm-item">${ip} | ${new Date().toISOString().split('T')[0]}</div>`).join('');
+                        })()}
                     </div>
 
                     ${isUnshareable ? '<div id="privacy-mask"></div>' : ""}
@@ -724,30 +721,65 @@ const base64Data = Buffer.from(buffer).toString("base64");
     }
 );
 
+// Get Active QRs for a user
+router.get(
+    "/qr-tokens/active",
+    authenticateToken,
+    async (req: Request, res: Response): Promise<void> => {
+        try {
+            const userId = (req as any).user?.userId;
+            const tokens = await QrTokenQueries.findActiveByUserId(userId);
+            res.json(tokens);
+        } catch (err) {
+            console.error("❌ Failed to fetch active QRs:", err);
+            res.status(500).json({ error: "Server error" });
+        }
+    }
+);
+
 // Get Scan Analytics (Authenticated)
 router.get(
     "/analytics",
     authenticateToken,
     async (req: Request, res: Response): Promise<void> => {
         try {
+            const { LogModel } = await import("../helpers/logger.js");
             const userId = (req as any).user?.userId;
-            const stats = await QrTokenQueries.getScanStatsByUserId(userId);
+            
+            // Fetch all logs where this user is the "Owner" of the activity (Sender)
+            const logs = await LogModel.find({
+                userId: userId.toString(),
+                activity: { $regex: /QR Scanned/i }
+            }).sort({ timestamp: -1 });
 
-            // Enrich unknown locations using MongoDB historical logs
-            const enrichedStats = await Promise.all(stats.map(async (s) => {
-                if (s.city === "Unknown" || s.country === "Unknown") {
-                    const resolved = await getLocationFromIp(s.ip_address);
-                    if (resolved) {
-                        return { ...s, city: resolved.city, country: resolved.country };
-                    }
-                }
-                return s;
-            }));
-
-            res.json(enrichedStats);
+            res.json(logs);
         } catch (err) {
-            console.error("❌ Analytics Enrichment Error:", err);
+            console.error("❌ Analytics Fetch Error:", err);
             res.status(500).json({ error: "Failed to fetch analytics" });
+        }
+    }
+);
+
+// Get Recent Scans (For Dashboard)
+router.get(
+    "/analytics/recent",
+    authenticateToken,
+    async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { LogModel } = await import("../helpers/logger.js");
+            const userId = (req as any).user?.userId;
+            
+            const logs = await LogModel.find({
+                userId: userId.toString(),
+                activity: { $regex: /QR Scanned/i }
+            })
+            .sort({ timestamp: -1 })
+            .limit(5);
+
+            res.json(logs);
+        } catch (err) {
+            console.error("❌ Recent Analytics Error:", err);
+            res.status(500).json({ error: "Failed to fetch recent scans" });
         }
     }
 );
