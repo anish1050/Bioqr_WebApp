@@ -14,8 +14,8 @@ dotenv.config();
  */
 const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
-    port: 465,
-    secure: true, // Use SSL
+    port: 587,
+    secure: false, // Use STARTTLS
     pool: true,   // Use a pool of connections
     auth: {
         user: process.env.GMAIL_USER,
@@ -31,6 +31,7 @@ const transporter = nodemailer.createTransport({
 transporter.verify((error) => {
     if (error) {
         console.error("❌ SMTP Transporter Verification Failed:", error.message);
+        console.error("   Make sure GMAIL_USER and GMAIL_PASS (App Password) are correct in Render!");
     } else {
         console.log("✅ SMTP Transporter is ready for production");
     }
@@ -66,8 +67,17 @@ export const sendVerificationOtp = async (email: string, otp: string, firstName:
         await transporter.sendMail(mailOptions);
         console.log(`📧 Verification email sent to ${email}`);
         return true;
-    } catch (error) {
-        console.error("❌ Failed to send verification email:", error);
+    } catch (error: any) {
+        console.error("❌ Failed to send verification email:");
+        console.error("  Error Name:", error.name);
+        console.error("  Error Message:", error.message);
+        console.error("  SMTP Code:", error.code);
+        console.error("  SMTP Command:", error.command);
+        
+        if (!process.env.GMAIL_USER || !process.env.GMAIL_PASS) {
+            console.error("  ⚠️ WARNING: GMAIL_USER or GMAIL_PASS environment variables are missing!");
+        }
+        
         return false;
     }
 };
@@ -102,8 +112,17 @@ export const sendPasswordResetOtp = async (email: string, otp: string, firstName
         await transporter.sendMail(mailOptions);
         console.log(`📧 Password reset email sent to ${email}`);
         return true;
-    } catch (error) {
-        console.error("❌ Failed to send password reset email:", error);
+    } catch (error: any) {
+        console.error("❌ Failed to send password reset email:");
+        console.error("  Error Name:", error.name);
+        console.error("  Error Message:", error.message);
+        console.error("  SMTP Code:", error.code);
+        console.error("  SMTP Command:", error.command);
+        
+        if (!process.env.GMAIL_USER || !process.env.GMAIL_PASS) {
+            console.error("  ⚠️ WARNING: GMAIL_USER or GMAIL_PASS environment variables are missing!");
+        }
+        
         return false;
     }
 };
