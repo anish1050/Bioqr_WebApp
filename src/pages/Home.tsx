@@ -82,8 +82,8 @@ const Home: React.FC = () => {
               <Link to="/register" className="btn btn-primary">
                 GET STARTED
               </Link>
-              <Link to="/viewdemo" className="btn btn-outline">
-                VIEW DEMO
+              <Link to="/docs" className="btn btn-outline">
+                VIEW DOCUMENTATION
               </Link>
             </div>
           </div>

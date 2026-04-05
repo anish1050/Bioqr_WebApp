@@ -13,6 +13,7 @@ import Help from './pages/Help';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
+import Documentation from './pages/Documentation';
 
 // Authenticated Pages
 import Dashboard from './pages/Dashboard';
@@ -39,6 +40,7 @@ function App() {
           <Route path="contact" element={<Contact />} />
           <Route path="status" element={<Status />} />
           <Route path="help" element={<Help />} />
+          <Route path="docs" element={<Documentation />} />
         </Route>
 
         {/* Authenticated Dashboard */}

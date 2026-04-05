@@ -1,17 +1,19 @@
-# BioQR - Biometric + QR Security System
+# BioQR - Biometric + Identity-Locked QR Security
 
-A modern, comprehensive web application built with React, Vite, Node.js, and MySQL. It offers a sophisticated QR-based security check-in flow, user authentication, OAuth integration, and secure file management capabilities.
+A sophisticated, zero-knowledge security platform that combines **biometric authentication** with **identity-locked dynamic QR technology**. Built for modern enterprises and individuals, BioQR ensures that sensitive data and physical access are locked to the intended receiver's unique biometric profile.
 
 ---
 
 ## 🚀 Features
 
-- **Authentication & Authorization**: Secure local signup/login (with bcrypt hashing), alongside seamless Google and GitHub OAuth combinations via Passport.js.
-- **Dynamic QR Code Management**: Automated QR code generation for secure validation and temporary file access sharing.
-- **Robust File Management**: Upload files securely constraints applied. Easily distribute and authorize view access via automatically generated temporary URLs and logic routes.
-- **Dashboard Interface**: A clean & interactive UI to seamlessly manage your uploaded files, track sessions, access history, and interact with the ecosystem endpoints.
-- **Security-First Approach**: Protected REST APIs utilizing JSON Web Tokens (JWT) for session validation, granular standard CSRF protections explicitly mapping token footprints, robust input sanitization, and route-level request rate-limiting to prevent DDoSing attempts.
-- **Search Engine Optimized**: Universal SEO parameters integrated per route supporting detailed metadata indexing mapping.
+- **Identity-Locked QR Codes**: Generate dynamic QR codes encrypted specifically for a receiver's public key. Accessible only after a local biometric scan (Fingerprint/FaceID).
+- **Comprehensive Documentation Hub**: A dedicated `/docs` portal featuring exhaustive guides for Web Dashboard enrollment and Android Application workflows.
+- **Biometric Enrollment (WebAuthn)**: Secure device-linking using hardware-backed keystores (Windows Hello, TouchID, FaceID) via the Web Dashboard.
+- **Organization & Team Management**: Scalable administrative tools to manage identities, teams, and cross-entity access permissions.
+- **System Status Monitoring**: Real-time service health tracking with a modern, high-visibility vertical dashboard.
+- **Android Integration**: Native Android application supporting biometric verification and on-the-go secure QR generation.
+- **Security-First Architecture**: Protected REST APIs utilizing JWT, CSRF token mapping, and rate-limiting to ensure high availability and integrity.
+- **Premium UI/UX**: A state-of-the-art glassmorphic interface with fluid transitions and modern typography (Google Fonts).
 
 ---
 
@@ -32,19 +34,21 @@ A modern, comprehensive web application built with React, Vite, Node.js, and MyS
   - [`App.tsx`](./src/App.tsx) - Client-side core router encompassing Layout mappings.
   - [`main.tsx`](./src/main.tsx) - React DOM anchor entry point.
 - **Pages ([`/src/pages`](./src/pages/)):**
-  - [`Home.tsx`](./src/pages/Home.tsx) - The landing page demonstrating core solutions.
-  - [`Login.tsx`](./src/pages/Login.tsx) - Authentication entry screen with OAuth options.
-  - [`Register.tsx`](./src/pages/Register.tsx) - Standard signup interface.
+  - [`Home.tsx`](./src/pages/Home.tsx) - The landing page identifying core identity-locking solutions.
+  - [`Login.tsx`](./src/pages/Login.tsx) - Authentication entry screen with biometric-ready OAuth options.
+  - [`Register.tsx`](./src/pages/Register.tsx) - Standard signup interface for secure onboarding.
   - [`Dashboard.tsx`](./src/pages/Dashboard.tsx) - User's protective secure area logic.
-  - [`About.tsx`](./src/pages/About.tsx) - Mission and vision metadata parameters.
-  - [`Contact.tsx`](./src/pages/Contact.tsx) - Feedback interaction form endpoint UI.
-  - [`Help.tsx`](./src/pages/Help.tsx) - Documentation access matrix.
-  - [`Status.tsx`](./src/pages/Status.tsx) - API ping evaluation screen.
+  - [`OrgDashboard.tsx`](./src/pages/OrgDashboard.tsx) - Administrative suite for high-level entity management.
+  - [`TeamDashboard.tsx`](./src/pages/TeamDashboard.tsx) - Localized team-based permission controls.
+  - [`Documentation.tsx`](./src/pages/Documentation.tsx) - Exhaustive guide and technical hub for the BioQR ecosystem.
+  - [`Status.tsx`](./src/pages/Status.tsx) - Modernized API evaluation and health monitoring screen.
 - **Components ([`/src/components`](./src/components/)):**
-  - [`Navbar.tsx`](./src/components/Navbar.tsx) - Core navigation framework utility.
-  - [`DashboardNavbar.tsx`](./src/components/DashboardNavbar.tsx) - Specific navigation for authenticated sessions.
-  - [`Footer.tsx`](./src/components/Footer.tsx) - Structural bottom component layout.
+  - [`Navbar.tsx`](./src/components/Navbar.tsx) - Simplified, high-performance navigation framework.
+  - [`DashboardNavbar.tsx`](./src/components/DashboardNavbar.tsx) - Secure navigation for authenticated sessions.
   - [`SEO.tsx`](./src/components/SEO.tsx) - Extracted Search Engine Optimization mapper logic.
+- **Styles ([`/src/styles`](./src/styles/)):**
+  - [`status-modern.css`](./src/styles/status-modern.css) - Bold, high-visibility status page styling.
+  - [`docs.css`](./src/styles/docs.css) - Premium glassmorphic documentation layout definitions.
 - **Layout Maps ([`/src/layouts`](./src/layouts/)):**
   - [`MainLayout.tsx`](./src/layouts/MainLayout.tsx)
   - [`DashboardLayout.tsx`](./src/layouts/DashboardLayout.tsx)
@@ -72,77 +76,61 @@ A modern, comprehensive web application built with React, Vite, Node.js, and MyS
 ## 🛠 Tech Stack
 
 ### Frontend Ecosystem
-- **React 19 & Vite**: Fast development server and optimized bundle compilation constraints.
-- **React Router DOM**: Dynamic client-side nested routing patterns.
-- **Vanilla CSS / Selected Libraries**: Deep personalized styling maps without aggressive overriding.
-- **Lucide React**: Vectorized SVG iconography toolkit.
+- **React 19 & Vite**: High-performance development and optimized production bundling.
+- **Lucide React**: Specialized vector iconography for a premium, clean aesthetic.
+- **Vanilla CSS (Modern)**: Custom design system featuring glassmorphism and fluid transitions.
+- **React Router DOM**: Advanced nested routing for multi-dashboard experiences.
 
 ### Backend Ecosystem
-- **Node.js**: Underlying baseline runtime.
-- **Express.js (v5)**: Scalable backend routing structure parsing algorithms.
-- **TypeScript**: Ensuring end-to-end typing for stability execution footprints.
-- **MySQL2 / TiDB**: Highly rapid relational structure database integration mappings parsing.
-- **Security Logic**: `bcrypt` (Hashing), `jsonwebtoken` (Sessions context tracking), `express-session`, `cors`.
+- **Node.js**: Underlying runtime for high-concurrency operations.
+- **Express.js (v5)**: Evolved routing architecture with native promise support.
+- **TypeScript**: Full-stack type safety across all entity transformations.
+- **MySQL2 & MongoDB**: Multi-modal data storage for structured relations and high-speed logging.
+- **Passport.js**: Multi-strategy authentication (Local, Google, GitHub).
 
 ---
 
 ## 🏁 Getting Started
 
 ### Prerequisites
-Make sure you have installed on your core system:
-1. **Node.js** (v20+ mapping constraints recommended)
-2. **Relational Database** like MySQL Server locally or explicitly via TiDB Cloud mapping configurations.
+1. **Node.js** (v20+ recommended)
+2. **MySQL Server** (Local or TiDB Cloud instance)
+3. **MongoDB** (For analytics and system logging)
 
 ### 1. Installation
-
-Clone the repository and install the initial dependencies natively:
 ```bash
 git clone https://github.com/your-username/bioqr-system.git
 cd bioqr-system
 npm install
 ```
 
-### 2. Environment Variables
-
-Create an `.env` file in the root directory:
-```bash
-touch .env
-```
-Populate `.env` with actual development credentials (database, OAuth tokens setup via Google Cloud Console & GitHub Apps explicitly, session securely typed hashes, etc.).
+### 2. Environment Setup
+Create a `.env` file and populate it with credentials:
+- `DB_HOST`, `DB_USER`, `DB_PASS`, `DB_NAME` (MySQL)
+- `MONGODB_URI` (Mongo Connection)
+- `GOOGLE_CLIENT_ID`, `GITHUB_CLIENT_ID` (OAuth)
+- `JWT_SECRET`, `SESSION_SECRET` (Security)
 
 ### 3. Database Initialization
-
-Execute the built-in database schema startup. This automatically pings your connection pool from `.env` and drops necessary tables (Users, Sessions, Devices, Files) securely natively:
 ```bash
 npm run setup-db
 ```
 
 ### 4. Running Locally
-
-Start up your localized development ecosystem. Both endpoints run via explicit hook watchers seamlessly:
 ```bash
-# In Terminal 1 (Frontend specific):
+# Start Frontend & Backend concurrently
 npm run dev
-
-# In Terminal 2 (Express Backend context watcher):
-npm run server:watch
 ```
-Your frontend is typically running on `http://localhost:5173` while parsing inputs via your backend explicitly situated mapped around `http://localhost:3000`.
 
 ---
 
-## 📦 Production Deployment Mapping
+## 📦 Android Integration
 
-For secure production integrations externally, Vite natively builds the `dist/` pipeline logic, and the isolated Express execution actively serves it concurrently in one specific port instance rendering footprints optimized.
-```bash
-# Build the production Vite React static bundles
-npm run build
-
-# Boot the isolated production Node Server parsing context configurations natively
-npm start
-```
-By mapping the static `dist/` structure securely through the Express endpoints inside `server.ts`, we inherently eliminate CORS restrictions externally while pushing singular instance boundaries efficiently.
+The BioQR Android application is tightly integrated with this web dashboard.
+- **APK Distribution**: The latest signed APK is served directly from `/public/downloads/BioQR.apk`.
+- **Identity Syncing**: Users must register on the web first, then sync their profile to the mobile app using the "Enroll Device" flow.
+- **Source Code**: For mobile development, refer to the `BioQR-Android` repository.
 
 ---
 
-> Built rigorously prioritizing high-end authentication bounds mappings algorithms constraints explicitly.
+> Built rigorously with a **Security-First** philosophy, prioritizing identity integrity and biometric privacy.
