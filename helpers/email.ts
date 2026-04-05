@@ -1,7 +1,13 @@
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+import dns from "dns";
 
 dotenv.config();
+
+// Fix for Node.js 17+ preference for IPv6, which causes ENETUNREACH on Render/Vercel
+if (dns.setDefaultResultOrder) {
+    dns.setDefaultResultOrder("ipv4first");
+}
 
 /**
  * Configure standard Gmail transporter using App Passwords.
@@ -21,13 +27,10 @@ const transporter = nodemailer.createTransport({
         user: process.env.GMAIL_USER,
         pass: process.env.GMAIL_PASS,
     },
-    // Force IPv4 to prevent ENETUNREACH errors on cloud providers like Render/Vercel
-    // that may not have IPv6 routing configured correctly.
-    host_ip_family: 4, 
     connectionTimeout: 10000, 
     greetingTimeout: 10000,
     socketTimeout: 10000,
-} as any); // cast as any because host_ip_family is a newer/specific property in some versions
+});
 
 // Verify connection on startup to log issues early
 transporter.verify((error) => {
