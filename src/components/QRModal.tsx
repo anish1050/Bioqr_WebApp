@@ -61,6 +61,7 @@ const QRModal: React.FC<QRModalProps> = ({
   const [isShaking, setIsShaking] = useState(false);
   const [isCrossHighlighted, setIsCrossHighlighted] = useState(false);
   const [showCustomDuration, setShowCustomDuration] = useState(false);
+  const [showReceiverError, setShowReceiverError] = useState(false);
 
   // Windows-style Alert Sound (Synthesized)
   const playWindowsAlert = () => {
@@ -119,6 +120,16 @@ const QRModal: React.FC<QRModalProps> = ({
 
   const handleGenerateQR = async () => {
     setError(null);
+    setShowReceiverError(false);
+
+    if (!receiverUniqueId || receiverUniqueId.trim().length < 6) {
+      setShowReceiverError(true);
+      setError("Receiver BioQR ID is mandatory for security.");
+      setIsShaking(true);
+      setTimeout(() => setIsShaking(false), 500);
+      return;
+    }
+
     try {
       await completeQRGeneration();
     } catch (err: any) {
@@ -296,23 +307,33 @@ const QRModal: React.FC<QRModalProps> = ({
                 </div>
               </div>
 
-              <div className="form-group" style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(56, 189, 248, 0.05)', borderRadius: '12px', border: '1px solid rgba(56, 189, 248, 0.1)' }}>
+              <div className={`form-group ${showReceiverError ? 'error-ring' : ''}`} style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(56, 189, 248, 0.05)', borderRadius: '12px', border: showReceiverError ? '1px solid var(--error)' : '1px solid rgba(56, 189, 248, 0.1)' }}>
                 <div className="label-with-info">
-                  <label style={{ color: '#38bdf8' }}>🧬 Receiver Biometric Lock (BioSeal)</label>
+                  <label style={{ color: showReceiverError ? 'var(--error)' : '#38bdf8', fontWeight: 'bold' }}>
+                    🧬 Receiver Biometric Lock <span style={{fontSize: '10px', verticalAlign: 'middle'}}>(MANDATORY)</span>
+                  </label>
                   <div className="info-tooltip-container">
-                    <Info size={14} className="info-icon" style={{ color: '#38bdf8' }} />
-                    <span className="tooltip-text">Enter the Receiver's BioQR ID (e.g., BQ-XXXXXXXX) to encrypt the payload with their biometric lock. Only they can unlock it.</span>
+                    <Info size={14} className="info-icon" style={{ color: showReceiverError ? 'var(--error)' : '#38bdf8' }} />
+                    <span className="tooltip-text">Universal Security Rule: You MUST enter the Receiver's BioQR ID (e.g., BQ-XXXXXXXX) to encrypt the payload with their biometric lock.</span>
                   </div>
                 </div>
                 <input 
                   type="text" 
                   value={receiverUniqueId} 
-                  onChange={(e) => setReceiverUniqueId(e.target.value.trim().toUpperCase())}
+                  onChange={(e) => {
+                    setReceiverUniqueId(e.target.value.trim().toUpperCase());
+                    if (e.target.value.trim()) setShowReceiverError(false);
+                  }}
                   placeholder="e.g. BQ-ABC12345"
-                  className="qr-textarea"
-                  style={{ height: 'auto', padding: '10px' }}
+                  className={`qr-textarea ${showReceiverError ? 'input-error' : ''}`}
+                  style={{ 
+                    height: 'auto', 
+                    padding: '10px',
+                    borderColor: showReceiverError ? 'var(--error)' : ''
+                  }}
                   disabled={!!lockedReceiverId}
                 />
+                {showReceiverError && <p style={{ color: 'var(--error)', fontSize: '11px', marginTop: '5px' }}>Identity locking is required for individual, org, and community shares.</p>}
               </div>
 
               <button className="settings-toggle" onClick={() => setAdvancedOpen(!advancedOpen)}>

@@ -131,31 +131,31 @@ router.post(
             const finalDuration = Math.min(Math.max(parseInt(duration as string, 10) || 60, 1), 525600); // Max 1yr
             const expiresAt = new Date(Date.now() + finalDuration * 60 * 1000);
 
-            // Handle Receiver Lock (Optional)
-            let receiverId = null;
-            let biosealLock = null;
-            let lockMethod = null;
-
-            if (receiver_unique_id) {
-                const receiver = await UserQueries.findByUniqueUserId(receiver_unique_id);
-                if (!receiver) {
-                    res.status(404).json({ error: "Receiver not found" });
-                    return;
-                }
-                if (!receiver.biometric_enrolled) {
-                    res.status(400).json({ error: "Receiver has not enrolled BioSeal. Cannot lock to them." });
-                    return;
-                }
-                const bioseal = await BioSealQueries.findByUserId(receiver.id);
-                if (!bioseal) {
-                    res.status(400).json({ error: "Receiver BioSeal not found in system." });
-                    return;
-                }
-                receiverId = receiver.id;
-                biosealLock = bioseal.sealed_template;
-                lockMethod = bioseal.method;
-                require_auth = true; // Implicitly require auth if locking to receiver
+            // Handle Receiver Lock (Mandatory for security)
+            if (!receiver_unique_id) {
+                res.status(400).json({ error: "Receiver ID is mandatory for generating secure BioQR codes." });
+                return;
             }
+
+            const receiver = await UserQueries.findByUniqueUserId(receiver_unique_id);
+            if (!receiver) {
+                res.status(404).json({ error: "Receiver not found (Invalid BioQR ID)" });
+                return;
+            }
+            if (!receiver.biometric_enrolled) {
+                res.status(400).json({ error: "Receiver has not enrolled biometrics. Cannot lock to them." });
+                return;
+            }
+            const bioseal = await BioSealQueries.findByUserId(receiver.id);
+            if (!bioseal) {
+                res.status(400).json({ error: "Receiver BioSeal not found in system." });
+                return;
+            }
+
+            const receiverId = receiver.id;
+            const biosealLock = bioseal.sealed_template;
+            const lockMethod = bioseal.method;
+            require_auth = true; // Forced true for receiver locking
 
             // 4. Save to DB
             const qrTokenId = await QrTokenQueries.create(token, userId, fileIds || [], expiresAt, {
