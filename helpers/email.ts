@@ -9,13 +9,31 @@ dotenv.config();
  * 1. Enable 2FA on your Gmail account.
  * 2. Generate an "App Password" (Settings -> Security).
  * 3. Add to your .env: GMAIL_USER=your-email@gmail.com, GMAIL_PASS=16-digit-app-password
+ * 
+ * 🚀 Production Note: We use explicit host/port and pooling to avoid hanging connections on cloud providers.
  */
 const transporter = nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true, // Use SSL
+    pool: true,   // Use a pool of connections
     auth: {
         user: process.env.GMAIL_USER,
         pass: process.env.GMAIL_PASS,
     },
+    // Prevent hanging requests indefinitely
+    connectionTimeout: 10000, 
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
+});
+
+// Verify connection on startup to log issues early
+transporter.verify((error) => {
+    if (error) {
+        console.error("❌ SMTP Transporter Verification Failed:", error.message);
+    } else {
+        console.log("✅ SMTP Transporter is ready for production");
+    }
 });
 
 /**
