@@ -393,8 +393,8 @@ router.get('/:orgUniqueId/qr-targets', authenticateToken, async (req: Request, r
             return res.status(403).json({ success: false, message: 'You do not belong to this organisation' });
         }
 
-        // Super admins can QR everyone in org
-        if (user.user_type === 'org_super_admin' || user.user_type === 'org_admin') {
+        // Super admins and Org Admins can QR everyone in org
+        if (['org_super_admin', 'org_admin'].includes(user.user_type)) {
             const allMembers = await OrganisationQueries.getMembers(org.id);
             return res.json({
                 success: true,

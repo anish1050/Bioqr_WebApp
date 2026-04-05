@@ -177,7 +177,7 @@ app.use("/auth", oauthRoutes);
 
 // General prefixes
 app.use("/bioqr/orgs", orgRoutes);
-app.use("/bioqr/teams", teamRoutes);
+app.use("/bioqr/communities", teamRoutes);
 app.use("/bioqr", authRoutes);        
 app.use("/bioqr", qrRoutes);           
 app.use("", qrRoutes);                 

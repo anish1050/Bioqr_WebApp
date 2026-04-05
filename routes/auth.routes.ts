@@ -301,7 +301,9 @@ router.post(
                 user_id: userId,
                 unique_user_id: uniqueUserId,
                 orgUniqueId: orgUniqueId || undefined,
+                org_id: userData.org_id || undefined,
                 teamUniqueId: teamUniqueId || undefined,
+                team_id: userData.team_id || undefined,
                 user_type: reqUserData.user_type || 'individual',
                 tokens: { accessToken, refreshToken, expiresIn: expiresInSec }
             });
@@ -542,7 +544,9 @@ router.post(
                     unique_user_id: user.unique_user_id,
                     biometric_enrolled: user.biometric_enrolled,
                     avatar_url: user.avatar_url,
+                    org_id: user.org_id,
                     org_unique_id: user.org_unique_id,
+                    team_id: user.team_id,
                     team_unique_id: user.team_unique_id
                 },
                 tokens: { accessToken, refreshToken, expiresIn: expiresInSec },

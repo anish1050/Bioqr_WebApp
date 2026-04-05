@@ -1,7 +1,7 @@
 /**
- * Team Routes — BioSeal Architecture
+ * Community Routes — BioSeal Architecture
  * 
- * Handles standalone team CRUD and member management
+ * Handles standalone community CRUD and member management
  */
 
 import { Router, Request, Response } from 'express';
@@ -36,19 +36,19 @@ router.post('/create', authenticateToken, async (req: Request, res: Response) =>
         const { name, description } = req.body;
 
         if (!name || name.trim().length < 2) {
-            return res.status(400).json({ success: false, message: 'Team name is required (min 2 characters)' });
+            return res.status(400).json({ success: false, message: 'Community name is required (min 2 characters)' });
         }
 
         const user = await UserQueries.findById(userId);
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
         if (user.team_id) {
-            return res.status(400).json({ success: false, message: 'You already belong to a team' });
+            return res.status(400).json({ success: false, message: 'You already belong to a community' });
         }
 
-        const teamUniqueId = generateCommunityId();
-        const teamId = await TeamQueries.create({
-            team_unique_id: teamUniqueId,
+        const communityUniqueId = generateCommunityId();
+        const communityId = await TeamQueries.create({
+            team_unique_id: communityUniqueId,
             name: name.trim(),
             description: description?.trim() || undefined,
             org_id: null,
@@ -56,65 +56,71 @@ router.post('/create', authenticateToken, async (req: Request, res: Response) =>
         });
 
         // Update user as Community Lead
-        await UserQueries.setTeamId(userId, teamId);
+        await UserQueries.setTeamId(userId, communityId);
         await UserQueries.setUserType(userId, 'community_lead');
 
-        console.log(`💚 Community created: ${name} (${teamUniqueId}) by user ${userId}`);
+        console.log(`💚 Community created: ${name} (${communityUniqueId}) by user ${userId}`);
 
         res.json({
             success: true,
-            message: 'Team created successfully',
-            team: {
-                id: teamId,
-                team_unique_id: teamUniqueId,
+            message: 'Community created successfully',
+            community: {
+                id: communityId,
+                community_unique_id: communityUniqueId,
                 name: name.trim()
             }
         });
     } catch (err: any) {
-        console.error('Error creating team:', err);
-        res.status(500).json({ success: false, message: 'Failed to create team' });
+        console.error('Error creating community:', err);
+        res.status(500).json({ success: false, message: 'Failed to create community' });
     }
 });
 
 // ─── Get Team Info ────────────────────────────────────────────
 
-router.get('/:teamUniqueId', authenticateToken, async (req: Request, res: Response) => {
+router.get('/:communityUniqueId', authenticateToken, async (req: Request, res: Response) => {
     try {
-        const team = await TeamQueries.findByTeamUniqueId(req.params.teamUniqueId as string);
-        if (!team) return res.status(404).json({ success: false, message: 'Team not found' });
+        const community = await TeamQueries.findByTeamUniqueId(req.params.communityUniqueId as string);
+        if (!community) return res.status(404).json({ success: false, message: 'Community not found' });
 
-        const memberCount = await TeamQueries.getMemberCount(team.id);
+        const memberCount = await TeamQueries.getMemberCount(community.id);
 
         res.json({
             success: true,
-            team: {
-                ...team,
+            community: {
+                ...community,
                 member_count: memberCount
             }
         });
     } catch (err: any) {
-        console.error('Error fetching team:', err);
-        res.status(500).json({ success: false, message: 'Failed to fetch team' });
+        console.error('Error fetching community:', err);
+        res.status(500).json({ success: false, message: 'Failed to fetch community' });
     }
 });
 
 // ─── Get Team Members ─────────────────────────────────────────
 
-router.get('/:teamUniqueId/members', authenticateToken, async (req: Request, res: Response) => {
+router.get('/:communityUniqueId/members', authenticateToken, async (req: Request, res: Response) => {
     try {
         const userId = (req as any).userId;
-        const team = await TeamQueries.findByTeamUniqueId(req.params.teamUniqueId as string);
-        if (!team) return res.status(404).json({ success: false, message: 'Team not found' });
+        const community = await TeamQueries.findByTeamUniqueId(req.params.communityUniqueId as string);
+        if (!community) return res.status(404).json({ success: false, message: 'Community not found' });
 
         const user = await UserQueries.findById(userId);
-        if (!user || user.team_id !== team.id) {
-            return res.status(403).json({ success: false, message: 'You do not belong to this team' });
+        // Security: user should belong to the community OR be an org super admin
+        if (!user || (user.team_id !== community.id && user.user_type !== 'org_super_admin')) {
+            return res.status(403).json({ success: false, message: 'You do not belong to this community' });
         }
 
-        const members = await TeamQueries.getMembers(team.id);
+        const members = await TeamQueries.getMembers(community.id);
 
         res.json({
             success: true,
+            community: {
+                id: community.id,
+                community_unique_id: community.team_unique_id,
+                name: community.name
+            },
             members: members.map(m => ({
                 id: m.id,
                 first_name: m.first_name,
@@ -127,41 +133,72 @@ router.get('/:teamUniqueId/members', authenticateToken, async (req: Request, res
             }))
         });
     } catch (err: any) {
-        console.error('Error fetching team members:', err);
+        console.error('Error fetching community members:', err);
         res.status(500).json({ success: false, message: 'Failed to fetch members' });
+    }
+});
+
+// ─── Get QR Targets for Community ──────────────────────────────
+// Returns all other members of the community as potential QR targets
+router.get('/:communityUniqueId/qr-targets', authenticateToken, async (req: Request, res: Response) => {
+    try {
+        const userId = (req as any).userId;
+        const community = await TeamQueries.findByTeamUniqueId(req.params.communityUniqueId as string);
+        if (!community) return res.status(404).json({ success: false, message: 'Community not found' });
+
+        const user = await UserQueries.findById(userId);
+        if (!user || user.team_id !== community.id) {
+            return res.status(403).json({ success: false, message: 'You do not belong to this community' });
+        }
+
+        const members = await TeamQueries.getMembers(community.id);
+
+        res.json({
+            success: true,
+            targets: members
+                .filter(m => m.id !== userId)
+                .map(m => ({
+                    id: m.id,
+                    name: `${m.first_name} ${m.last_name}`.trim() || m.username,
+                    unique_id: m.unique_user_id
+                }))
+        });
+    } catch (err: any) {
+        console.error('Error fetching community QR targets:', err);
+        res.status(500).json({ success: false, message: 'Failed to fetch targets' });
     }
 });
 
 // ─── Remove Member From Team ──────────────────────────────────
 
-router.delete('/:teamUniqueId/members/:memberId', authenticateToken, async (req: Request, res: Response) => {
+router.delete('/:communityUniqueId/members/:memberId', authenticateToken, async (req: Request, res: Response) => {
     try {
         const userId = (req as any).userId;
         const memberId = parseInt(req.params.memberId as string, 10);
 
-        const team = await TeamQueries.findByTeamUniqueId(req.params.teamUniqueId as string);
-        if (!team) return res.status(404).json({ success: false, message: 'Team not found' });
+        const community = await TeamQueries.findByTeamUniqueId(req.params.communityUniqueId as string);
+        if (!community) return res.status(404).json({ success: false, message: 'Community not found' });
 
-        // Only team lead can remove members
+        // Only community lead can remove members
         const user = await UserQueries.findById(userId);
-        if (!user || user.team_id !== team.id || !['team_lead', 'community_lead'].includes(user.user_type)) {
-            return res.status(403).json({ success: false, message: 'Only Team Lead can remove members' });
+        if (!user || user.team_id !== community.id || !['community_lead', 'team_lead'].includes(user.user_type)) {
+            return res.status(403).json({ success: false, message: 'Only Community Lead can remove members' });
         }
 
         if (memberId === userId) {
-            return res.status(400).json({ success: false, message: 'Cannot remove yourself from the team' });
+            return res.status(400).json({ success: false, message: 'Cannot remove yourself from the community' });
         }
 
         const member = await UserQueries.findById(memberId);
-        if (!member || member.team_id !== team.id) {
-            return res.status(404).json({ success: false, message: 'Member not found in this team' });
+        if (!member || member.team_id !== community.id) {
+            return res.status(404).json({ success: false, message: 'Member not found in this community' });
         }
 
-        // Remove team association
+        // Remove association
         await UserQueries.setTeamId(memberId, 0 as any);
         await UserQueries.setUserType(memberId, 'individual');
 
-        res.json({ success: true, message: 'Member removed from team' });
+        res.json({ success: true, message: 'Member removed from community' });
     } catch (err: any) {
         console.error('Error removing member:', err);
         res.status(500).json({ success: false, message: 'Failed to remove member' });
