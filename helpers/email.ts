@@ -21,11 +21,13 @@ const transporter = nodemailer.createTransport({
         user: process.env.GMAIL_USER,
         pass: process.env.GMAIL_PASS,
     },
-    // Prevent hanging requests indefinitely
+    // Force IPv4 to prevent ENETUNREACH errors on cloud providers like Render/Vercel
+    // that may not have IPv6 routing configured correctly.
+    host_ip_family: 4, 
     connectionTimeout: 10000, 
     greetingTimeout: 10000,
     socketTimeout: 10000,
-});
+} as any); // cast as any because host_ip_family is a newer/specific property in some versions
 
 // Verify connection on startup to log issues early
 transporter.verify((error) => {
@@ -33,7 +35,7 @@ transporter.verify((error) => {
         console.error("❌ SMTP Transporter Verification Failed:", error.message);
         console.error("   Make sure GMAIL_USER and GMAIL_PASS (App Password) are correct in Render!");
     } else {
-        console.log("✅ SMTP Transporter is ready for production");
+        console.log("✅ SMTP Transporter is ready (IPv4).");
     }
 });
 
