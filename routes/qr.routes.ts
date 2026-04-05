@@ -304,8 +304,7 @@ router.get(
                         <p id="sub-text">Align your face within the circle to unlock securely.</p>
                         
                         <div id="progress" class="progress-bar"><div id="fill" class="progress-fill"></div></div>
-                        <button id="start-btn" class="btn">Start Secure Scan</button>
-                        <div id="status" class="status"></div>
+                        <div id="status" class="status" style="margin-top: 1rem;">Initializing Lens...</div>
                         
                         <canvas id="canvas" style="display:none;"></canvas>
                     </div>
@@ -321,7 +320,6 @@ router.get(
 
                         async function startScan() {
                             try {
-                                startBtn.style.display = 'none';
                                 status.innerText = "Initializing Lens...";
                                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 } });
                                 video.srcObject = stream;
@@ -333,15 +331,16 @@ router.get(
                                     autoCapture();
                                 };
                             } catch (err) {
-                                startBtn.style.display = 'block';
                                 status.innerText = "❌ ACCESS ERROR: Camera Required";
                             }
                         }
 
+                        window.onload = startScan;
+
                         async function autoCapture() {
                             let p = 0;
                             const interval = setInterval(() => {
-                                p += 2;
+                                p += 4; // Faster progress (approx 750ms)
                                 fill.style.width = p + '%';
                                 if (p >= 100) {
                                     clearInterval(interval);
@@ -352,6 +351,14 @@ router.get(
 
                         async function performVerify() {
                             status.innerText = "🔐 Verifying Identity Map...";
+                            
+                            // 📸 Freeze Camera and Hide Beam for visual confirmation
+                            beam.style.display = 'none';
+                            video.pause();
+                            if (video.srcObject) {
+                                video.srcObject.getTracks().forEach(track => track.stop());
+                            }
+
                             const size = 300;
                             canvas.width = size;
                             canvas.height = size;
@@ -360,7 +367,7 @@ router.get(
                             const sx = (video.videoWidth - minSide) / 2;
                             const sy = (video.videoHeight - minSide) / 2;
                             ctx.drawImage(video, sx, sy, minSide, minSide, 0, 0, size, size);
-                            const base64Image = canvas.toDataURL('image/jpeg', 0.7);
+                            const base64Image = canvas.toDataURL('image/jpeg', 0.6); // Slightly lower quality for speed
 
                             try {
                                 const verifyRes = await fetch('/verify-scan-face/' + window.location.pathname.split('/').pop(), {
@@ -388,7 +395,6 @@ router.get(
                                 }, 2000);
                             }
                         }
-                        startBtn.onclick = startScan;
                     </script>
                 </body>
                 </html>
@@ -680,6 +686,16 @@ const base64Data = Buffer.from(buffer).toString("base64");
                             shield.style.display = 'flex';
                             setTimeout(() => window.location.href = 'about:blank', 2500);
                         };
+
+                        // Auto-close on Expiration
+                        const expiresAt = ${new Date(qrToken.expires_at).getTime()};
+                        const now = Date.now();
+                        const ttl = expiresAt - now;
+                        if (ttl <= 0) {
+                            killAccess();
+                        } else {
+                            setTimeout(killAccess, ttl);
+                        }
 
                         ${isUnshareable ? `
                         const updateSpotlight = (x, y) => {
