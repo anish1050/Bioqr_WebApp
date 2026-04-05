@@ -355,6 +355,20 @@ router.get(
                         async function performVerify() {
                             status.innerText = "Verifying Identity Map...";
                             
+                            // 💡 Dynamic UX: Update status while processing
+                            const uxSequence = [
+                                { t: 600, m: "Analyzing BioSeal..." },
+                                { t: 1200, m: "Matching Descriptors..." },
+                                { t: 2000, m: "Finalizing Security Handshake..." }
+                            ];
+                            uxSequence.forEach(step => {
+                                setTimeout(() => {
+                                    if (status.innerText.startsWith("Verifying") || status.innerText.includes("Analyzing") || status.innerText.includes("Matching")) {
+                                        status.innerText = step.m;
+                                    }
+                                }, step.t);
+                            });
+
                             // 📸 Freeze Camera and Hide Beam for visual confirmation
                             beam.style.display = 'none';
                             video.pause();
