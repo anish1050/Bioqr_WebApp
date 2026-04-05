@@ -175,7 +175,7 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '8.5rem', paddingBottom: '3rem', paddingLeft: '1rem', paddingRight: '1rem', position: 'relative', overflowY: 'auto', overflowX: 'hidden', background: '#020617' }}>
+    <div className="login-wrapper">
       <SEO title="Sign In" description="Securely log in to manage your files and access your BioQR dashboard." />
       
       <Navbar />
@@ -197,8 +197,8 @@ const Login: React.FC = () => {
               <div>
                 
                 <div style={{ marginBottom: '2rem' }}>
-                  <h2 style={{ fontSize: '2.25rem', fontWeight: 800, color: 'white', lineHeight: 1.2, marginBottom: '1rem' }}>Welcome Back.</h2>
-                  <p style={{ color: '#94a3b8', fontSize: '1.125rem', fontWeight: 500, lineHeight: 1.6 }}>Sign in to access your dashboard, manage files, and continue where you left off.</p>
+                  <h2 style={{ fontSize: 'clamp(1.75rem, 5vw, 2.25rem)', fontWeight: 800, color: 'white', lineHeight: 1.2, marginBottom: '0.75rem' }}>Welcome Back.</h2>
+                  <p style={{ color: '#94a3b8', fontSize: 'clamp(0.95rem, 3vw, 1.125rem)', fontWeight: 500, lineHeight: 1.5, maxWidth: '100%' }}>Sign in to access your dashboard, manage files, and continue where you left off.</p>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', paddingTop: '0.5rem' }}>

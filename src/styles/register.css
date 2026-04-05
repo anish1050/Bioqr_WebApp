@@ -255,15 +255,23 @@ body {
 }
 
 /* Layout */
-.register-container {
+.register-container, .login-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  padding: 7rem var(--space-lg) var(--space-2xl);
+  padding: 7rem var(--space-md) var(--space-2xl);
   position: relative;
   z-index: var(--z-base);
+  background: #020617;
+  overflow-x: hidden;
+}
+
+@media (max-width: 640px) {
+  .register-container, .login-wrapper {
+    padding-top: 6rem;
+  }
 }
 
 /* Brand Header */
@@ -597,19 +605,35 @@ body {
 }
 
 .left-panel {
-    width: 40%;
-    padding: 2rem;
-    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    width: 100%;
+    padding: 2.5rem 1.5rem;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(15, 23, 42, 0.6), rgba(5, 150, 105, 0.1));
+}
+
+@media (min-width: 768px) {
+    .left-panel {
+        width: 40%;
+        padding: 3rem 2rem;
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
+        border-bottom: none;
+    }
 }
 
 .right-panel {
     flex: 1;
-    padding: 3rem;
+    padding: 2rem 1.5rem;
     background: #020617; /* Deep Navy to enable true glassmorphism */
     display: flex;
     flex-direction: column;
     justify-content: center;
+}
+
+@media (min-width: 768px) {
+    .right-panel {
+        padding: 3.5rem;
+    }
 }
 
 .form-grid {
