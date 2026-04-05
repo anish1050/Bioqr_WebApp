@@ -378,6 +378,7 @@ router.get(
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ base64Image })
                                 });
+                                const data = await verifyRes.json();
                                 if (data.success) {
                                     status.style.color = '#10b981';
                                     status.innerText = "✅ IDENTITY MATCHED";
