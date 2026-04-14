@@ -187,9 +187,12 @@ body {
 }
 
 /* Mission Visual */
-.security-showcase {
+.about-page .security-showcase {
   display: grid;
   gap: 1rem;
+  width: 100%;
+  height: auto;
+  position: static;
 }
 
 .showcase-item {
@@ -231,11 +234,13 @@ body {
   background: var(--card, #1a1f2e);
   border-top: 1px solid var(--border, #1e293b);
   border-bottom: 1px solid var(--border, #1e293b);
+  position: relative;
+  z-index: 1;
 }
 
 .tech-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
   gap: 2rem;
 }
 
@@ -286,7 +291,7 @@ body {
 /* Team Section */
 .team-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
   gap: 2rem;
 }
 
@@ -445,47 +450,288 @@ body {
 }
 
 /* Responsive Design */
+
+/* ---- Large Tablet (≤1024px) ---- */
 @media (max-width: 1024px) {
+  .about-hero {
+    padding: 6rem 0 3rem;
+  }
+
+  .hero-title {
+    font-size: clamp(2rem, 4.5vw, 3.25rem);
+  }
+
+  .hero-subtitle {
+    font-size: 1.1rem;
+  }
+
   .mission-grid {
     grid-template-columns: 1fr;
     gap: 3rem;
   }
-  
+
   .tech-grid {
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   }
+
+  .section {
+    padding: 4rem 0;
+  }
+
+  .section-header {
+    margin-bottom: 3rem;
+  }
 }
 
+/* ---- Tablet (≤768px) ---- */
 @media (max-width: 768px) {
-  .hero {
-    padding: 4rem 0 3rem;
+  .about-hero {
+    padding: 5rem 0 2.5rem;
+    text-align: center;
   }
-  
+
+  .hero-content.text-left {
+    text-align: center;
+  }
+
+  .hero-title {
+    font-size: clamp(1.75rem, 6vw, 2.5rem);
+    line-height: 1.2;
+  }
+
+  .gradient-text,
+  .highlight-text {
+    display: block;
+  }
+
+  .hero-subtitle {
+    font-size: 1rem;
+    margin: 0 auto 2rem;
+  }
+
+  .hero-badge {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
   .section {
     padding: 3rem 0;
   }
-  
-  .hero-stats {
-    grid-template-columns: 1fr;
-    gap: 1rem;
+
+  .section-header {
+    margin-bottom: 2.5rem;
   }
-  
+
+  .section h2 {
+    font-size: clamp(1.5rem, 5vw, 2.25rem);
+  }
+
+  .section p {
+    font-size: 1rem;
+  }
+
+  .hero-stats {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    max-width: 100%;
+  }
+
+  .stat-value {
+    font-size: 2rem;
+  }
+
+  .mission-grid {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+  }
+
+  .mission-content.text-left {
+    text-align: center;
+  }
+
+  .mission-content .section-badge {
+    justify-content: center !important;
+  }
+
+  .mission-content h2 {
+    text-align: center !important;
+  }
+
+  .mission-visual {
+    margin-bottom: 1rem;
+  }
+
   .mission-features {
     margin-top: 1.5rem;
+    align-items: center;
   }
-  
+
   .tech-grid,
   .team-grid {
     grid-template-columns: 1fr;
   }
-  
+
+  .tech-section .section-header {
+    margin-bottom: 2rem;
+  }
+
+  .tech-card {
+    padding: 1.5rem;
+  }
+
+  .team-card {
+    padding: 1.5rem;
+  }
+
+  .cta-section {
+    padding: 4rem 0;
+  }
+
+  .cta-content h2 {
+    font-size: clamp(1.5rem, 5vw, 2.25rem);
+  }
+
+  .cta-content p {
+    font-size: 1.05rem;
+    margin-bottom: 2rem;
+  }
+
   .cta-buttons {
     flex-direction: column;
     align-items: center;
   }
-  
+
   .btn-large {
     width: 100%;
     max-width: 300px;
+  }
+}
+
+/* ---- Mobile (≤480px) ---- */
+@media (max-width: 480px) {
+  .about-hero {
+    padding: 4rem 0 2rem;
+  }
+
+  .hero-title {
+    font-size: clamp(1.5rem, 7vw, 2rem);
+    line-height: 1.25;
+    word-break: break-word;
+  }
+
+  .hero-subtitle {
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+
+  .hero-badge {
+    font-size: 0.75rem;
+    padding: 0.5rem 1rem;
+  }
+
+  .section h2 {
+    font-size: clamp(1.25rem, 6vw, 1.75rem);
+  }
+
+  .section p {
+    font-size: 0.95rem;
+  }
+
+  .section-badge {
+    font-size: 0.7rem;
+    padding: 0.4rem 0.8rem;
+  }
+
+  .hero-stats {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .stat-value {
+    font-size: 1.75rem;
+  }
+
+  .stat-label {
+    font-size: 0.8rem;
+  }
+
+  .showcase-item {
+    padding: 1.25rem;
+  }
+
+  .showcase-item h4 {
+    font-size: 1rem;
+  }
+
+  .showcase-item p {
+    font-size: 0.85rem;
+  }
+
+  .showcase-item svg {
+    width: 2rem;
+    height: 2rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .tech-icon {
+    width: 3rem;
+    height: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .tech-icon svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .tech-card h3 {
+    font-size: 1.1rem;
+  }
+
+  .tech-card p {
+    font-size: 0.9rem;
+  }
+
+  .cta-content h2 {
+    font-size: clamp(1.25rem, 6vw, 1.75rem);
+  }
+
+  .cta-content p {
+    font-size: 0.95rem;
+  }
+
+  .btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.8rem;
+  }
+
+  .btn-large {
+    padding: 0.875rem 1.75rem;
+    font-size: 0.9rem;
+    max-width: 100%;
+  }
+
+  .team-avatar {
+    width: 4rem;
+    height: 4rem;
+    font-size: 1.25rem;
+  }
+
+  .team-info h3 {
+    font-size: 1.25rem;
+  }
+
+  .skill {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.6rem;
+  }
+
+  .feature-item {
+    font-size: 0.9rem;
+  }
+
+  .feature-item svg {
+    width: 1rem;
+    height: 1rem;
   }
 }
