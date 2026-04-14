@@ -1,50 +1,65 @@
-import axios from "axios";
+import nodemailer from "nodemailer";
+import type SMTPTransport from "nodemailer/lib/smtp-transport";
+import dns from "dns";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const RESEND_API_URL = "https://api.resend.com/emails";
+// Force IPv4 DNS resolution globally to prevent ENETUNREACH on cloud providers (Render)
+dns.setDefaultResultOrder("ipv4first");
+
+const GMAIL_USER = process.env.GMAIL_USER;
+const GMAIL_PASS = process.env.GMAIL_PASS;
 
 /**
- * Robust Email Helper using Resend API (HTTPS).
- * 🚀 This eliminates SMTP issues (port blocking, IPv6 ENETUNREACH) on cloud providers.
+ * Nodemailer Gmail SMTP transporter.
+ * Uses App Password authentication and forces IPv4 to avoid
+ * ENETUNREACH (IPv6 routing) issues on Render/cloud hosts.
+ */
+const smtpConfig: SMTPTransport.Options = {
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true, // SSL
+    auth: {
+        user: GMAIL_USER,
+        pass: GMAIL_PASS,
+    },
+    // Connection timeouts
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
+} as SMTPTransport.Options;
+
+// Force IPv4 — critical fix for Render deployment (ENETUNREACH)
+(smtpConfig as any).family = 4;
+
+const transporter = nodemailer.createTransport(smtpConfig);
+
+/**
+ * Core email sender using Nodemailer + Gmail SMTP (completely free).
  */
 const sendEmail = async (to: string, subject: string, html: string): Promise<boolean> => {
-    if (!RESEND_API_KEY) {
-        console.error("❌ Resend Migration Error: RESEND_API_KEY is missing from environment variables!");
+    if (!GMAIL_USER || !GMAIL_PASS) {
+        console.error("❌ Nodemailer Error: GMAIL_USER or GMAIL_PASS is missing from environment variables!");
         return false;
     }
 
     try {
-        const response = await axios.post(
-            RESEND_API_URL,
-            {
-                from: "BioQR Security <onboarding@resend.dev>", // Default free sandbox domain
-                to: [to],
-                subject: subject,
-                html: html,
-            },
-            {
-                headers: {
-                    "Authorization": `Bearer ${RESEND_API_KEY}`,
-                    "Content-Type": "application/json",
-                },
-            }
-        );
+        const info = await transporter.sendMail({
+            from: `"BioQR Security" <${GMAIL_USER}>`,
+            to: to,
+            subject: subject,
+            html: html,
+        });
 
-        if (response.status === 200 || response.status === 201) {
-            console.log(`✅ Email sent via Resend API to ${to} (ID: ${response.data.id})`);
-            return true;
-        }
-        return false;
+        console.log(`✅ Email sent via Nodemailer to ${to} (Message ID: ${info.messageId})`);
+        return true;
     } catch (error: any) {
-        console.error("❌ Resend API failure:");
+        console.error("❌ Nodemailer send failure:");
+        console.error("  Code:", error.code);
+        console.error("  Message:", error.message);
         if (error.response) {
-            console.error("  Status:", error.response.status);
-            console.error("  Data:", JSON.stringify(error.response.data));
-        } else {
-            console.error("  Message:", error.message);
+            console.error("  SMTP Response:", error.response);
         }
         return false;
     }
