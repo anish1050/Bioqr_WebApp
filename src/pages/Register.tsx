@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { 
   User, Mail, Lock, Eye, EyeOff, Smartphone, MailCheck, Fingerprint, 
-  CheckCircle2, XCircle, Loader2, ArrowRight, Building, Users, Camera, ChevronDown, X, Heart, UserPlus
+  CheckCircle2, XCircle, Loader2, ArrowRight, ArrowLeft, Building, Users, Camera, ChevronDown, X, Heart, UserPlus
 } from 'lucide-react';
 import axios from "axios";
 import "../styles/register.css";
@@ -612,8 +612,13 @@ const Register: React.FC = () => {
           {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <><CheckCircle2 className="h-5 w-5" /> <span>Verify & Continue</span></>}
         </button>
 
-        <button type="button" onClick={() => setStep('info')} className="w-full text-slate-500 hover:text-white text-xs font-medium transition-colors cursor-pointer text-center">
-          Wrong email? Go back
+        <button 
+          type="button" 
+          onClick={() => setStep('info')} 
+          className="w-full mt-4 flex items-center justify-center gap-2 text-slate-300 hover:text-white text-sm font-semibold py-3 rounded-xl border border-white/10 hover:bg-white/5 transition-all cursor-pointer"
+        >
+          <ArrowLeft className="h-5 w-5" />
+          <span>Wrong email? Go back</span>
         </button>
       </form>
     </div>

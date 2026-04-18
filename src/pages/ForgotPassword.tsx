@@ -297,8 +297,13 @@ const ForgotPassword: React.FC = () => {
                         {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <><CheckCircle2 className="h-5 w-5" /> <span>Reset Password</span></>}
                       </button>
 
-                      <button type="button" onClick={() => { setStep('email'); setOtp(""); setNewPassword(""); setConfirmPassword(""); setError(""); setSuccess(""); }} style={{ width: '100%', background: 'transparent', border: 'none', color: '#64748b', fontSize: '0.75rem', fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', padding: '0.5rem' }}>
-                        <ArrowLeft size={14} /> Wrong email? Go back
+                      <button 
+                        type="button" 
+                        onClick={() => { setStep('email'); setOtp(""); setNewPassword(""); setConfirmPassword(""); setError(""); setSuccess(""); }} 
+                        className="w-full mt-2 flex items-center justify-center gap-2 text-slate-300 hover:text-white text-sm font-semibold py-3 rounded-xl border border-white/10 hover:bg-white/5 transition-all cursor-pointer"
+                        style={{ background: 'transparent' }}
+                      >
+                        <ArrowLeft size={18} /> <span>Wrong email? Go back</span>
                       </button>
                     </div>
                   </form>

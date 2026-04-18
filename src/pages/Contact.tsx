@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { 
   Headset, MessageSquare, Ticket, Calendar, Mail, 
@@ -9,6 +10,7 @@ import "../styles/contact-modern.css";
 import SEO from "../components/SEO";
 
 const Contact: React.FC = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -61,20 +63,11 @@ const Contact: React.FC = () => {
       // but we can assume success if no error is thrown. 
       // For GAS specifically, a successful execution returns opaque response.
       setSubmitStatus('success');
-      setFormData({
-        firstName: "",
-        lastName: "",
-        email: "",
-        phone: "",
-        company: "",
-        subject: "",
-        priority: "low",
-        message: "",
-        newsletter: false,
-      });
-
-      // Reset status after 5 seconds
-      setTimeout(() => setSubmitStatus('idle'), 5000);
+      
+      // Redirect to help page with success state
+      setTimeout(() => {
+        navigate('/help?success=true', { state: { fromContact: true } });
+      }, 1500);
       
     } catch (error) {
       console.error('Submission error:', error);
@@ -86,76 +79,25 @@ const Contact: React.FC = () => {
   return (
     <div className="contact-page">
       <SEO title="Contact Us" description="Get in touch with the BioQR team for enterprise support and inquiries." />
-      {/* Hero Section */}
       <section className="contact-hero">
         <div className="container contact-hero-container">
           <div className="contact-hero-left">
             <div className="hero-badge" style={{ margin: '0 0 1rem 0' }}>
-              <Headset className="badge-icon" />
-              <span>24/7 Support</span>
+              <Mail className="badge-icon" />
+              <span>Email Support</span>
             </div>
-            <h1 className="hero-title" style={{ margin: 0 }}>GET IN TOUCH</h1>
+            <h1 className="hero-title" style={{ margin: 0 }}>Reach Out to Us</h1>
           </div>
           <div className="contact-hero-right">
             <p className="hero-subtitle" style={{ margin: 0 }}>
               Have questions about BioQR? Need technical support
-              or want to discuss enterprise solutions? We're here to
-              help you secure your future.
+              or want to discuss enterprise solutions? Send us a message 
+              and our team will get back to you shortly.
             </p>
           </div>
         </div>
       </section>
 
-      {/* Contact Options */}
-      <section className="section">
-        <div className="container">
-          <div className="contact-options grid grid-cols-4">
-            <div className="contact-option-card card">
-              <div className="contact-icon">
-                <MessageSquare />
-              </div>
-              <h3>Live Chat</h3>
-              <p>Get instant support from our technical team</p>
-              <button className="btn btn-outline btn-sm">
-                Start Chat
-              </button>
-            </div>
-            
-            <div className="contact-option-card card">
-              <div className="contact-icon">
-                <Ticket />
-              </div>
-              <h3>Support Ticket</h3>
-              <p>Submit detailed technical issues and track progress</p>
-              <button className="btn btn-outline btn-sm">
-                Create Ticket
-              </button>
-            </div>
-            
-            <div className="contact-option-card card">
-              <div className="contact-icon">
-                <Calendar />
-              </div>
-              <h3>Schedule Call</h3>
-              <p>Book a consultation with our solutions experts</p>
-              <button className="btn btn-outline btn-sm">
-                Book Call
-              </button>
-            </div>
-            
-            <div className="contact-option-card card">
-              <div className="contact-icon">
-                <Mail />
-              </div>
-              <h3>Email Support</h3>
-              <p>Send us detailed inquiries and documentation</p>
-              <a href="#contactForm" className="btn btn-outline btn-sm">
-                Send Email
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Main Contact Section */}
       <section className="section">
@@ -302,32 +244,9 @@ const Contact: React.FC = () => {
             
             {/* Contact Information */}
             <div className="contact-info-section">
-              {/* Office Locations */}
-              <div className="card">
-                <h3><Building size={20} /> Office Locations</h3>
-                
-                <div className="office-location">
-                  <h4>Headquarters - Mumbai</h4>
-                  <div className="office-details">
-                    <p><MapPin size={16} /> 123 Tech Hub, Bandra Kurla Complex<br/>Mumbai, Maharashtra 400051, India</p>
-                    <p><Phone size={16} /> +91 98765 43210</p>
-                    <p><Clock size={16} /> Mon-Fri: 9:00 AM - 6:00 PM IST</p>
-                  </div>
-                </div>
-                
-                <div className="office-location">
-                  <h4>Development Center - Bangalore</h4>
-                  <div className="office-details">
-                    <p><MapPin size={16} /> 456 Innovation Street, Electronic City<br/>Bangalore, Karnataka 560100, India</p>
-                    <p><Phone size={16} /> +91 98765 43211</p>
-                    <p><Clock size={16} /> Mon-Fri: 9:00 AM - 6:00 PM IST</p>
-                  </div>
-                </div>
-              </div>
-              
               {/* Direct Contact */}
-              <div className="card">
-                <h3><Headset size={20} /> Direct Contact</h3>
+              <div className="card glass-card">
+                <h3><Mail size={20} /> Direct Contact</h3>
                 
                 <div className="contact-methods">
                   <div className="contact-method">
@@ -337,55 +256,30 @@ const Contact: React.FC = () => {
                     <div className="method-details">
                       <h4>Email Support</h4>
                       <p>wearebioqr@gmail.com</p>
-                      <span className="response-time">Response within 4 hours</span>
+                      <span className="response-time">Typical response: 2-4 hours</span>
                     </div>
                   </div>
                   
                   <div className="contact-method">
                     <div className="method-icon">
-                      <Phone />
+                      <Clock />
                     </div>
                     <div className="method-details">
-                      <h4>Phone Support</h4>
-                      <p>+91 98765 43210</p>
-                      <span className="response-time">Mon-Fri, 9 AM - 6 PM IST</span>
-                    </div>
-                  </div>
-                  
-                  <div className="contact-method">
-                    <div className="method-icon">
-                      <MessageSquare />
-                    </div>
-                    <div className="method-details">
-                      <h4>Live Chat</h4>
-                      <p>Available 24/7</p>
-                      <span className="response-time">Instant response</span>
+                      <h4>Business Hours</h4>
+                      <p>Mon - Fri: 9 AM - 6 PM IST</p>
+                      <span className="response-time">Emails monitored daily</span>
                     </div>
                   </div>
                 </div>
               </div>
-              
-              {/* Support Hours */}
-              <div className="card">
-                <h3><Clock size={20} /> Support Hours</h3>
-                <div className="support-hours">
-                  <div className="hours-item">
-                    <span className="day">Monday - Friday</span>
-                    <span className="time">9:00 AM - 6:00 PM IST</span>
-                  </div>
-                  <div className="hours-item">
-                    <span className="day">Saturday</span>
-                    <span className="time">10:00 AM - 4:00 PM IST</span>
-                  </div>
-                  <div className="hours-item">
-                    <span className="day">Sunday</span>
-                    <span className="time">Emergency only</span>
-                  </div>
-                  <div className="hours-item emergency">
-                    <span className="day">24/7 Emergency</span>
-                    <span className="time">Critical issues</span>
-                  </div>
-                </div>
+
+              {/* Newsletter or extra info */}
+              <div className="card glass-card">
+                <h3 style={{ justifyContent: 'flex-start' }}><Building size={20} /> Our Mission</h3>
+                <p style={{ fontSize: '0.9rem', color: 'var(--muted-foreground)', textAlign: 'left' }}>
+                  BioQR is committed to providing secure, efficient, and innovative solutions for your business needs. 
+                  Our team of experts is always striving to deliver the best experience for our users.
+                </p>
               </div>
             </div>
           </div>
@@ -401,24 +295,24 @@ const Contact: React.FC = () => {
           </div>
           
           <div className="faq-grid grid grid-cols-2">
-            <div className="faq-item card">
-              <h4>What is the typical response time for support tickets?</h4>
-              <p>We respond to most support tickets within 4 hours during business hours. Critical issues are addressed immediately.</p>
+            <div className="faq-item card glass-card">
+              <h4>How long does it take to get a response?</h4>
+              <p>We typically respond to all inquiries within 2 to 4 hours during business hours. Over the weekend, it may take slightly longer.</p>
             </div>
             
-            <div className="faq-item card">
-              <h4>Do you offer enterprise support packages?</h4>
-              <p>Yes, we offer comprehensive enterprise support with dedicated account managers, SLA guarantees, and 24/7 phone support.</p>
+            <div className="faq-item card glass-card">
+              <h4>Do you offer customized solutions?</h4>
+              <p>Yes, we can tailor BioQR to fit your specific enterprise needs. Just send us a detailed message with your requirements.</p>
             </div>
             
-            <div className="faq-item card">
-              <h4>Can I schedule a product demonstration?</h4>
-              <p>Absolutely! You can schedule a personalized demo with our solutions team using the "Schedule Call" option above.</p>
+            <div className="faq-item card glass-card">
+              <h4>Is technical support free?</h4>
+              <p>Basic technical support is included with every account. For specialized integration help, our team is happy to assist.</p>
             </div>
             
-            <div className="faq-item card">
+            <div className="faq-item card glass-card">
               <h4>How can I report a security vulnerability?</h4>
-              <p>Please email wearebioqr@gmail.com for responsible disclosure. We take security reports very seriously and respond promptly.</p>
+              <p>Please email wearebioqr@gmail.com for responsible disclosure. We take security reports very seriously and respond as a priority.</p>
             </div>
           </div>
         </div>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu } from 'lucide-react';
+import { Menu, X, LogOut, User as UserIcon } from 'lucide-react';
 import Logo from './Logo';
 
 interface UserInfo {
@@ -21,24 +21,13 @@ interface UserInfo {
 
 interface DashboardNavbarProps {
   onMobileMenuToggle: () => void;
+  isMobileMenuOpen: boolean;
 }
 
-const DashboardNavbar: React.FC<DashboardNavbarProps> = ({ onMobileMenuToggle }) => {
+const DashboardNavbar: React.FC<DashboardNavbarProps> = ({ onMobileMenuToggle, isMobileMenuOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState<UserInfo | null>(() => {
-    // 1. Check URL for OAuth data first (handle initial redirect)
-    const searchParams = new URLSearchParams(window.location.search);
-    const urlUser = searchParams.get('user');
-    if (urlUser) {
-      try {
-        return JSON.parse(decodeURIComponent(urlUser));
-      } catch (e) {
-        console.error('Failed to parse user from URL', e);
-      }
-    }
-
-    // 2. Fallback to localStorage
     const userInfo = localStorage.getItem('userInfo');
     if (userInfo) {
       try {
@@ -52,7 +41,6 @@ const DashboardNavbar: React.FC<DashboardNavbarProps> = ({ onMobileMenuToggle })
   const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
-    // Keep sync with localStorage in case it changes
     const handleStorageChange = () => {
       const userInfo = localStorage.getItem('userInfo');
       if (userInfo) {
@@ -101,35 +89,28 @@ const DashboardNavbar: React.FC<DashboardNavbarProps> = ({ onMobileMenuToggle })
 
   const getAvatarUrl = () => {
     if (!user || imgError) return null;
-    
-    let url = null;
-    if (user.provider === 'github' && user.github_avatar) url = user.github_avatar;
-    else if (user.provider === 'google' && user.google_avatar) url = user.google_avatar;
-    else if (user.avatar_url) url = user.avatar_url;
-
-    // Filter out "null" string or empty strings
+    let url = user.provider === 'github' ? user.github_avatar : user.provider === 'google' ? user.google_avatar : user.avatar_url;
     if (!url || url === 'null' || url === 'undefined') return null;
-
-    // Handle relative paths
-    if (typeof url === 'string' && !url.startsWith('http') && !url.startsWith('/')) {
-      return `/${url}`;
-    }
-
+    if (typeof url === 'string' && !url.startsWith('http') && !url.startsWith('/')) return `/${url}`;
     return url;
   };
 
   const displayName = getUserDisplayName();
   const avatarUrl = getAvatarUrl();
 
+  const closeMenu = () => {
+    if (isMobileMenuOpen) onMobileMenuToggle();
+  };
+
   return (
     <header className="header">
       <div className="container">
-        <Link to="/dashboard" className="logo">
+        <Link to="/dashboard" className="logo" onClick={closeMenu}>
           <Logo className="logo-icon" />
           <span className="logo-text">BioQR</span>
         </Link>
       
-        <nav className={`main-nav ${location.pathname === '/' ? "nav-open" : ""}`}>
+        <nav className={`main-nav ${isMobileMenuOpen ? "nav-open" : ""}`}>
           <ul>
             <li>
               <Link 
@@ -139,75 +120,74 @@ const DashboardNavbar: React.FC<DashboardNavbarProps> = ({ onMobileMenuToggle })
                     ? "/dashboard/team#files"
                     : "/dashboard#files")} 
                 className={(location.pathname.includes('/dashboard')) && location.hash === '#files' ? 'active' : ''}
+                onClick={closeMenu}
               >
                 Files
               </Link>
             </li>
-            <li>
-              <Link to="/dashboard?mode=personal" className={location.pathname === '/dashboard' && !location.hash ? 'active' : ''}>
-                Individual
+            <li className="mobile-only">
+              <Link to="/dashboard?mode=personal" className={location.pathname === '/dashboard' && !location.hash ? 'active' : ''} onClick={closeMenu}>
+                Dashboard
               </Link>
             </li>
             {user && ['org_super_admin', 'org_admin', 'org_member'].includes(user.user_type || '') && (
               <li>
-                <Link to="/dashboard/org" className={location.pathname.startsWith('/dashboard/org') ? 'active' : ''}>
+                <Link to="/dashboard/org" className={location.pathname.startsWith('/dashboard/org') ? 'active' : ''} onClick={closeMenu}>
                   Org Hub
                 </Link>
               </li>
             )}
             {user && ['team_lead', 'team_member', 'community_lead', 'community_member'].includes(user.user_type || '') && (
               <li>
-                <Link to="/dashboard/team" className={location.pathname.startsWith('/dashboard/team') ? 'active' : ''}>
-                Community
+                <Link to="/dashboard/team" className={location.pathname.startsWith('/dashboard/team') ? 'active' : ''} onClick={closeMenu}>
+                  Community
                 </Link>
               </li>
             )}
             <li>
-              <Link to="/dashboard/analytics" className={location.pathname === '/dashboard/analytics' ? 'active' : ''}>
+              <Link to="/dashboard/analytics" className={location.pathname === '/dashboard/analytics' ? 'active' : ''} onClick={closeMenu}>
                 Analytics
               </Link>
             </li>
             <li>
-              <Link to="/dashboard/about" className={location.pathname === '/dashboard/about' ? 'active' : ''}>
+              <Link to="/dashboard/about" className={location.pathname === '/dashboard/about' ? 'active' : ''} onClick={closeMenu}>
                 About
               </Link>
             </li>
-            <li>
-              <Link to="/dashboard/contact" className={location.pathname === '/dashboard/contact' ? 'active' : ''}>
-                Contact
-              </Link>
+            <li className="mobile-user-info">
+              <div className="mobile-profile">
+                <div className="mobile-avatar">
+                  {avatarUrl ? <img src={avatarUrl} alt="" onError={() => setImgError(true)} /> : <span>{getInitials(displayName)}</span>}
+                </div>
+                <div className="mobile-details">
+                   <p className="name">{displayName}</p>
+                   <p className="email">{user?.email}</p>
+                </div>
+              </div>
+              <button className="mobile-logout-btn" onClick={handleLogout}>
+                <LogOut size={18} /> Logout
+              </button>
             </li>
           </ul>
         </nav>
         
-        <div className="navbar-user" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div className="user-profile" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div className="user-avatar" style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 600, fontSize: '0.8rem', position: 'relative', overflow: 'hidden' }}>
+        <div className="navbar-user">
+          <div className="user-profile">
+            <div className="user-avatar" style={{ background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))' }}>
               {avatarUrl ? (
-                <img 
-                  src={avatarUrl} 
-                  alt="Avatar" 
-                  className="profile-image" 
-                  style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} 
-                  onError={() => setImgError(true)}
-                />
+                <img src={avatarUrl} alt="Avatar" className="profile-image" onError={() => setImgError(true)} />
               ) : (
                 <span>{getInitials(displayName)}</span>
               )}
             </div>
-            <div className="user-details" style={{ display: 'none' }}>
-              <h4 style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>{displayName}</h4>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>{user?.email || 'user@example.com'}</p>
-            </div>
           </div>
-          <button className="btn btn-ghost" onClick={handleLogout} style={{ padding: '0.5rem 1rem' }}>
+          <button className="btn btn-ghost logout-btn-desktop desktop-only" onClick={handleLogout}>
             Logout
           </button>
         </div>
         
-        {/* Mobile Menu Toggle */}
         <button className="mobile-menu-btn" onClick={onMobileMenuToggle}>
-          <Menu size={24} />
+          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
     </header>

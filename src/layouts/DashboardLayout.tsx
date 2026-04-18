@@ -84,7 +84,10 @@ const DashboardLayout: React.FC = () => {
         </div>
       </div>
 
-      <DashboardNavbar onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)} />
+      <DashboardNavbar 
+        onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)} 
+        isMobileMenuOpen={mobileMenuOpen}
+      />
 
       <main className="main-content" onClick={() => { if(mobileMenuOpen) setMobileMenuOpen(false) }}>
         <Outlet />

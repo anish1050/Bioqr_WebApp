@@ -806,9 +806,15 @@ const formatLogsForFrontend = (logs: any[]) => {
             token: token,
             qr_type: qr_type,
             scanner_name: scanner_name,
+            email: log.email || "N/A",
             city: log.city && log.city !== "Unknown" ? log.city : "Unknown City",
             country: log.country && log.country !== "Unknown" ? log.country : "Unknown Country",
+            region: log.region || "Unknown Region",
             ip_address: log.ip || "Unknown IP",
+            platform: log.platform || "web",
+            latitude: log.latitude || null,
+            longitude: log.longitude || null,
+            timezone: log.timezone || "UTC",
             scanned_at: log.timestamp
         };
     });

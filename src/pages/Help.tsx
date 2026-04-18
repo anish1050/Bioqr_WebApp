@@ -1,49 +1,112 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { 
+  HelpCircle, Book, MessageCircle, Shield, 
+  ChevronRight, CheckCircle, Mail, ExternalLink 
+} from "lucide-react";
 import SEO from "../components/SEO";
-// Note: using basic styling and elements similar to the other pages to match uniformity, 
-// since the learnmore.css file was missing.
+import "../styles/help-modern.css";
 
 const Help: React.FC = () => {
+  const location = useLocation();
+  const isSubmissionSuccess = location.search.includes('success=true') || location.state?.fromContact;
+
+  const faqs = [
+    {
+      question: "How do I create an account?",
+      answer: "Contact our support team for assistance with setting up an enterprise account tailored to your needs.",
+      icon: <Book size={20} />
+    },
+    {
+      question: "How do I log in to my dashboard?",
+      answer: "Navigate to the login page and enter your credentials. If you've forgotten your password, use the reset option.",
+      icon: <Shield size={20} />
+    },
+    {
+      question: "Can I track data in real-time?",
+      answer: "Yes, our dashboard provides live updates and historical views of all your biometric and scan data.",
+      icon: <HelpCircle size={20} />
+    },
+    {
+      question: "Is my data secure?",
+      answer: "We use enterprise-grade encryption and blockchain technology to ensure your data remains private and tamper-proof.",
+      icon: <Shield size={20} />
+    }
+  ];
+
   return (
-    <div className="help-page" style={{ padding: '4rem 1rem', maxWidth: '800px', margin: '0 auto', minHeight: '60vh' }}>
+    <div className="help-page">
       <SEO title="Help Center" description="Find answers to your questions and explore our knowledge base." />
-      <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-        <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem', fontWeight: 'bold' }}>Help Center</h1>
-        <p style={{ color: '#64748b', fontSize: '1.1rem', lineHeight: '1.6' }}>
-          Welcome to the BioQR Help Center. Here you can find answers to common questions, guidance on using our services, and ways to get in touch with support.
-        </p>
-      </div>
-
-      <div style={{ marginBottom: '3rem' }}>
-        <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>Frequently Asked Questions</h2>
-        
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div style={{ backgroundColor: '#f8fafc', padding: '1.5rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
-            <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', fontWeight: '600' }}>How do I create an account?</h3>
-            <p style={{ color: '#475569' }}>Contact support for assistance with setting up an enterprise account.</p>
+      
+      <div className="help-container">
+        {/* Success Banner (Conditional) */}
+        {isSubmissionSuccess && (
+          <div className="success-banner">
+            <div className="success-icon">
+              <CheckCircle size={24} />
+            </div>
+            <div className="success-content">
+              <h2>Message Sent Successfully!</h2>
+              <p>Thank you for reaching out. Our team will get back to you within 2-4 hours.</p>
+            </div>
           </div>
+        )}
 
-          <div style={{ backgroundColor: '#f8fafc', padding: '1.5rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
-            <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', fontWeight: '600' }}>How do I log in to my dashboard?</h3>
-            <p style={{ color: '#475569' }}>You can navigate to the <Link to="/login" style={{ color: '#3b82f6', textDecoration: 'none' }}>Login page</Link> and enter your credentials. If you face issues, please contact support.</p>
+        {/* Hero Section */}
+        <header className="help-hero">
+          <h1>How can we help?</h1>
+          <p>
+            Welcome to the BioQR Help Center. Find answers to common questions, 
+            explore our features, and get the support you need.
+          </p>
+        </header>
+
+        {/* FAQ Section */}
+        <section className="help-section">
+          <h2><HelpCircle className="text-primary" /> Common Questions</h2>
+          <div className="help-grid">
+            {faqs.map((faq, index) => (
+              <div key={index} className="help-card">
+                <div className="help-card-icon">{faq.icon}</div>
+                <h3>{faq.question}</h3>
+                <p>{faq.answer}</p>
+                <Link to="#" className="text-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: '600', textDecoration: 'none' }}>
+                  Learn More <ChevronRight size={14} />
+                </Link>
+              </div>
+            ))}
           </div>
+        </section>
 
-          <div style={{ backgroundColor: '#f8fafc', padding: '1.5rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
-            <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', fontWeight: '600' }}>Can I see my heart rate at different times of the day?</h3>
-            <p style={{ color: '#475569' }}>Yes, the dashboard provides a detailed historical view of your biometric data.</p>
+        {/* Knowledge Base / Links */}
+        <section className="help-section">
+          <h2><Book className="text-primary" /> Resources</h2>
+          <div className="help-grid">
+            <div className="help-card">
+              <h3>Documentation</h3>
+              <p>Explore our detailed API documentation and integration guides.</p>
+              <Link to="/documentation" className="btn-contact" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
+                View Docs <ExternalLink size={14} />
+              </Link>
+            </div>
+            <div className="help-card">
+              <h3>Security Features</h3>
+              <p>Learn about how we protect your biometric data and privacy.</p>
+              <Link to="/about" className="btn-contact" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
+                About BioQR
+              </Link>
+            </div>
           </div>
-        </div>
-      </div>
+        </section>
 
-      <div style={{ backgroundColor: '#e0e7ff', padding: '2rem', borderRadius: '0.5rem', textAlign: 'center' }}>
-        <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem', color: '#1e3a8a' }}>Need More Help?</h2>
-        <p style={{ color: '#312e81', marginBottom: '1.5rem' }}>
-          If you didn’t find what you were looking for, our support team is here to help.
-        </p>
-        <Link to="/contact" style={{ display: 'inline-block', backgroundColor: '#3b82f6', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '0.25rem', textDecoration: 'none', fontWeight: 'bold' }}>
-          Contact Support
-        </Link>
+        {/* CTA Section */}
+        <footer className="help-cta">
+          <h2>Still need help?</h2>
+          <p>If you didn't find the answer you were looking for, our support team is ready to assist you.</p>
+          <Link to="/contact" className="btn-contact">
+            <Mail size={18} /> Contact Support
+          </Link>
+        </footer>
       </div>
     </div>
   );
