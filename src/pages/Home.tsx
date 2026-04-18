@@ -112,6 +112,13 @@ const Home: React.FC = () => {
               </div>
             ))}
           </div>
+
+          <div className="text-center" style={{ marginTop: '4rem' }}>
+            <Link to="/features" className="btn btn-outline">
+              VIEW DETAILED CAPABILITIES
+              <Shield size={18} style={{ marginLeft: '0.5rem' }} />
+            </Link>
+          </div>
         </div>
       </section>
 

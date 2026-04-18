@@ -8,26 +8,26 @@ const Footer: React.FC = () => {
     {
       title: "Product",
       links: [
-        { name: "Features", href: "/#features" },
-        { name: "Security", href: "/#security" },
-        { name: "Pricing", href: "/#pricing" },
-        { name: "Documentation", href: "/#docs" },
+        { name: "Features", href: "/features" },
+        { name: "Security", href: "/security" },
+        { name: "Pricing", href: "/pricing" },
+        { name: "Documentation", href: "/docs" },
       ],
     },
     {
       title: "Company",
       links: [
         { name: "About Us", href: "/about" },
-        { name: "Careers", href: "/#careers" },
-        { name: "Press", href: "/#press" },
-        { name: "Partners", href: "/#partners" },
+        { name: "Careers", href: "/careers" },
+        { name: "Press", href: "/press" },
+        { name: "Partners", href: "/partners" },
       ],
     },
     {
       title: "Support",
       links: [
         { name: "Help Center", href: "/help" },
-        { name: "Community", href: "/#community" },
+        { name: "Community", href: "/community" },
         { name: "Contact", href: "/contact" },
         { name: "Status Page", href: "/status" },
       ],

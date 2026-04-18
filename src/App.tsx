@@ -14,6 +14,13 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import Documentation from './pages/Documentation';
+import Features from './pages/Features';
+import Security from './pages/Security';
+import Pricing from './pages/Pricing';
+import Careers from './pages/Careers';
+import Press from './pages/Press';
+import Partners from './pages/Partners';
+import Community from './pages/Community';
 
 // Authenticated Pages
 import Dashboard from './pages/Dashboard';
@@ -41,6 +48,13 @@ function App() {
           <Route path="status" element={<Status />} />
           <Route path="help" element={<Help />} />
           <Route path="docs" element={<Documentation />} />
+          <Route path="features" element={<Features />} />
+          <Route path="security" element={<Security />} />
+          <Route path="pricing" element={<Pricing />} />
+          <Route path="careers" element={<Careers />} />
+          <Route path="press" element={<Press />} />
+          <Route path="partners" element={<Partners />} />
+          <Route path="community" element={<Community />} />
         </Route>
 
         {/* Authenticated Dashboard */}
