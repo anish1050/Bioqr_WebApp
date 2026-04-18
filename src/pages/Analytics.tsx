@@ -9,7 +9,7 @@ const AnalyticsPage: React.FC = () => {
     const [stats, setStats] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const navigate = useNavigate();
+    const navigate = useNavigate(); 
 
     const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
         let accessToken = localStorage.getItem('accessToken');
