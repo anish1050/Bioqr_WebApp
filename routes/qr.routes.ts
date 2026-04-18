@@ -780,6 +780,40 @@ router.get(
     }
 );
 
+// Helper to format logs for frontend
+const formatLogsForFrontend = (logs: any[]) => {
+    return logs.map(log => {
+        const match = log.activity.match(/QR Scanned:\s*([a-zA-Z0-9_\-]+)\s*\[Token:\s*([^\]]+)\]/i);
+        let qr_type = "UNKNOWN";
+        let token = "Unknown";
+        
+        if (match) {
+            qr_type = match[1];
+            token = match[2].replace('...', '');
+        } else {
+            const tokenMatch = log.activity.match(/Token:\s*([a-zA-Z0-9]+)/i);
+            if (tokenMatch) token = tokenMatch[1];
+        }
+
+        let scanner_name = "Guest";
+        if (log.firstName || log.lastName) {
+            scanner_name = `${log.firstName || ''} ${log.lastName || ''}`.trim();
+        } else if (log.username) {
+            scanner_name = log.username;
+        }
+
+        return {
+            token: token,
+            qr_type: qr_type,
+            scanner_name: scanner_name,
+            city: log.city && log.city !== "Unknown" ? log.city : "Unknown City",
+            country: log.country && log.country !== "Unknown" ? log.country : "Unknown Country",
+            ip_address: log.ip || "Unknown IP",
+            scanned_at: log.timestamp
+        };
+    });
+};
+
 // Get Scan Analytics (Authenticated)
 router.get(
     "/analytics",
@@ -795,7 +829,7 @@ router.get(
                 activity: { $regex: /QR Scanned/i }
             }).sort({ timestamp: -1 });
 
-            res.json(logs);
+            res.json(formatLogsForFrontend(logs));
         } catch (err) {
             console.error("❌ Analytics Fetch Error:", err);
             res.status(500).json({ error: "Failed to fetch analytics" });
@@ -819,7 +853,7 @@ router.get(
             .sort({ timestamp: -1 })
             .limit(5);
 
-            res.json(logs);
+            res.json(formatLogsForFrontend(logs));
         } catch (err) {
             console.error("❌ Recent Analytics Error:", err);
             res.status(500).json({ error: "Failed to fetch recent scans" });
