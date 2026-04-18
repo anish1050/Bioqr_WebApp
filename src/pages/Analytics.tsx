@@ -1,24 +1,79 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, RefreshCcw, Activity, User } from 'lucide-react';
+import { BarChart3, RefreshCcw, Activity, User, AlertCircle } from 'lucide-react';
 import SEO from '../components/SEO';
+import { useNavigate } from 'react-router-dom';
 
 const API_BASE = '';
 
 const AnalyticsPage: React.FC = () => {
     const [stats, setStats] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const navigate = useNavigate();
+
+    const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
+        let accessToken = localStorage.getItem('accessToken');
+        const headers = { ...options.headers, 'Authorization': `Bearer ${accessToken}` };
+        
+        let response = await fetch(url, { ...options, headers });
+        
+        if (response.status === 401 || response.status === 403) {
+            const refreshToken = localStorage.getItem('refreshToken');
+            if (refreshToken) {
+                try {
+                    const refreshRes = await fetch(`${API_BASE}/bioqr/auth/refresh`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ refreshToken })
+                    });
+                    const refreshData = await refreshRes.json();
+                    if (refreshRes.ok && refreshData.success) {
+                        localStorage.setItem('accessToken', refreshData.tokens.accessToken);
+                        localStorage.setItem('refreshToken', refreshData.tokens.refreshToken);
+                        
+                        headers['Authorization'] = `Bearer ${refreshData.tokens.accessToken}`;
+                        response = await fetch(url, { ...options, headers });
+                    } else {
+                        localStorage.removeItem('accessToken');
+                        localStorage.removeItem('refreshToken');
+                        navigate('/login');
+                        throw new Error('Session expired');
+                    }
+                } catch (e) {
+                    localStorage.removeItem('accessToken');
+                    localStorage.removeItem('refreshToken');
+                    navigate('/login');
+                    throw new Error('Session expired');
+                }
+            } else {
+                localStorage.removeItem('accessToken');
+                navigate('/login');
+                throw new Error('Authentication required');
+            }
+        }
+        return response;
+    };
 
     const fetchStats = async () => {
         setLoading(true);
+        setError(null);
         try {
-            const token = localStorage.getItem('accessToken');
-            const res = await fetch(`${API_BASE}/bioqr/analytics`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const res = await authenticatedFetch(`${API_BASE}/bioqr/analytics`);
             const data = await res.json();
-            setStats(Array.isArray(data) ? data : []);
-        } catch (err) { console.error(err); }
-        finally { setLoading(false); }
+            
+            if (res.ok && Array.isArray(data)) {
+                setStats(data);
+            } else {
+                setError(data.message || data.error || 'Failed to fetch analytics');
+                setStats([]);
+            }
+        } catch (err: any) { 
+            console.error('Error fetching stats:', err);
+            setError(err.message || 'An unexpected error occurred');
+            setStats([]);
+        } finally { 
+            setLoading(false); 
+        }
     };
 
     useEffect(() => { fetchStats(); }, []);
@@ -57,7 +112,16 @@ const AnalyticsPage: React.FC = () => {
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={4} style={{ padding: '3rem', textAlign: 'center' }}>Loading activity logs...</td></tr>
+                                <tr><td colSpan={5} style={{ padding: '3rem', textAlign: 'center' }}>Loading activity logs...</td></tr>
+                            ) : error ? (
+                                <tr>
+                                    <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: '#f87171' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                                            <AlertCircle size={32} />
+                                            <span>{error}</span>
+                                        </div>
+                                    </td>
+                                </tr>
                             ) : stats.length > 0 ? (
                                 stats.map((s, i) => (
                                     <tr key={i} style={{ borderBottom: '1px solid #334155' }}>
@@ -74,7 +138,7 @@ const AnalyticsPage: React.FC = () => {
                                     </tr>
                                 ))
                             ) : (
-                                <tr><td colSpan={4} style={{ padding: '3rem', textAlign: 'center' }}>No scan history recorded yet. Share your QRs to see activity!</td></tr>
+                                <tr><td colSpan={5} style={{ padding: '3rem', textAlign: 'center' }}>No scan history recorded yet. Share your QRs to see activity!</td></tr>
                             )}
                         </tbody>
                     </table>
