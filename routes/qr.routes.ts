@@ -5,7 +5,7 @@ import QRCode from "qrcode";
 import { JWT_SECRET } from "../helpers/tokens.js";
 import { authenticateToken } from "../helpers/auth.js";
 import { FileQueries, QrTokenQueries, WebAuthnCredentialQueries, FaceRecognitionQueries, UserQueries, BioSealQueries } from "../helpers/queries.js";
-import { log, getLocationFromIp } from "../helpers/logger.js";
+import { log, getLocationFromIp, LogModel } from "../helpers/logger.js";
 import { verifyBioSeal } from "../helpers/bioseal.js";
 import { calculateDistance, formatVCard, getScanDetails } from "../helpers/qr-v2.js";
 
@@ -826,7 +826,6 @@ router.get(
     authenticateToken,
     async (req: Request, res: Response): Promise<void> => {
         try {
-            const { LogModel } = await import("../helpers/logger.js");
             const userId = (req as any).user?.userId;
             
             // Fetch all logs where this user is the "Owner" of the activity (Sender)
@@ -838,7 +837,10 @@ router.get(
             res.json(formatLogsForFrontend(logs));
         } catch (err) {
             console.error("❌ Analytics Fetch Error:", err);
-            res.status(500).json({ error: "Failed to fetch analytics" });
+            res.status(500).json({ 
+                error: "Failed to fetch analytics", 
+                details: err instanceof Error ? err.message : String(err) 
+            });
         }
     }
 );
@@ -849,7 +851,6 @@ router.get(
     authenticateToken,
     async (req: Request, res: Response): Promise<void> => {
         try {
-            const { LogModel } = await import("../helpers/logger.js");
             const userId = (req as any).user?.userId;
             
             const logs = await LogModel.find({
@@ -862,7 +863,10 @@ router.get(
             res.json(formatLogsForFrontend(logs));
         } catch (err) {
             console.error("❌ Recent Analytics Error:", err);
-            res.status(500).json({ error: "Failed to fetch recent scans" });
+            res.status(500).json({ 
+                error: "Failed to fetch recent scans", 
+                details: err instanceof Error ? err.message : String(err) 
+            });
         }
     }
 );
