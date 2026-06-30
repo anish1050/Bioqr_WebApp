@@ -2,6 +2,40 @@
 <html lang="en">
 
 <head>
+  <!-- ===== Analytics Integration (GA4 & Amplitude) ===== -->
+  <!-- Defer Google Analytics for better performance -->
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-RS5VD5HK56', {
+      'version': 'real'
+    });
+
+    // Load GA script after page load
+    window.addEventListener('load', function () {
+      var script = document.createElement('script');
+      script.async = true;
+      script.src = 'https://www.googletagmanager.com/gtag/js?id=G-RS5VD5HK56';
+      document.head.appendChild(script);
+    });
+  </script>
+  <!-- ===== Amplitude Analytics ===== -->
+  <script src="https://cdn.amplitude.com/script/d450d75dd930eaa649486e8e31587393.js"></script>
+  <script>
+    if (window.amplitude) {
+      window.amplitude.init('d450d75dd930eaa649486e8e31587393', {
+        fetchRemoteConfig: true,
+        autocapture: {
+          attribution: true,
+          pageViews: true,
+          sessions: true,
+          elementInteractions: true
+        }
+      });
+      window.amplitude.track('Page View', { project: 'BioQR Real', version: 'real' });
+    }
+  </script>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/png" href="/logo.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
